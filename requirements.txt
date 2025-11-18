@@ -1,0 +1,11 @@
+flask
+yfinance
+requests
+openai
+pandas
+numpy
+scikit-learn
+ta
+python-dotenv
+Flask-Caching
+gunicorn
