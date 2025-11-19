@@ -174,6 +174,11 @@ function renderChart(graphData) {
         mlChartInstance.destroy();
     }
 
+    // Create gradient for the area chart
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
     mlChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
@@ -182,45 +187,116 @@ function renderChart(graphData) {
                 {
                     label: 'Actual Price',
                     data: graphData.prices,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: '#3b82f6', // Primary Blue
+                    backgroundColor: gradient,
                     borderWidth: 2,
                     pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#2563eb',
+                    pointHoverBorderColor: '#ffffff',
+                    pointHoverBorderWidth: 2,
                     fill: true,
-                    tension: 0.1
+                    tension: 0.3 // Smoother curve
                 },
                 {
-                    label: 'Trend Line (Regression)',
+                    label: 'Trend Line',
                     data: graphData.regression,
-                    borderColor: '#ef4444',
+                    borderColor: '#f87171', // Soft Red
                     borderWidth: 2,
-                    borderDash: [5, 5],
+                    borderDash: [6, 4],
                     pointRadius: 0,
-                    fill: false
+                    pointHoverRadius: 0,
+                    fill: false,
+                    tension: 0
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             plugins: {
                 legend: {
                     position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 8,
+                        padding: 20,
+                        font: {
+                            family: "'Inter', sans-serif",
+                            size: 12,
+                            weight: 500
+                        },
+                        color: '#475569'
+                    }
                 },
-                title: {
-                    display: true,
-                    text: 'Price History vs Trend'
+                tooltip: {
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    titleColor: '#f8fafc',
+                    bodyColor: '#f8fafc',
+                    titleFont: {
+                        family: "'Inter', sans-serif",
+                        size: 13,
+                        weight: 600
+                    },
+                    bodyFont: {
+                        family: "'Inter', sans-serif",
+                        size: 13
+                    },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    boxPadding: 4,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: false,
-                    title: {
-                        display: true,
-                        text: 'Price ($)'
+                    grid: {
+                        color: '#f1f5f9',
+                        drawBorder: false,
+                    },
+                    ticks: {
+                        font: {
+                            family: "'Inter', sans-serif",
+                            size: 11
+                        },
+                        color: '#64748b',
+                        callback: function(value) {
+                            return '$' + value;
+                        }
                     }
                 },
                 x: {
-                    display: false // Hide dates if too many
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        font: {
+                            family: "'Inter', sans-serif",
+                            size: 11
+                        },
+                        color: '#64748b',
+                        maxTicksLimit: 6,
+                        maxRotation: 0
+                    }
                 }
             }
         }
