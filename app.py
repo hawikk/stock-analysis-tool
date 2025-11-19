@@ -1,3 +1,4 @@
+# ... (existing imports) ...
 import os
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify
@@ -18,6 +19,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# ... (existing cache config) ...
 # Cache Configuration - Use FileSystemCache for persistence
 cache = Cache(app, config={
     'CACHE_TYPE': 'FileSystemCache',
@@ -26,6 +28,7 @@ cache = Cache(app, config={
     'CACHE_THRESHOLD': 500 # Maximum number of items
 })
 
+# ... (existing configuration) ...
 # Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -37,6 +40,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 def index():
     return render_template('index.html')
 
+# ... (existing /api/info) ...
 @app.route('/api/info', methods=['GET'])
 @cache.cached(query_string=True)
 def get_info():
@@ -114,6 +118,7 @@ def get_info():
         print(f"Error in info: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ... (existing /api/history) ...
 @app.route('/api/history', methods=['GET'])
 @cache.cached(query_string=True)
 def get_history():
@@ -150,6 +155,7 @@ def get_history():
         print(f"Error in history: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ... (existing /api/search) ...
 @app.route('/api/search', methods=['GET'])
 def search_ticker():
     query = request.args.get('q')
@@ -178,6 +184,7 @@ def search_ticker():
         print(f"Search error: {e}")
         return jsonify({'results': []})
 
+# ... (existing /api/news) ...
 @app.route('/api/news', methods=['GET'])
 @cache.cached(query_string=True)
 def get_news():
@@ -214,6 +221,7 @@ def get_news():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ... (existing /api/ai) ...
 @app.route('/api/ai', methods=['GET'])
 @cache.cached(query_string=True)
 def get_ai_summary():
@@ -241,6 +249,7 @@ def get_ai_summary():
         print(f"AI Error: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ... (existing /api/ml) ...
 @app.route('/api/ml', methods=['GET'])
 @cache.cached(query_string=True)
 def get_ml_analysis():
@@ -301,6 +310,39 @@ def get_ml_analysis():
 
     except Exception as e:
         print(f"ML Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# NEW: Chat Endpoint
+@app.route('/api/chat', methods=['POST'])
+def chat_bot():
+    data = request.get_json()
+    ticker_symbol = data.get('ticker')
+    user_message = data.get('message')
+    
+    if not ticker_symbol or not user_message:
+        return jsonify({'error': 'Missing ticker or message'}), 400
+
+    try:
+        # Create a context-aware prompt
+        system_prompt = f"""You are a specialized financial assistant. 
+        You are currently discussing the stock with ticker symbol: {ticker_symbol}. 
+        Your answers must be relevant to this specific stock or general financial concepts related to it. 
+        If the user asks about something completely unrelated (like cooking or sports), politely steer them back to {ticker_symbol} or financial topics.
+        Keep your answers concise and professional."""
+
+        completion = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ]
+        )
+
+        bot_reply = completion.choices[0].message.content
+        return jsonify({'reply': bot_reply})
+
+    except Exception as e:
+        print(f"Chat Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

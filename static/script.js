@@ -99,6 +99,13 @@ document.getElementById('searchBtn').addEventListener('click', function() {
     document.getElementById('companyLogo').classList.add('d-none');
     document.getElementById('companyLogo').src = '';
 
+    // Enable Chat Input
+    document.getElementById('chatInput').disabled = false;
+    document.getElementById('sendMessageBtn').disabled = false;
+    document.getElementById('chatInput').placeholder = `Ask about ${ticker}...`;
+    // Add initial bot message about the new stock
+    appendMessage('bot', `I'm ready to answer questions about ${ticker}.`);
+
     // Fetch Data
     fetchInfo(ticker);
     fetchNews(ticker);
@@ -462,4 +469,67 @@ function formatNumber(num) {
     if (num >= 1.0e+9) return (num / 1.0e+9).toFixed(2) + "B";
     if (num >= 1.0e+6) return (num / 1.0e+6).toFixed(2) + "M";
     return num;
+}
+
+// Chat Bot Logic
+const chatToggle = document.getElementById('chatToggle');
+const chatContainer = document.getElementById('chatContainer');
+const closeChat = document.getElementById('closeChat');
+const chatInput = document.getElementById('chatInput');
+const sendMessageBtn = document.getElementById('sendMessageBtn');
+const chatBody = document.getElementById('chatBody');
+
+chatToggle.addEventListener('click', () => {
+    chatContainer.classList.toggle('open');
+});
+
+closeChat.addEventListener('click', () => {
+    chatContainer.classList.remove('open');
+});
+
+sendMessageBtn.addEventListener('click', sendMessage);
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
+
+function sendMessage() {
+    const message = chatInput.value.trim();
+    const ticker = document.getElementById('tickerInput').value.toUpperCase();
+
+    if (!message) return;
+    if (!ticker) {
+        appendMessage('bot', 'Please search for a stock first so I know what to talk about!');
+        return;
+    }
+
+    appendMessage('user', message);
+    chatInput.value = '';
+    chatInput.disabled = true;
+
+    // Call Backend
+    fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: ticker, message: message })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        appendMessage('bot', data.reply);
+    })
+    .catch(err => {
+        appendMessage('bot', "Sorry, I couldn't process that request.");
+    })
+    .finally(() => {
+        chatInput.disabled = false;
+        chatInput.focus();
+    });
+}
+
+function appendMessage(sender, text) {
+    const div = document.createElement('div');
+    div.classList.add('chat-message', `${sender}-message`);
+    div.innerText = text;
+    chatBody.appendChild(div);
+    chatBody.scrollTop = chatBody.scrollHeight;
 }

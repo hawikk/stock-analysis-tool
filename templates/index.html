@@ -209,6 +209,30 @@
         </div>
     </div>
 
+    <!-- Chat Bot -->
+    <div id="chatContainer" class="chat-container">
+        <div class="chat-header d-flex justify-content-between align-items-center">
+            <span><i class="fa-solid fa-robot me-2"></i>Clanky</span>
+            <button id="closeChat" class="btn btn-sm btn-link text-white"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <div class="chat-message bot-message">
+                Hello! I can answer questions about the selected stock. Search for a ticker first!
+            </div>
+        </div>
+        <div class="chat-footer">
+            <div class="input-group">
+                <input type="text" id="chatInput" class="form-control border-0" placeholder="Ask about this stock..." disabled>
+                <button class="btn btn-primary" type="button" id="sendMessageBtn" disabled><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Toggle Button -->
+    <button id="chatToggle" class="btn btn-primary rounded-circle shadow-lg chat-toggle-btn">
+        <i class="fa-solid fa-comments fs-4"></i>
+    </button>
+
     <!-- Referral Banner -->
     <div class="referral-banner">
         <div class="container d-flex justify-content-center align-items-center">
