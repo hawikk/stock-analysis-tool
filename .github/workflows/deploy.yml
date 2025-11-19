@@ -41,5 +41,4 @@ jobs:
             --image "gcr.io/$CLEAN_PROJECT_ID/$SERVICE_NAME" \
             --region $RUN_REGION \
             --platform managed \
-            --allow-unauthenticated \
-            --set-env-vars OPENAI_API_KEY=${{ secrets.OPENAI_KEY }},NEWS_API_KEY=${{ secrets.NEWS_KEY }}
+            --allow-unauthenticated
