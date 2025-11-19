@@ -5,14 +5,15 @@ on:
     branches:
       - master
 
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  RUN_REGION: us-central1
-  SERVICE_NAME: stock-analysis-tool
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: test
+    
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      RUN_REGION: us-central1
+      SERVICE_NAME: stock-analysis-tool
 
     steps:
       - name: Checkout code
