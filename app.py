@@ -83,7 +83,9 @@ def get_info():
         # Extract website for logo fallback
         website = info.get('website', '')
         logo_url = ""
-        if website:
+        if 'logo_url' in info and info['logo_url']:
+             logo_url = info['logo_url']
+        elif website:
             # Simple hack to get logo from clearbit
             domain = website.replace('https://', '').replace('http://', '').replace('www.', '').split('/')[0]
             logo_url = f"https://logo.clearbit.com/{domain}"

@@ -81,6 +81,18 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Popular Ticker Chips Click Handler
+document.addEventListener('DOMContentLoaded', function() {
+    const tickerChips = document.querySelectorAll('.ticker-chip');
+    tickerChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const ticker = this.textContent.trim();
+            document.getElementById('tickerInput').value = ticker;
+            document.getElementById('searchBtn').click();
+        });
+    });
+});
+
 
 document.getElementById('searchBtn').addEventListener('click', function() {
     const ticker = document.getElementById('tickerInput').value.toUpperCase();
@@ -96,8 +108,27 @@ document.getElementById('searchBtn').addEventListener('click', function() {
     resetTab('ml');
 
     // Reset Logo
-    document.getElementById('companyLogo').classList.add('d-none');
-    document.getElementById('companyLogo').src = '';
+    const logoImg = document.getElementById('companyLogo');
+    if (logoImg) {
+        logoImg.classList.add('d-none');
+        logoImg.src = '';
+    }
+    const logoWrapper = document.querySelector('.logo-wrapper');
+    if (logoWrapper) {
+        // If the image was removed, we need to put it back for the next search to work
+        if (!logoImg) {
+             const newImg = document.createElement('img');
+             newImg.id = 'companyLogo';
+             newImg.className = 'd-none company-logo';
+             newImg.alt = '';
+             logoWrapper.innerHTML = '';
+             logoWrapper.appendChild(newImg);
+        } else {
+             // Remove any fallback icons
+             const fallback = logoWrapper.querySelector('i');
+             if (fallback) fallback.remove();
+        }
+    }
 
     // Enable Chat Input
     document.getElementById('chatInput').disabled = false;
@@ -134,14 +165,69 @@ function fetchInfo(ticker) {
         const techs = data.technicals;
 
         // Update Logo
+        const logoWrapper = document.querySelector('.logo-wrapper');
+        let logoImg = document.getElementById('companyLogo');
+        
+        // Ensure logoImg exists
+        if (!logoImg && logoWrapper) {
+             logoImg = document.createElement('img');
+             logoImg.id = 'companyLogo';
+             logoImg.className = 'd-none company-logo';
+             logoImg.alt = '';
+             logoWrapper.appendChild(logoImg);
+        }
+
+        if (logoWrapper) {
+            // Clear any previous content (like fallback icons) but keep the image
+            // We can't just innerHTML='' because that removes the image if it's there.
+            // But we can just remove all 'i' tags.
+            const icons = logoWrapper.querySelectorAll('i');
+            icons.forEach(icon => icon.remove());
+            
+            if (!logoWrapper.contains(logoImg)) {
+                logoWrapper.appendChild(logoImg);
+            }
+        }
+
         if (info.logo) {
-            const logoImg = document.getElementById('companyLogo');
             logoImg.src = info.logo;
             logoImg.classList.remove('d-none');
+            logoImg.onerror = function() {
+                this.classList.add('d-none');
+                if (logoWrapper) {
+                    // Check if icon already exists to avoid duplicates
+                    if (!logoWrapper.querySelector('.fa-building')) {
+                        logoWrapper.insertAdjacentHTML('beforeend', `<i class="fa-solid fa-building fs-3 text-primary"></i>`);
+                    }
+                }
+            };
+        } else {
+            if (logoWrapper) {
+                 logoWrapper.insertAdjacentHTML('beforeend', `<i class="fa-solid fa-building fs-3 text-primary"></i>`);
+            }
         }
 
         // Update Title
         document.getElementById('stockTitle').innerText = info.name || ticker;
+        
+        // Update sector info
+        const sectorEl = document.getElementById('stockSector');
+        if (sectorEl) {
+            sectorEl.innerText = info.sector ? `${info.sector} • ${info.country || 'Global'}` : 'Market Data';
+        }
+        
+        // Update large price display
+        const priceLargeEl = document.getElementById('stockPriceLarge');
+        if (priceLargeEl && info.currentPrice) {
+            priceLargeEl.innerText = `$${info.currentPrice}`;
+        }
+        
+        // Update stock change (if available from data)
+        const changeEl = document.getElementById('stockChange');
+        if (changeEl) {
+            changeEl.innerText = '+0.00 (0.00%)'; // Placeholder - update if you have this data
+            changeEl.style.color = '#10b981'; // Green for positive
+        }
 
         // Render Key Metrics Cards
         const metrics = [
@@ -203,9 +289,14 @@ function renderHistoryChart(data) {
     if (historyChartInstance) historyChartInstance.destroy();
 
     // Create gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
-    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)'); // var(--primary)
+    gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+
+    // Dynamic grid color based on theme
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
 
     historyChartInstance = new Chart(ctx, {
         type: 'line',
@@ -214,29 +305,51 @@ function renderHistoryChart(data) {
             datasets: [{
                 label: 'Close Price',
                 data: data.close,
-                borderColor: '#3b82f6',
+                borderColor: '#2563eb', // var(--primary)
                 backgroundColor: gradient,
                 borderWidth: 2,
                 pointRadius: 0,
-                pointHoverRadius: 4,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#2563eb',
+                pointHoverBorderColor: '#ffffff',
+                pointHoverBorderWidth: 2,
                 fill: true,
-                tension: 0.1
+                tension: 0.3
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    mode: 'index',
-                    intersect: false
+                    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                    titleColor: isDark ? '#f8fafc' : '#0f172a',
+                    bodyColor: isDark ? '#cbd5e1' : '#334155',
+                    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+                    borderWidth: 1,
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return '$' + context.parsed.y.toFixed(2);
+                        }
+                    }
                 }
             },
             scales: {
-                x: { display: false },
+                x: { 
+                    grid: { display: false },
+                    ticks: { color: textColor, maxTicksLimit: 8 }
+                },
                 y: { 
-                    grid: { color: document.body.getAttribute('data-theme') === 'dark' ? '#334155' : '#f1f5f9' }
+                    grid: { color: gridColor, borderDash: [4, 4] },
+                    ticks: { color: textColor }
                 }
             }
         }
@@ -334,10 +447,15 @@ function renderChart(graphData) {
         mlChartInstance.destroy();
     }
 
+    // Dynamic colors based on theme
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+
     // Create gradient for the area chart
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
-    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)'); // Primary
+    gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
     mlChartInstance = new Chart(ctx, {
         type: 'line',
@@ -347,7 +465,7 @@ function renderChart(graphData) {
                 {
                     label: 'Actual Price',
                     data: graphData.prices,
-                    borderColor: '#3b82f6', // Primary Blue
+                    borderColor: '#2563eb', // Primary Blue
                     backgroundColor: gradient,
                     borderWidth: 2,
                     pointRadius: 0,
@@ -361,9 +479,9 @@ function renderChart(graphData) {
                 {
                     label: 'Trend Line',
                     data: graphData.regression,
-                    borderColor: '#f87171', // Soft Red
+                    borderColor: '#ef4444', // Accent Red
                     borderWidth: 2,
-                    borderDash: [6, 4],
+                    borderDash: [6, 6],
                     pointRadius: 0,
                     pointHoverRadius: 0,
                     fill: false,
@@ -391,22 +509,15 @@ function renderChart(graphData) {
                             size: 12,
                             weight: 500
                         },
-                        color: document.body.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#475569' // Dynamic color
+                        color: textColor
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                    titleColor: '#f8fafc',
-                    bodyColor: '#f8fafc',
-                    titleFont: {
-                        family: "'Inter', sans-serif",
-                        size: 13,
-                        weight: 600
-                    },
-                    bodyFont: {
-                        family: "'Inter', sans-serif",
-                        size: 13
-                    },
+                    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                    titleColor: isDark ? '#f8fafc' : '#0f172a',
+                    bodyColor: isDark ? '#cbd5e1' : '#334155',
+                    borderColor: isDark ? '#1e293b' : '#e2e8f0',
+                    borderWidth: 1,
                     padding: 12,
                     cornerRadius: 8,
                     displayColors: true,
@@ -429,7 +540,8 @@ function renderChart(graphData) {
                 y: {
                     beginAtZero: false,
                     grid: {
-                        color: document.body.getAttribute('data-theme') === 'dark' ? '#334155' : '#f1f5f9', // Dynamic grid color
+                        color: gridColor,
+                        borderDash: [4, 4],
                         drawBorder: false,
                     },
                     ticks: {
@@ -437,7 +549,7 @@ function renderChart(graphData) {
                             family: "'Inter', sans-serif",
                             size: 11
                         },
-                        color: document.body.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#64748b', // Dynamic tick color
+                        color: textColor,
                         callback: function(value) {
                             return '$' + value;
                         }
@@ -453,8 +565,8 @@ function renderChart(graphData) {
                             family: "'Inter', sans-serif",
                             size: 11
                         },
-                        color: document.body.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#64748b', // Dynamic tick color
-                        maxTicksLimit: 6,
+                        color: textColor,
+                        maxTicksLimit: 8,
                         maxRotation: 0
                     }
                 }
