@@ -143,7 +143,16 @@
 
                 <!-- AI Summary Tab -->
                 <div class="tab-pane fade" id="ai" role="tabpanel" aria-labelledby="ai-tab">
-                    <div id="aiLoading" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+                    <div id="aiLoading" class="ai-loading-container d-flex flex-column align-items-center justify-content-center py-5">
+                        <div class="ai-spinner">
+                            <div class="spinner-ring"></div>
+                            <div class="spinner-ring"></div>
+                            <div class="spinner-ring"></div>
+                            <i class="fa-solid fa-brain ai-icon"></i>
+                        </div>
+                        <h5 class="mt-4 ai-loading-text">Analyzing Market Data...</h5>
+                        <p class="text-muted small">Processing news, technicals, and sentiment</p>
+                    </div>
                     <div id="aiContent" class="d-none">
                         <div class="card border-0 shadow-sm">
                             <div class="card-header bg-gradient-ai border-0 py-3 px-4 d-flex justify-content-between align-items-center text-white rounded-top">
