@@ -12,7 +12,7 @@ jobs:
     
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      RUN_REGION: us-central1
+      RUN_REGION: europe-west1
       SERVICE_NAME: stock-analysis-tool
 
     steps:
