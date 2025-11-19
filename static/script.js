@@ -1,4 +1,86 @@
+let historyChartInstance = null;
 let mlChartInstance = null;
+
+// Dark Mode Logic
+const themeToggleBtn = document.getElementById('themeToggle');
+const body = document.body;
+const icon = themeToggleBtn.querySelector('i');
+
+// Check local storage
+if (localStorage.getItem('theme') === 'dark') {
+    body.setAttribute('data-theme', 'dark');
+    icon.classList.remove('fa-moon');
+    icon.classList.add('fa-sun');
+    themeToggleBtn.classList.remove('btn-light');
+    themeToggleBtn.classList.add('btn-dark');
+}
+
+themeToggleBtn.addEventListener('click', () => {
+    if (body.getAttribute('data-theme') === 'dark') {
+        body.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+        icon.classList.remove('fa-sun');
+        icon.classList.add('fa-moon');
+        themeToggleBtn.classList.remove('btn-dark');
+        themeToggleBtn.classList.add('btn-light');
+    } else {
+        body.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+        themeToggleBtn.classList.remove('btn-light');
+        themeToggleBtn.classList.add('btn-dark');
+    }
+});
+
+
+// Autocomplete Logic
+const tickerInput = document.getElementById('tickerInput');
+const suggestionsBox = document.getElementById('suggestionsBox');
+let debounceTimer;
+
+tickerInput.addEventListener('input', function() {
+    const query = this.value;
+    clearTimeout(debounceTimer);
+    
+    if (query.length < 1) {
+        suggestionsBox.classList.add('d-none');
+        return;
+    }
+
+    debounceTimer = setTimeout(() => {
+        fetch(`/api/search?q=${query}`)
+            .then(res => res.json())
+            .then(data => {
+                suggestionsBox.innerHTML = '';
+                if (data.results && data.results.length > 0) {
+                    suggestionsBox.classList.remove('d-none');
+                    data.results.forEach(item => {
+                        const div = document.createElement('div');
+                        div.classList.add('suggestion-item');
+                        div.innerHTML = `<span class="suggestion-symbol">${item.symbol}</span><span class="suggestion-name">${item.shortname || item.longname}</span>`;
+                        div.addEventListener('click', () => {
+                            tickerInput.value = item.symbol;
+                            suggestionsBox.classList.add('d-none');
+                            document.getElementById('searchBtn').click();
+                        });
+                        suggestionsBox.appendChild(div);
+                    });
+                } else {
+                    suggestionsBox.classList.add('d-none');
+                }
+            })
+            .catch(err => console.error(err));
+    }, 300);
+});
+
+// Close suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (e.target !== tickerInput && e.target !== suggestionsBox) {
+        suggestionsBox.classList.add('d-none');
+    }
+});
+
 
 document.getElementById('searchBtn').addEventListener('click', function() {
     const ticker = document.getElementById('tickerInput').value.toUpperCase();
@@ -12,6 +94,10 @@ document.getElementById('searchBtn').addEventListener('click', function() {
     resetTab('news');
     resetTab('ai');
     resetTab('ml');
+
+    // Reset Logo
+    document.getElementById('companyLogo').classList.add('d-none');
+    document.getElementById('companyLogo').src = '';
 
     // Fetch Data
     fetchInfo(ticker);
@@ -39,6 +125,16 @@ function fetchInfo(ticker) {
 
         const info = data.info;
         const techs = data.technicals;
+
+        // Update Logo
+        if (info.logo) {
+            const logoImg = document.getElementById('companyLogo');
+            logoImg.src = info.logo;
+            logoImg.classList.remove('d-none');
+        }
+
+        // Update Title
+        document.getElementById('stockTitle').innerText = info.name || ticker;
 
         // Render Key Metrics Cards
         const metrics = [
@@ -75,10 +171,68 @@ function fetchInfo(ticker) {
         document.getElementById('technicalsList').innerHTML = techHtml;
 
         showContent('info');
+        
+        // Fetch History Chart for Overview
+        fetchHistory(ticker);
     })
     .catch(err => {
         document.getElementById('infoContent').innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
         showContent('info');
+    });
+}
+
+function fetchHistory(ticker) {
+    fetch(`/api/history?ticker=${ticker}&period=1y`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        renderHistoryChart(data);
+    })
+    .catch(err => console.error("History fetch error:", err));
+}
+
+function renderHistoryChart(data) {
+    const ctx = document.getElementById('historyChart').getContext('2d');
+    if (historyChartInstance) historyChartInstance.destroy();
+
+    // Create gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+    historyChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.dates,
+            datasets: [{
+                label: 'Close Price',
+                data: data.close,
+                borderColor: '#3b82f6',
+                backgroundColor: gradient,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: { display: false },
+                y: { 
+                    grid: { color: document.body.getAttribute('data-theme') === 'dark' ? '#334155' : '#f1f5f9' }
+                }
+            }
+        }
     });
 }
 
@@ -100,8 +254,7 @@ function fetchNews(ticker) {
                     <div class="card news-card">
                         <img src="${imgUrl}" class="news-card-img" alt="${article.title}" onerror="this.src='https://via.placeholder.com/400x200?text=Image+Error'">
                         <div class="card-body">
-                            <h5 class="card-title"><a href="${article.url}" target="_blank" class="text-decoration-none text-dark stretched-link">${article.title}</a></h5>
-                            <p class="card-text">${article.description || 'No description available.'}</p>
+                            <h5 class="card-title"><a href="${article.url}" target="_blank" class="text-decoration-none stretched-link">${article.title}</a></h5>
                             <div class="news-meta">
                                 <span>${article.source}</span>
                                 <span>${date}</span>
@@ -231,7 +384,7 @@ function renderChart(graphData) {
                             size: 12,
                             weight: 500
                         },
-                        color: '#475569'
+                        color: document.body.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#475569' // Dynamic color
                     }
                 },
                 tooltip: {
@@ -269,7 +422,7 @@ function renderChart(graphData) {
                 y: {
                     beginAtZero: false,
                     grid: {
-                        color: '#f1f5f9',
+                        color: document.body.getAttribute('data-theme') === 'dark' ? '#334155' : '#f1f5f9', // Dynamic grid color
                         drawBorder: false,
                     },
                     ticks: {
@@ -277,7 +430,7 @@ function renderChart(graphData) {
                             family: "'Inter', sans-serif",
                             size: 11
                         },
-                        color: '#64748b',
+                        color: document.body.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#64748b', // Dynamic tick color
                         callback: function(value) {
                             return '$' + value;
                         }
@@ -293,7 +446,7 @@ function renderChart(graphData) {
                             family: "'Inter', sans-serif",
                             size: 11
                         },
-                        color: '#64748b',
+                        color: document.body.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#64748b', // Dynamic tick color
                         maxTicksLimit: 6,
                         maxRotation: 0
                     }

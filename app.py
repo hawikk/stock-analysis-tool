@@ -76,6 +76,14 @@ def get_info():
         current_bb_high = bb.bollinger_hband().iloc[-1]
         current_bb_low = bb.bollinger_lband().iloc[-1]
 
+        # Extract website for logo fallback
+        website = info.get('website', '')
+        logo_url = ""
+        if website:
+            # Simple hack to get logo from clearbit
+            domain = website.replace('https://', '').replace('http://', '').replace('www.', '').split('/')[0]
+            logo_url = f"https://logo.clearbit.com/{domain}"
+
         company_info = {
             'name': info.get('longName', ticker_symbol),
             'sector': info.get('sector', 'N/A'),
@@ -86,7 +94,8 @@ def get_info():
             'peRatio': info.get('trailingPE', 'N/A'),
             'dividendYield': info.get('dividendYield', 'N/A'),
             'fiftyTwoWeekHigh': info.get('fiftyTwoWeekHigh', 'N/A'),
-            'fiftyTwoWeekLow': info.get('fiftyTwoWeekLow', 'N/A')
+            'fiftyTwoWeekLow': info.get('fiftyTwoWeekLow', 'N/A'),
+            'logo': logo_url
         }
 
         technicals = {
@@ -104,6 +113,70 @@ def get_info():
     except Exception as e:
         print(f"Error in info: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/history', methods=['GET'])
+@cache.cached(query_string=True)
+def get_history():
+    ticker_symbol = request.args.get('ticker')
+    period = request.args.get('period', '1y')
+    
+    if not ticker_symbol:
+        return jsonify({'error': 'No ticker provided'}), 400
+
+    try:
+        stock = yf.Ticker(ticker_symbol)
+        hist = stock.history(period=period)
+        
+        if hist.empty:
+             return jsonify({'error': 'No historical data found'}), 404
+        
+        # Convert timestamps to string
+        dates = hist.index.strftime('%Y-%m-%d').tolist()
+        prices = hist['Close'].tolist()
+        opens = hist['Open'].tolist()
+        highs = hist['High'].tolist()
+        lows = hist['Low'].tolist()
+        volumes = hist['Volume'].tolist()
+
+        return jsonify({
+            'dates': dates,
+            'close': prices,
+            'open': opens,
+            'high': highs,
+            'low': lows,
+            'volume': volumes
+        })
+    except Exception as e:
+        print(f"Error in history: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/search', methods=['GET'])
+def search_ticker():
+    query = request.args.get('q')
+    if not query:
+        return jsonify({'results': []})
+    
+    try:
+        # Use Yahoo Finance Autocomplete API
+        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=5&newsCount=0"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers)
+        data = response.json()
+        
+        results = []
+        if 'quotes' in data:
+            for quote in data['quotes']:
+                results.append({
+                    'symbol': quote.get('symbol'),
+                    'shortname': quote.get('shortname', ''),
+                    'longname': quote.get('longname', ''),
+                    'exchDisp': quote.get('exchDisp', '')
+                })
+        
+        return jsonify({'results': results})
+    except Exception as e:
+        print(f"Search error: {e}")
+        return jsonify({'results': []})
 
 @app.route('/api/news', methods=['GET'])
 @cache.cached(query_string=True)
@@ -123,6 +196,11 @@ def get_news():
 
         articles = []
         for article in news_data.get('articles', []):
+            # Filter out biztoc.com
+            source_name = article.get('source', {}).get('name', '').lower()
+            if 'biztoc' in source_name or 'biztoc.com' in (article.get('url') or ''):
+                continue
+
             articles.append({
                 'title': article.get('title'),
                 'description': article.get('description'),
