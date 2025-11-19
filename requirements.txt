@@ -9,3 +9,4 @@ ta
 python-dotenv
 Flask-Caching
 gunicorn
+vaderSentiment

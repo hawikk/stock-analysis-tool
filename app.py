@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import json
 from flask import Flask, render_template, request, jsonify
 from flask_caching import Cache
 import yfinance as yf
@@ -7,10 +8,11 @@ import requests
 from openai import OpenAI
 import pandas as pd
 import numpy as np
-from ta.momentum import RSIIndicator
+from ta.momentum import RSIIndicator, StochasticOscillator
 from ta.trend import MACD, SMAIndicator
-from ta.volatility import BollingerBands
+from ta.volatility import BollingerBands, AverageTrueRange
 from sklearn.linear_model import LinearRegression
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import datetime
 
 # Load environment variables
@@ -37,6 +39,57 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 def index():
     return render_template('index.html')
 
+def get_company_info(stock, ticker_symbol):
+    info = stock.info
+    logo_url = f"https://logo.clearbit.com/{info.get('website', '').split('//')[-1].split('/')[0]}" if info.get('website') else info.get('logo_url', '')
+    return {
+        'name': info.get('longName', ticker_symbol),
+        'logo': logo_url,
+        'sector': info.get('sector', 'N/A'),
+        'industry': info.get('industry', 'N/A'),
+        'summary': info.get('longBusinessSummary', 'N/A'),
+        'currentPrice': info.get('currentPrice', 'N/A'),
+        'marketCap': info.get('marketCap', 'N/A'),
+        'peRatio': info.get('trailingPE', 'N/A'),
+        'dividendYield': info.get('dividendYield', 'N/A'),
+        'fiftyTwoWeekHigh': info.get('fiftyTwoWeekHigh', 'N/A'),
+        'fiftyTwoWeekLow': info.get('fiftyTwoWeekLow', 'N/A')
+    }
+
+def get_technical_indicators(hist):
+    # RSI
+    rsi = RSIIndicator(close=hist["Close"], window=14).rsi().iloc[-1]
+    # MACD
+    macd = MACD(close=hist["Close"])
+    macd_val = macd.macd().iloc[-1]
+    macd_signal = macd.macd_signal().iloc[-1]
+    # SMAs
+    sma50 = SMAIndicator(close=hist["Close"], window=50).sma_indicator().iloc[-1]
+    sma200 = SMAIndicator(close=hist["Close"], window=200).sma_indicator().iloc[-1]
+    # Bollinger Bands
+    bb = BollingerBands(close=hist["Close"], window=20)
+    bb_high = bb.bollinger_hband().iloc[-1]
+    bb_low = bb.bollinger_lband().iloc[-1]
+    # ATR
+    atr = AverageTrueRange(high=hist["High"], low=hist["Low"], close=hist["Close"], window=14).average_true_range().iloc[-1]
+    # Stochastic Oscillator
+    stoch = StochasticOscillator(high=hist["High"], low=hist["Low"], close=hist["Close"], window=14, smooth_window=3)
+    stoch_k = stoch.stoch().iloc[-1]
+    stoch_d = stoch.stoch_signal().iloc[-1]
+
+    return {
+        'RSI (14)': round(rsi, 2),
+        'MACD': round(macd_val, 2),
+        'MACD Signal': round(macd_signal, 2),
+        'SMA (50)': round(sma50, 2) if not np.isnan(sma50) else "N/A",
+        'SMA (200)': round(sma200, 2) if not np.isnan(sma200) else "N/A",
+        'Bollinger High': round(bb_high, 2),
+        'Bollinger Low': round(bb_low, 2),
+        'ATR (14)': round(atr, 2),
+        'Stochastic %K': round(stoch_k, 2),
+        'Stochastic %D': round(stoch_d, 2)
+    }
+
 @app.route('/api/info', methods=['GET'])
 @cache.cached(query_string=True)
 def get_info():
@@ -46,58 +99,12 @@ def get_info():
 
     try:
         stock = yf.Ticker(ticker_symbol)
-        info = stock.info
-        
-        # Get historical data for technicals
         hist = stock.history(period="1y")
         if hist.empty:
-             return jsonify({'error': 'No historical data found'}), 404
+            return jsonify({'error': 'No historical data found'}), 404
 
-        # Calculate Technicals (5 best)
-        # 1. RSI
-        rsi = RSIIndicator(close=hist["Close"], window=14)
-        current_rsi = rsi.rsi().iloc[-1]
-
-        # 2. MACD
-        macd = MACD(close=hist["Close"])
-        current_macd = macd.macd().iloc[-1]
-        current_macd_signal = macd.macd_signal().iloc[-1]
-
-        # 3. SMA 50
-        sma50 = SMAIndicator(close=hist["Close"], window=50)
-        current_sma50 = sma50.sma_indicator().iloc[-1]
-
-        # 4. SMA 200
-        sma200 = SMAIndicator(close=hist["Close"], window=200)
-        current_sma200 = sma200.sma_indicator().iloc[-1]
-
-        # 5. Bollinger Bands
-        bb = BollingerBands(close=hist["Close"], window=20)
-        current_bb_high = bb.bollinger_hband().iloc[-1]
-        current_bb_low = bb.bollinger_lband().iloc[-1]
-
-        company_info = {
-            'name': info.get('longName', ticker_symbol),
-            'sector': info.get('sector', 'N/A'),
-            'industry': info.get('industry', 'N/A'),
-            'summary': info.get('longBusinessSummary', 'N/A'),
-            'currentPrice': info.get('currentPrice', 'N/A'),
-            'marketCap': info.get('marketCap', 'N/A'),
-            'peRatio': info.get('trailingPE', 'N/A'),
-            'dividendYield': info.get('dividendYield', 'N/A'),
-            'fiftyTwoWeekHigh': info.get('fiftyTwoWeekHigh', 'N/A'),
-            'fiftyTwoWeekLow': info.get('fiftyTwoWeekLow', 'N/A')
-        }
-
-        technicals = {
-            'RSI (14)': round(current_rsi, 2),
-            'MACD': round(current_macd, 2),
-            'MACD Signal': round(current_macd_signal, 2),
-            'SMA (50)': round(current_sma50, 2) if not np.isnan(current_sma50) else "N/A",
-            'SMA (200)': round(current_sma200, 2) if not np.isnan(current_sma200) else "N/A",
-            'Bollinger High': round(current_bb_high, 2),
-            'Bollinger Low': round(current_bb_low, 2)
-        }
+        company_info = get_company_info(stock, ticker_symbol)
+        technicals = get_technical_indicators(hist)
 
         return jsonify({'info': company_info, 'technicals': technicals})
 
@@ -110,26 +117,30 @@ def get_info():
 def get_news():
     ticker_symbol = request.args.get('ticker')
     if not ticker_symbol:
-         return jsonify({'error': 'No ticker provided'}), 400
+        return jsonify({'error': 'No ticker provided'}), 400
 
     try:
-        # Use newsapi.org
         url = f'https://newsapi.org/v2/everything?q={ticker_symbol}&sortBy=publishedAt&language=en&pageSize=12&apiKey={NEWS_API_KEY}'
         response = requests.get(url)
         news_data = response.json()
 
         if news_data.get('status') != 'ok':
-             return jsonify({'error': 'Failed to fetch news', 'details': news_data}), 500
+            return jsonify({'error': 'Failed to fetch news', 'details': news_data}), 500
 
         articles = []
+        analyzer = SentimentIntensityAnalyzer()
         for article in news_data.get('articles', []):
+            text_to_analyze = (article.get('title') or '') + " " + (article.get('description') or '')
+            sentiment = analyzer.polarity_scores(text_to_analyze)
+
             articles.append({
                 'title': article.get('title'),
                 'description': article.get('description'),
                 'url': article.get('url'),
                 'image': article.get('urlToImage'),
                 'source': article.get('source', {}).get('name'),
-                'publishedAt': article.get('publishedAt')
+                'publishedAt': article.get('publishedAt'),
+                'sentiment': sentiment['compound']
             })
 
         return jsonify({'articles': articles})
@@ -163,67 +174,43 @@ def get_ai_summary():
         print(f"AI Error: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/ml', methods=['GET'])
+@app.route('/api/history', methods=['GET'])
 @cache.cached(query_string=True)
-def get_ml_analysis():
+def get_history():
     ticker_symbol = request.args.get('ticker')
+    period = request.args.get('period', '1y')
     if not ticker_symbol:
         return jsonify({'error': 'No ticker provided'}), 400
 
     try:
         stock = yf.Ticker(ticker_symbol)
-        hist = stock.history(period="2y")
-        
+        hist = stock.history(period=period)
         if hist.empty:
-            return jsonify({'error': 'Not enough data for ML'}), 400
-        
-        # Prepare data for Linear Regression (Predicting Next Day Close)
-        hist['DateOrdinal'] = pd.to_datetime(hist.index).map(datetime.datetime.toordinal)
-        
-        # Simple Model: Use Date to predict Close (Trend Analysis)
-        X = hist[['DateOrdinal']].values
-        y = hist['Close'].values
-        
-        # Train on last 60 days for recent trend
-        X_recent = X[-60:]
-        y_recent = y[-60:]
-        dates_recent = hist.index[-60:].strftime('%Y-%m-%d').tolist()
-        
-        model = LinearRegression()
-        model.fit(X_recent, y_recent)
-        
-        # Predict next day
-        next_day_ordinal = X_recent[-1][0] + 1
-        prediction = model.predict([[next_day_ordinal]])[0]
-        
-        current_price = y_recent[-1]
-        slope = model.coef_[0]
-        
-        trend = "Upward" if slope > 0 else "Downward"
+            return jsonify({'error': 'No historical data found'}), 404
 
-        # Generate regression line points for the graph
-        regression_line = model.predict(X_recent).tolist()
+        hist.reset_index(inplace=True)
+        hist['Date'] = hist['Date'].dt.strftime('%Y-%m-%d')
         
-        analysis = {
-            'current_price': round(current_price, 2),
-            'predicted_next_close': round(prediction, 2),
-            'trend_60_days': trend,
-            'slope': round(slope, 4),
-            'model_score': round(model.score(X_recent, y_recent), 4),
-            'message': f"Based on a linear regression of the last 60 days, the trend is {trend}. The model predicts a price of ${round(prediction, 2)} for the next trading day."
-        }
-        
-        graph_data = {
-            'dates': dates_recent,
-            'prices': y_recent.tolist(),
-            'regression': regression_line
-        }
-        
-        return jsonify({'analysis': analysis, 'graph_data': graph_data})
+        return jsonify(hist.to_dict(orient='records'))
 
     except Exception as e:
-        print(f"ML Error: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/search', methods=['GET'])
+def search_tickers():
+    query = request.args.get('q', '')
+    if not query:
+        return jsonify([])
+
+    try:
+        with open('tickers.json', 'r') as f:
+            tickers = json.load(f)
+
+        matches = [t for t in tickers if query.lower() in t['symbol'].lower() or query.lower() in t['name'].lower()]
+        return jsonify(matches)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

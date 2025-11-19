@@ -265,3 +265,17 @@ body {
     letter-spacing: 1px;
     color: #fff;
 }
+
+/* Dark Mode Toggle */
+.dark-mode-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+}
+
+.dark-mode .dark-mode-toggle .btn {
+    background-color: var(--card-bg);
+    color: var(--secondary-text);
+    border-color: #334155;
+}

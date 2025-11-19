@@ -1,0 +1,15 @@
+// This is a placeholder file for ticker data.
+// In a production environment, this should be replaced with a more robust solution,
+// such as a database or an API that provides a comprehensive list of tickers.
+[
+    {"symbol":"TSLA","name":"Tesla, Inc."},
+    {"symbol":"AAPL","name":"Apple Inc."},
+    {"symbol":"AMZN","name":"Amazon.com, Inc."},
+    {"symbol":"MSFT","name":"Microsoft Corporation"},
+    {"symbol":"GOOGL","name":"Alphabet Inc."},
+    {"symbol":"FB","name":"Meta Platforms, Inc."},
+    {"symbol":"NVDA","name":"NVIDIA Corporation"},
+    {"symbol":"JPM","name":"JPMorgan Chase & Co."},
+    {"symbol":"V","name":"Visa Inc."},
+    {"symbol":"JNJ","name":"Johnson & Johnson"}
+]

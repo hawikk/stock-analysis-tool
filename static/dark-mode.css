@@ -1,0 +1,59 @@
+body.dark-mode {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --secondary-text: #94a3b8;
+    color: #cbd5e1;
+}
+
+.dark-mode .hero-section {
+    --hero-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.dark-mode .card,
+.dark-mode .search-bar .input-group-text,
+.dark-mode .search-bar .form-control {
+    background-color: var(--card-bg);
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+.dark-mode .nav-pills .nav-link {
+    background-color: var(--card-bg);
+    color: var(--secondary-text);
+    border-color: #334155;
+}
+
+.dark-mode .nav-pills .nav-link:hover {
+    background-color: #334155;
+}
+
+.dark-mode .nav-pills .nav-link.active {
+    background: var(--accent-gradient);
+    color: white;
+}
+
+.dark-mode #stockTitle {
+    color: #f1f5f9;
+}
+
+.dark-mode .metric-card .value {
+    color: #f1f5f9;
+}
+
+.dark-mode .news-card .card-title a {
+    color: #f1f5f9;
+}
+
+.dark-mode .list-group-item {
+    background: transparent;
+    border-color: #334155;
+}
+
+.dark-mode .table th {
+    color: #94a3b8;
+}
+
+.dark-mode .table-light {
+    --bs-table-bg: #334155;
+    --bs-table-border-color: #475569;
+}
