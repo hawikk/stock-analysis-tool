@@ -1,0 +1,40 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  RUN_REGION: us-central1
+  SERVICE_NAME: stock-analysis-tool
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Build and Push Container
+        run: |
+          gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE_NAME \
+            --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
+            --region $RUN_REGION \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars OPENAI_API_KEY=${{ secrets.OPENAI_KEY }},NEWS_API_KEY=${{ secrets.NEWS_KEY }}
