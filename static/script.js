@@ -369,14 +369,46 @@ function fetchNews(ticker) {
             const imgUrl = article.image || 'https://via.placeholder.com/400x200?text=No+Image';
             const date = new Date(article.publishedAt).toLocaleDateString();
 
+            let sentimentIcon = '';
+            let sentimentClass = '';
+            let sentimentLabel = '';
+
+            // Sentiment logic
+            if (article.sentiment === 'positive') {
+                sentimentIcon = '<i class="fa-solid fa-arrow-trend-up"></i>';
+                sentimentClass = 'sentiment-positive';
+                sentimentLabel = 'Bullish';
+            } else if (article.sentiment === 'negative') {
+                sentimentIcon = '<i class="fa-solid fa-arrow-trend-down"></i>';
+                sentimentClass = 'sentiment-negative';
+                sentimentLabel = 'Bearish';
+            } else {
+                sentimentIcon = '<i class="fa-solid fa-minus"></i>';
+                sentimentClass = 'sentiment-neutral';
+                sentimentLabel = 'Neutral';
+            }
+
             newsHtml += `
                 <div class="col-md-4">
-                    <div class="card news-card">
-                        <img src="${imgUrl}" class="news-card-img" alt="${article.title}" onerror="this.src='https://via.placeholder.com/400x200?text=Image+Error'">
-                        <div class="card-body">
-                            <h5 class="card-title"><a href="${article.url}" target="_blank" class="text-decoration-none stretched-link">${article.title}</a></h5>
-                            <div class="news-meta">
-                                <span>${article.source}</span>
+                    <div class="card news-card h-100 border-0 shadow-sm">
+                        <div class="position-relative">
+                            <img src="${imgUrl}" class="card-img-top news-card-img" alt="${article.title}" onerror="this.src='https://via.placeholder.com/400x200?text=Image+Error'">
+                            <div class="sentiment-badge ${sentimentClass}">
+                                ${sentimentIcon}
+                                <span>${sentimentLabel}</span>
+                            </div>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title mb-3">
+                                <a href="${article.url}" target="_blank" class="text-decoration-none stretched-link text-reset hover-primary">
+                                    ${article.title}
+                                </a>
+                            </h5>
+                            <div class="news-meta mt-auto">
+                                <span class="d-flex align-items-center gap-2">
+                                    <i class="fa-regular fa-newspaper"></i>
+                                    ${article.source}
+                                </span>
                                 <span>${date}</span>
                             </div>
                         </div>

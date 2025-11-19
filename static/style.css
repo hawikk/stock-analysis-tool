@@ -505,6 +505,7 @@ h1, h2, h3, h4, h5, h6 {
     background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
     z-index: 10;
     animation: ai-pulse 2s infinite ease-in-out;
 }
@@ -764,3 +765,79 @@ h1, h2, h3, h4, h5, h6 {
 .markdown-body p { margin-bottom: 1rem; }
 .markdown-body strong { color: var(--primary); }
 
+/* News Card Styles */
+.news-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    height: 100%;
+    background: var(--bg-card);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.news-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.news-card-img {
+    height: 200px;
+    object-fit: cover;
+    width: 100%;
+    border-bottom: 1px solid var(--border);
+}
+
+.news-card .card-body {
+    padding: 1.5rem;
+    position: relative;
+    flex: 1;
+}
+
+.news-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.hover-primary {
+    transition: color 0.2s;
+}
+
+.hover-primary:hover {
+    color: var(--primary) !important;
+}
+
+/* Sentiment Badge */
+.sentiment-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(4px);
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 2;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+[data-theme="dark"] .sentiment-badge {
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+}
+
+.sentiment-positive { color: var(--success); }
+.sentiment-negative { color: #ef4444; }
+.sentiment-neutral { color: var(--text-secondary); }

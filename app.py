@@ -13,6 +13,7 @@ from ta.trend import MACD, SMAIndicator
 from ta.volatility import BollingerBands
 from sklearn.linear_model import LinearRegression
 import datetime
+from textblob import TextBlob
 
 # Load environment variables
 load_dotenv()
@@ -210,13 +211,26 @@ def get_news():
             if 'biztoc' in source_name or 'biztoc.com' in (article.get('url') or ''):
                 continue
 
+            # Calculate Sentiment
+            title = article.get('title', '')
+            blob = TextBlob(title)
+            polarity = blob.sentiment.polarity
+            
+            if polarity > 0.1:
+                sentiment = 'positive'
+            elif polarity < -0.1:
+                sentiment = 'negative'
+            else:
+                sentiment = 'neutral'
+
             articles.append({
                 'title': article.get('title'),
                 'description': article.get('description'),
                 'url': article.get('url'),
                 'image': article.get('urlToImage'),
                 'source': article.get('source', {}).get('name'),
-                'publishedAt': article.get('publishedAt')
+                'publishedAt': article.get('publishedAt'),
+                'sentiment': sentiment
             })
 
         return jsonify({'articles': articles})
