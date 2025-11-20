@@ -162,10 +162,11 @@ jobs:
 
 ## 🛡️ Cloudflare Integration (Future)
 
-To implement Cloudflare for DDoS protection, CDN, and DNS management:
+To implement Cloudflare for DDoS protection, CDN, and DNS management, see the detailed guide in [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md).
 
+**Quick Summary:**
 1.  **Add Site**: Sign up for Cloudflare and add your domain.
 2.  **Update DNS**: Change your domain's nameservers to the ones provided by Cloudflare.
-3.  **Proxy Traffic**: In the Cloudflare DNS dashboard, create a CNAME record pointing your domain (e.g., `www`) to the Cloud Run domain url (e.g., `stock-tool-xyz.a.run.app`). Ensure the "Proxy status" is "Proxied" (Orange cloud).
-4.  **SSL/TLS**: Set SSL/TLS mode to "Full" or "Full (Strict)" in Cloudflare settings since Cloud Run provides a valid SSL certificate.
+3.  **Proxy Traffic**: Create a CNAME record pointing to your Cloud Run URL (e.g., `stock-tool-xyz.a.run.app`) and enable "Proxied" status.
+4.  **SSL/TLS**: Set mode to "Full (Strict)".
 
