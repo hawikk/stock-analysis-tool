@@ -160,9 +160,9 @@ jobs:
 
 ---
 
-## 🛡️ Cloudflare Integration (Future)
+## 🛡️ Cloudflare Integration
 
-To implement Cloudflare for DDoS protection, CDN, and DNS management, see the detailed guide in [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md).
+Implemented Cloudflare for DDoS protection, CDN, and DNS management
 
 **Quick Summary:**
 1.  **Add Site**: Sign up for Cloudflare and add your domain.
