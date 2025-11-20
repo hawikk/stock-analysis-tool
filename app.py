@@ -158,6 +158,285 @@ def get_history():
         print(f"Error in history: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/dashboard_data', methods=['GET'])
+@cache.cached(query_string=True)
+def get_dashboard_data():
+    ticker_symbol = request.args.get('ticker')
+    if not ticker_symbol:
+        return jsonify({'error': 'No ticker provided'}), 400
+
+    try:
+        stock = yf.Ticker(ticker_symbol)
+        hist = stock.history(period="1y")
+
+        if hist.empty:
+             return jsonify({'error': 'No historical data found'}), 404
+
+        # --- 1. Prepare Chart Data (OHLC + Volume) ---
+        # Convert timestamps to string (YYYY-MM-DD) for Lightweight Charts
+        hist.index = hist.index.strftime('%Y-%m-%d')
+
+        ohlc_data = []
+        volume_data = []
+
+        for date, row in hist.iterrows():
+            ohlc_data.append({
+                'time': date,
+                'open': row['Open'],
+                'high': row['High'],
+                'low': row['Low'],
+                'close': row['Close']
+            })
+            # Color volume bars: Green if close > open, Red if close < open
+            vol_color = 'rgba(38, 166, 154, 0.5)' if row['Close'] >= row['Open'] else 'rgba(239, 83, 80, 0.5)'
+            volume_data.append({
+                'time': date,
+                'value': row['Volume'],
+                'color': vol_color
+            })
+
+        # --- 2. Calculate Technicals (Historical Series) ---
+        close_series = hist['Close']
+
+        # SMA
+        sma50_indicator = SMAIndicator(close=close_series, window=50)
+        sma200_indicator = SMAIndicator(close=close_series, window=200)
+
+        sma50 = sma50_indicator.sma_indicator()
+        sma200 = sma200_indicator.sma_indicator()
+
+        # Bollinger Bands
+        bb_indicator = BollingerBands(close=close_series, window=20, window_dev=2)
+        bb_upper = bb_indicator.bollinger_hband()
+        bb_lower = bb_indicator.bollinger_lband()
+        bb_mid = bb_indicator.bollinger_mavg() # Usually same as SMA20
+
+        # RSI
+        rsi_indicator = RSIIndicator(close=close_series, window=14)
+        rsi = rsi_indicator.rsi()
+
+        # MACD
+        macd_indicator = MACD(close=close_series)
+        macd_line = macd_indicator.macd()
+        macd_signal = macd_indicator.macd_signal()
+        macd_hist = macd_indicator.macd_diff()
+
+        # Helper to format series for charts (drop NaNs for cleanliness or handle on frontend)
+        # Lightweight Charts handles missing data by just not drawing, but we need consistent dates.
+        # We will zip with dates.
+
+        def format_series(series):
+            data = []
+            for date, value in series.items():
+                if not np.isnan(value):
+                    data.append({'time': date, 'value': value})
+            return data
+
+        sma50_data = format_series(sma50)
+        sma200_data = format_series(sma200)
+        bb_upper_data = format_series(bb_upper)
+        bb_lower_data = format_series(bb_lower)
+        bb_mid_data = format_series(bb_mid)
+        rsi_data = format_series(rsi)
+
+        macd_data = [] # Combine line and signal
+        macd_hist_data = []
+
+        # We iterate through the dataframe index to ensure alignment
+        for date in hist.index:
+            m_val = macd_line.get(date)
+            s_val = macd_signal.get(date)
+            h_val = macd_hist.get(date)
+
+            if not np.isnan(m_val) and not np.isnan(s_val):
+                # For MACD pane
+                # Note: We'll separate these on frontend or send as custom object
+                pass
+
+        # Re-structure MACD for easier frontend consumption (separate series)
+        macd_line_data = format_series(macd_line)
+        macd_signal_data = format_series(macd_signal)
+
+        # Histogram needs color
+        macd_histogram_data = []
+        for date, value in macd_hist.items():
+            if not np.isnan(value):
+                color = '#26a69a' if value >= 0 else '#ef5350' # Green/Red
+                # Dim color if decreasing? Optional polish.
+                macd_histogram_data.append({'time': date, 'value': value, 'color': color})
+
+
+        # --- 3. Generate Chart Markers (Crosses & Squeezes) ---
+        markers = []
+
+        # A. Golden / Death Crosses
+        # Find indices where 50 crosses 200
+        # Align indices
+        common_index = sma50.index.intersection(sma200.index)
+        s50 = sma50.loc[common_index]
+        s200 = sma200.loc[common_index]
+
+        # We need at least 2 points
+        if len(s50) > 1:
+            # Check for crossovers
+            # Golden Cross: 50 > 200 AND Prev_50 <= Prev_200
+            golden = (s50 > s200) & (s50.shift(1) <= s200.shift(1))
+
+            # Death Cross: 50 < 200 AND Prev_50 >= Prev_200
+            death = (s50 < s200) & (s50.shift(1) >= s200.shift(1))
+
+            for date, is_golden in golden.items():
+                if is_golden:
+                     markers.append({
+                        'time': date,
+                        'position': 'belowBar',
+                        'color': '#FFD700', # Gold
+                        'shape': 'arrowUp',
+                        'text': 'Golden Cross',
+                        'size': 2
+                     })
+
+            for date, is_death in death.items():
+                if is_death:
+                     markers.append({
+                        'time': date,
+                        'position': 'aboveBar',
+                        'color': '#FF4500', # OrangeRed
+                        'shape': 'arrowDown',
+                        'text': 'Death Cross',
+                        'size': 2
+                     })
+
+        # B. Volatility Squeeze
+        # Bandwidth = (Upper - Lower) / Middle (or just Upper - Lower)
+        # Standard squeeze logic: Bandwidth is within the lowest X percentile (e.g. 5%) of the last N periods (e.g. 6 months ~ 126 days)
+
+        bb_width = (bb_upper - bb_lower)
+        # We'll calculate squeeze based on the full loaded history (1y)
+        # Threshold: 10th percentile of width
+        if not bb_width.empty:
+             threshold = bb_width.quantile(0.10)
+             is_squeeze = bb_width < threshold
+
+             for date, squeezed in is_squeeze.items():
+                 if squeezed:
+                     # We want to show a marker, but maybe not on every single candle if it's a long squeeze.
+                     # But for now, simple dots below/above are fine.
+                     # Let's put a small circle on the candle
+                     markers.append({
+                        'time': date,
+                        'position': 'inBar', # or belowBar
+                        'color': 'rgba(255, 255, 0, 0.5)',
+                        'shape': 'circle',
+                        'text': 'Squeeze',
+                        'size': 0.5 # Small dot
+                     })
+
+        # Sort markers by time just in case
+        markers.sort(key=lambda x: x['time'])
+
+
+        # --- 4. Generate "The Verdict" ---
+        current_price = close_series.iloc[-1]
+        curr_sma50 = sma50.iloc[-1]
+        curr_sma200 = sma200.iloc[-1]
+        curr_rsi = rsi.iloc[-1]
+        curr_macd = macd_hist.iloc[-1]
+
+        score = 0
+        reasons = []
+
+        # 1. Trend (Price vs SMA200)
+        if not np.isnan(curr_sma200):
+            if current_price > curr_sma200:
+                score += 2
+                reasons.append("Price is in a long-term Uptrend (above SMA 200).")
+            else:
+                score -= 2
+                reasons.append("Price is in a long-term Downtrend (below SMA 200).")
+
+        # 2. Golden/Death Cross
+        if not np.isnan(curr_sma50) and not np.isnan(curr_sma200):
+            # Check if cross happened recently (last 5 days)
+            recent_sma50 = sma50.iloc[-5:]
+            recent_sma200 = sma200.iloc[-5:]
+
+            # Simple check: is 50 > 200 now?
+            if curr_sma50 > curr_sma200:
+                score += 1
+                reasons.append("Bullish: SMA 50 is above SMA 200.")
+            else:
+                score -= 1
+                reasons.append("Bearish: SMA 50 is below SMA 200.")
+
+        # 3. RSI
+        if curr_rsi > 70:
+            score -= 1
+            reasons.append("RSI is Overbought (>70). Potential pullback.")
+        elif curr_rsi < 30:
+            score += 1
+            reasons.append("RSI is Oversold (<30). Potential bounce.")
+        else:
+            reasons.append(f"RSI is Neutral ({round(curr_rsi, 2)}).")
+
+        # 4. MACD Momentum
+        if curr_macd > 0:
+            score += 1
+            reasons.append("MACD indicates positive momentum.")
+        else:
+            score -= 1
+            reasons.append("MACD indicates negative momentum.")
+
+        # Determine Signal Strength
+        # Range approx -5 to +5
+        if score >= 4:
+            signal = "Strong Buy"
+            signal_color = "green"
+        elif score >= 1:
+            signal = "Buy"
+            signal_color = "#10b981" # Emerald
+        elif score <= -4:
+            signal = "Strong Sell"
+            signal_color = "red"
+        elif score <= -1:
+            signal = "Sell"
+            signal_color = "#ef4444" # Red
+        else:
+            signal = "Neutral"
+            signal_color = "gray"
+
+        verdict = {
+            'signal': signal,
+            'score': score,
+            'color': signal_color,
+            'reasons': reasons
+        }
+
+        # --- 5. Construct Response ---
+        response_data = {
+            'ohlc': ohlc_data,
+            'volume': volume_data,
+            'indicators': {
+                'sma50': sma50_data,
+                'sma200': sma200_data,
+                'bb_upper': bb_upper_data,
+                'bb_lower': bb_lower_data,
+                'bb_mid': bb_mid_data,
+                'rsi': rsi_data,
+                'macd_line': macd_line_data,
+                'macd_signal': macd_signal_data,
+                'macd_hist': macd_histogram_data
+            },
+            'markers': markers,
+            'verdict': verdict
+        }
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        print(f"Dashboard Data Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # ... (existing /api/search) ...
 @app.route('/api/search', methods=['GET'])
 def search_ticker():

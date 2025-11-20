@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Insights</title>
+    <title>Market Insights Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,10 +12,12 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lightweight Charts (Pinned Version) -->
+    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
     <!-- Marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Chart.js (Legacy support for ML chart if needed, otherwise remove) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -24,235 +26,190 @@
         <i class="fa-solid fa-moon fs-5"></i>
     </button>
 
-    <!-- Hero Section -->
-    <div class="hero-section">
-        <div class="animated-bg"></div>
-        <div class="container text-center hero-content">
-            <div class="mb-4 d-inline-flex align-items-center px-3 py-2 rounded-pill glass-badge">
-                <span class="badge bg-gradient-brand rounded-pill me-2 px-2">New</span>
-                <span class="small fw-semibold">AI Analysis v2.0 • Powered by GPT-5.1</span>
-            </div>
+    <!-- Top Navigation / Search Bar -->
+    <nav class="navbar navbar-expand-lg sticky-top glass-nav p-3">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
+                <i class="fa-solid fa-layer-group text-primary"></i>
+                Market Insights <span class="badge bg-primary ms-2 rounded-pill text-white" style="font-size: 0.6em;">PRO</span>
+            </a>
             
-            <h1 class="display-3 fw-bold mb-3 hero-title">
-                Market Insights
-            </h1>
-            <p class="lead text-muted mb-5 mx-auto hero-subtitle" style="max-width: 550px;">
-                Real-time technicals, news sentiment, and AI predictions.<br>
-                <span class="text-primary">Your edge in the market.</span>
-            </p>
-            
-            <!-- Search Bar -->
-            <div class="search-container">
-                <div class="search-input-group">
-                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" id="tickerInput" class="form-control-search" placeholder="Search any ticker... (NVDA, AAPL, TSLA)" autocomplete="off">
-                    <button class="btn-search" type="button" id="searchBtn">
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
+            <div class="d-flex align-items-center flex-grow-1 mx-lg-5 position-relative">
+                <div class="search-container w-100" style="max-width: 600px;">
+                     <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" id="tickerInput" class="form-control border-start-0 shadow-none" placeholder="Search ticker (e.g. NVDA)..." autocomplete="off">
+                        <button class="btn btn-primary" type="button" id="searchBtn">Search</button>
+                     </div>
+                     <!-- Autocomplete -->
+                     <div id="suggestionsBox" class="suggestions-box d-none"></div>
                 </div>
-                <!-- Autocomplete -->
-                <div id="suggestionsBox" class="suggestions-box d-none"></div>
             </div>
-            
-            <!-- Popular Tickers -->
-            <div class="mt-4">
-                <span class="text-muted small me-2">Popular:</span>
-                <span class="ticker-chip">NVDA</span>
-                <span class="ticker-chip">AAPL</span>
-                <span class="ticker-chip">MSFT</span>
-                <span class="ticker-chip">TSLA</span>
+
+             <div class="d-none d-lg-flex align-items-center gap-3">
+                <span class="ticker-chip-nav">NVDA</span>
+                <span class="ticker-chip-nav">AAPL</span>
+                <span class="ticker-chip-nav">TSLA</span>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <div class="container" style="margin-top: 2rem; position: relative;">
-        <!-- Content Section -->
-        <div id="resultSection" class="d-none">
+    <div class="container-fluid px-4 py-4">
+
+        <!-- Initial State -->
+        <div id="initialState" class="text-center py-5 mt-5">
+            <h1 class="display-5 fw-bold mb-3">Professional Trading Dashboard</h1>
+            <p class="text-muted lead mb-4">Enter a stock ticker to view real-time institutional-grade technical analysis.</p>
+            <div class="d-flex justify-content-center gap-3">
+                <div class="feature-icon-box"><i class="fa-solid fa-chart-candlestick"></i><span>Interactive Charts</span></div>
+                <div class="feature-icon-box"><i class="fa-solid fa-bolt"></i><span>Live Signals</span></div>
+                <div class="feature-icon-box"><i class="fa-solid fa-brain"></i><span>AI Insights</span></div>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboard" class="d-none">
             
-            <!-- Stock Header - Redesigned -->
-            <div class="stock-header-card mb-5">
-                <div class="stock-header-gradient"></div>
-                <div class="stock-header-content">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <div class="logo-wrapper me-4">
-                                <img id="companyLogo" src="" alt="" class="d-none company-logo">
-                            </div>
-                            <div>
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <i class="fa-solid fa-brain text-primary fs-3 me-2"></i>
-                                        <h2 id="stockTitle" class="mb-0 fw-bold stock-title"></h2>
-                                        <span class="live-badge">
-                                        <span class="live-dot"></span> Live
-                                    </span>
-                                </div>
-                                <p class="text-muted mb-0 small" id="stockSector">Loading sector info...</p>
-                            </div>
-                        </div>
-                        <div class="text-end d-none d-md-block">
-                            <div class="stock-price-large" id="stockPriceLarge">$0.00</div>
-                            <div class="stock-change" id="stockChange">+0.00 (0.00%)</div>
-                        </div>
+            <!-- Header Info -->
+            <div class="row align-items-end mb-4">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-3">
+                         <div class="logo-wrapper-sm bg-white rounded p-1">
+                             <img id="companyLogo" src="" class="d-none" width="40" height="40">
+                             <i class="fa-solid fa-building fs-4 text-primary d-none default-logo"></i>
+                         </div>
+                         <div>
+                             <h2 class="mb-0 fw-bold"><span id="stockSymbol">---</span> <small class="text-muted fs-5 fw-normal" id="stockName">---</small></h2>
+                             <div class="d-flex gap-3 text-muted small">
+                                 <span id="stockSector">---</span>
+                                 <span>•</span>
+                                 <span id="marketStatus"><span class="live-dot"></span> Market Open</span>
+                             </div>
+                         </div>
                     </div>
+                </div>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <h2 class="mb-0 font-monospace" id="currentPrice">---</h2>
+                    <div id="priceChange" class="fw-medium">---</div>
                 </div>
             </div>
 
-            <!-- Tabs -->
-            <div class="d-flex justify-content-center mb-5">
-                <ul class="nav nav-pills-modern" id="stockTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">
-                            <i class="fa-solid fa-chart-line me-2"></i>Overview
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="news-tab" data-bs-toggle="tab" data-bs-target="#news" type="button" role="tab">
-                            <i class="fa-solid fa-newspaper me-2"></i>News
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai" type="button" role="tab">
-                            <i class="fa-solid fa-brain me-2"></i>AI Insights
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="ml-tab" data-bs-toggle="tab" data-bs-target="#ml" type="button" role="tab">
-                            <i class="fa-solid fa-chart-area me-2"></i>Forecast
-                        </button>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Tab Content -->
-            <div class="tab-content" id="stockTabsContent">
+            <!-- Main Grid -->
+            <div class="row g-3 h-100">
                 
-                <!-- Overview -->
-                <div class="tab-pane fade show active" id="info" role="tabpanel">
-                    <div id="infoLoading" class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="text-muted mt-3 small">Fetching market data...</p>
-                    </div>
-                    <div id="infoContent" class="d-none">
-                        <!-- Metrics Grid -->
-                        <div class="row g-3 mb-4" id="keyMetrics"></div>
-
-                        <!-- Chart -->
-                        <div class="card mb-4 card-hover">
-                            <div class="card-header d-flex justify-content-between align-items-center border-0 pb-0 pt-4 px-4">
-                                <h5 class="mb-0"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Price Action</h5>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-outline-secondary active">1Y</button>
-                                </div>
+                <!-- Left Column: Chart -->
+                <div class="col-xl-9 col-lg-8">
+                    <div class="card h-100 border-0 shadow-sm dashboard-card">
+                        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-3 px-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <h6 class="mb-0 fw-bold"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Technical Chart</h6>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">Daily</span>
                             </div>
-                            <div class="card-body px-2">
-                                <div class="chart-container" style="position: relative; height:380px;">
-                                    <canvas id="historyChart"></canvas>
+                            <div class="d-flex gap-2 small text-muted">
+                                <span class="d-flex align-items-center"><span class="legend-dot" style="background: #2962FF"></span> SMA 200</span>
+                                <span class="d-flex align-items-center"><span class="legend-dot" style="background: #FF9800"></span> SMA 50</span>
+                                <span class="d-flex align-items-center"><span class="legend-dot" style="background: rgba(38, 166, 154, 0.6)"></span> Bollinger</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0 position-relative">
+                             <div id="chartContainer" style="width: 100%; height: 600px;"></div>
+                             <div id="chartLoader" class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-glass d-none">
+                                 <div class="spinner-border text-primary" role="status"></div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Verdict & Stats -->
+                <div class="col-xl-3 col-lg-4">
+                    <div class="d-flex flex-column gap-3 h-100">
+
+                        <!-- The Verdict Card -->
+                        <div class="card border-0 shadow-sm dashboard-card flex-grow-0">
+                            <div class="card-header bg-transparent border-0 pt-3 px-3">
+                                <h6 class="mb-0 fw-bold"><i class="fa-solid fa-gavel me-2 text-primary"></i>Technical Verdict</h6>
+                            </div>
+                            <div class="card-body text-center pt-1 pb-4">
+                                <div class="verdict-gauge mb-3 position-relative d-inline-block">
+                                    <!-- Dynamic Gauge/Circle -->
+                                    <div id="verdictCircle" class="verdict-circle neutral">
+                                        <span id="verdictScore">0</span>
+                                    </div>
+                                </div>
+                                <h3 id="verdictSignal" class="fw-bold mb-2">NEUTRAL</h3>
+                                <p id="verdictSummary" class="text-muted small mb-3 px-2">Loading analysis...</p>
+
+                                <div class="text-start px-2">
+                                    <h6 class="small fw-bold text-uppercase text-muted mb-2">Key Drivers</h6>
+                                    <ul id="verdictReasons" class="list-unstyled small d-flex flex-column gap-2">
+                                        <!-- JS populated -->
+                                    </ul>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="row g-4">
-                            <div class="col-lg-8">
-                                <div class="card h-100 card-hover">
-                                    <div class="card-header border-0 pt-4 px-4">
-                                        <h5 class="mb-0"><i class="fa-solid fa-building me-2 text-primary"></i>About</h5>
-                                    </div>
-                                    <div class="card-body px-4 pb-4">
-                                        <div id="companyProfileData" class="mb-3"></div>
-                                        <p id="companySummary" class="text-muted mb-0 summary-truncate" style="line-height: 1.7;"></p>
-                                    </div>
+                        <!-- Key Stats Card -->
+                        <div class="card border-0 shadow-sm dashboard-card flex-grow-1">
+                            <div class="card-header bg-transparent border-0 pt-3 px-3">
+                                <h6 class="mb-0 fw-bold"><i class="fa-solid fa-list-check me-2 text-primary"></i>Fundamentals</h6>
+                            </div>
+                            <div class="card-body px-3">
+                                <div class="stats-grid" id="fundamentalsGrid">
+                                    <!-- JS Populated -->
                                 </div>
                             </div>
-                            <div class="col-lg-4">
-                                <div class="card h-100 card-hover">
-                                    <div class="card-header border-0 pt-4 px-4">
-                                        <h5 class="mb-0"><i class="fa-solid fa-sliders me-2 text-primary"></i>Technicals</h5>
-                                    </div>
-                                    <div class="card-body px-4">
-                                        <ul class="list-group list-group-flush" id="technicalsList"></ul>
-                                    </div>
-                                </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div> <!-- End Main Grid -->
+
+            <!-- Bottom Grid: News & AI -->
+            <div class="row g-3 mt-1">
+
+                <!-- AI Insights -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm dashboard-card h-100">
+                         <div class="card-header bg-transparent border-0 pt-3 px-3 d-flex justify-content-between">
+                            <h6 class="mb-0 fw-bold"><i class="fa-solid fa-brain me-2 text-primary"></i>AI Analyst</h6>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill">GPT-4o</span>
+                        </div>
+                        <div class="card-body p-4 position-relative">
+                            <div id="aiLoading" class="text-center py-4">
+                                <div class="spinner-grow text-primary spinner-grow-sm" role="status"></div>
+                                <span class="ms-2 small text-muted">Analyzing...</span>
+                            </div>
+                            <div id="aiContent" class="markdown-body small d-none" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Markdown -->
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- News -->
-                <div class="tab-pane fade" id="news" role="tabpanel">
-                    <div id="newsLoading" class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="text-muted mt-3 small">Loading latest news...</p>
-                    </div>
-                    <div id="newsContent" class="d-none">
-                        <div class="row g-4" id="newsGrid"></div>
-                    </div>
-                </div>
-
-                <!-- AI -->
-                <div class="tab-pane fade" id="ai" role="tabpanel">
-                    <div id="aiLoading" class="ai-loading-container">
-                        <div class="ai-spinner mb-4">
-                            <div class="spinner-ring"></div>
-                            <div class="spinner-ring"></div>
-                            <div class="spinner-ring"></div>
-                            <i class="fa-solid fa-brain ai-icon"></i>
+                <!-- News Feed -->
+                <div class="col-lg-6">
+                     <div class="card border-0 shadow-sm dashboard-card h-100">
+                        <div class="card-header bg-transparent border-0 pt-3 px-3">
+                            <h6 class="mb-0 fw-bold"><i class="fa-regular fa-newspaper me-2 text-primary"></i>Latest Headlines</h6>
                         </div>
-                        <h5 class="ai-loading-text mb-2">Analyzing Market Signals...</h5>
-                        <p class="text-muted small">Processing 50+ indicators & sentiment sources</p>
-                    </div>
-                    <div id="aiContent" class="d-none">
-                        <div class="card border-0 shadow-lg overflow-hidden card-ai">
-                            <div class="bg-gradient-ai p-1"></div>
-                            <div class="card-body p-4 px-md-5 markdown-body" id="aiResponse"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ML -->
-                <div class="tab-pane fade" id="ml" role="tabpanel">
-                    <div id="mlLoading" class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="text-muted mt-3 small">Computing forecast model...</p>
-                    </div>
-                    <div id="mlContent" class="d-none">
-                        <div class="row g-4">
-                            <div class="col-lg-8">
-                                <div class="card h-100 card-hover">
-                                    <div class="card-header border-0 pt-4 px-4 d-flex justify-content-between">
-                                        <h5 class="mb-0"><i class="fa-solid fa-chart-area me-2 text-primary"></i>Prediction Model</h5>
-                                        <span class="badge bg-primary-subtle text-primary">60 Days</span>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="chart-container" style="position: relative; height:400px;">
-                                            <canvas id="mlChart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="card-body p-0">
+                            <div id="newsLoading" class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-muted" role="status"></div>
                             </div>
-                            <div class="col-lg-4">
-                                <div class="card h-100 card-hover">
-                                    <div class="card-header border-0 pt-4 px-4">
-                                        <h5 class="mb-0"><i class="fa-solid fa-calculator me-2 text-primary"></i>Model Metrics</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="alert border-0 p-3 mb-3 rounded-3" id="mlMessageContainer" style="background: var(--bg-hover);">
-                                            <div id="mlMessage" class="fw-medium small"></div>
-                                        </div>
-                                        <table class="table table-borderless mb-0">
-                                            <tbody id="mlTable"></tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                            <div id="newsList" class="list-group list-group-flush small" style="max-height: 350px; overflow-y: auto;">
+                                <!-- JS Populated -->
                             </div>
                         </div>
                     </div>
                 </div>
 
             </div>
-        </div>
+
+        </div> <!-- End Dashboard -->
     </div>
 
-    <!-- Chat -->
+    <!-- Chat Bot -->
     <div id="chatContainer" class="chat-container">
         <div class="chat-header">
             <div class="d-flex align-items-center">
@@ -261,19 +218,19 @@
                 </div>
                 <div>
                     <span class="fw-semibold">Clanky AI</span>
-                    <div class="chat-status">Always here to help</div>
+                    <div class="chat-status">Ready to assist</div>
                 </div>
             </div>
             <button id="closeChat" class="btn btn-sm text-white opacity-75 hover-opacity-100"><i class="fa-solid fa-times"></i></button>
         </div>
         <div class="chat-body" id="chatBody">
             <div class="chat-message bot-message">
-                👋 Hello! Search for a stock ticker to get started.
+                👋 I'm here to help you analyze the charts.
             </div>
         </div>
         <div class="chat-footer">
             <div class="input-group">
-                <input type="text" id="chatInput" placeholder="Ask something..." disabled>
+                <input type="text" id="chatInput" placeholder="Ask about this stock..." disabled>
                 <button class="btn" type="button" id="sendMessageBtn" disabled><i class="fa-solid fa-paper-plane"></i></button>
             </div>
         </div>
@@ -285,6 +242,6 @@
     </button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=6"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

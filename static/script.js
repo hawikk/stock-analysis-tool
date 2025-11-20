@@ -1,40 +1,45 @@
-let historyChartInstance = null;
-let mlChartInstance = null;
+let chartInstance = null;
+let rsiChartInstance = null;
+let macdChartInstance = null;
+let volumeSeries, candlestickSeries, sma50Series, sma200Series, bbUpper, bbLower;
+let rsiSeries;
+let macdLineSeries, macdSignalSeries, macdHistSeries;
 
 // Dark Mode Logic
 const themeToggleBtn = document.getElementById('themeToggle');
 const body = document.body;
 const icon = themeToggleBtn.querySelector('i');
 
-// Check local storage
+// Default to Dark Mode
+if (!localStorage.getItem('theme')) {
+    localStorage.setItem('theme', 'dark');
+}
+
 if (localStorage.getItem('theme') === 'dark') {
     body.setAttribute('data-theme', 'dark');
     icon.classList.remove('fa-moon');
     icon.classList.add('fa-sun');
-    themeToggleBtn.classList.remove('btn-light');
-    themeToggleBtn.classList.add('btn-dark');
 }
 
 themeToggleBtn.addEventListener('click', () => {
-    if (body.getAttribute('data-theme') === 'dark') {
+    const isDark = body.getAttribute('data-theme') === 'dark';
+    if (isDark) {
         body.removeAttribute('data-theme');
         localStorage.setItem('theme', 'light');
         icon.classList.remove('fa-sun');
         icon.classList.add('fa-moon');
-        themeToggleBtn.classList.remove('btn-dark');
-        themeToggleBtn.classList.add('btn-light');
     } else {
         body.setAttribute('data-theme', 'dark');
         localStorage.setItem('theme', 'dark');
         icon.classList.remove('fa-moon');
         icon.classList.add('fa-sun');
-        themeToggleBtn.classList.remove('btn-light');
-        themeToggleBtn.classList.add('btn-dark');
+    }
+    if (chartInstance) {
+        applyChartTheme(chartInstance, rsiChartInstance, macdChartInstance);
     }
 });
 
-
-// Autocomplete Logic
+// Autocomplete
 const tickerInput = document.getElementById('tickerInput');
 const suggestionsBox = document.getElementById('suggestionsBox');
 let debounceTimer;
@@ -58,7 +63,7 @@ tickerInput.addEventListener('input', function() {
                     data.results.forEach(item => {
                         const div = document.createElement('div');
                         div.classList.add('suggestion-item');
-                        div.innerHTML = `<span class="suggestion-symbol">${item.symbol}</span><span class="suggestion-name">${item.shortname || item.longname}</span>`;
+                        div.innerHTML = `<span>${item.symbol}</span><span>${item.shortname || item.longname}</span>`;
                         div.addEventListener('click', () => {
                             tickerInput.value = item.symbol;
                             suggestionsBox.classList.add('d-none');
@@ -74,548 +79,328 @@ tickerInput.addEventListener('input', function() {
     }, 300);
 });
 
-// Close suggestions when clicking outside
 document.addEventListener('click', function(e) {
     if (e.target !== tickerInput && e.target !== suggestionsBox) {
         suggestionsBox.classList.add('d-none');
     }
 });
 
-// Popular Ticker Chips Click Handler
-document.addEventListener('DOMContentLoaded', function() {
-    const tickerChips = document.querySelectorAll('.ticker-chip');
-    tickerChips.forEach(chip => {
-        chip.addEventListener('click', function() {
-            const ticker = this.textContent.trim();
-            document.getElementById('tickerInput').value = ticker;
-            document.getElementById('searchBtn').click();
-        });
+document.querySelectorAll('.ticker-chip-nav').forEach(chip => {
+    chip.addEventListener('click', function() {
+        document.getElementById('tickerInput').value = this.textContent.trim();
+        document.getElementById('searchBtn').click();
     });
 });
 
-
+// Search Button
 document.getElementById('searchBtn').addEventListener('click', function() {
     const ticker = document.getElementById('tickerInput').value.toUpperCase();
     if (!ticker) return alert('Please enter a stock ticker');
 
-    document.getElementById('stockTitle').innerText = `Results for ${ticker}`;
-    document.getElementById('resultSection').classList.remove('d-none');
+    // Close suggestions
+    suggestionsBox.classList.add('d-none');
 
-    // Reset and Show Loaders
-    resetTab('info');
-    resetTab('news');
-    resetTab('ai');
-    resetTab('ml');
+    // UI Reset
+    document.getElementById('initialState').classList.add('d-none');
+    document.getElementById('dashboard').classList.remove('d-none');
+    document.getElementById('chartLoader').classList.remove('d-none');
+    document.getElementById('verdictSummary').innerText = "Analyzing market data...";
 
-    // Reset Logo
-    const logoImg = document.getElementById('companyLogo');
-    if (logoImg) {
-        logoImg.classList.add('d-none');
-        logoImg.src = '';
-    }
-    const logoWrapper = document.querySelector('.logo-wrapper');
-    if (logoWrapper) {
-        // If the image was removed, we need to put it back for the next search to work
-        if (!logoImg) {
-             const newImg = document.createElement('img');
-             newImg.id = 'companyLogo';
-             newImg.className = 'd-none company-logo';
-             newImg.alt = '';
-             logoWrapper.innerHTML = '';
-             logoWrapper.appendChild(newImg);
-        } else {
-             // Remove any fallback icons
-             const fallback = logoWrapper.querySelector('i');
-             if (fallback) fallback.remove();
-        }
-    }
+    // Clear data
+    document.getElementById('stockSymbol').innerText = ticker;
+    document.getElementById('stockName').innerText = "";
+    document.getElementById('currentPrice').innerText = "---";
+    document.getElementById('priceChange').innerText = "---";
+    document.getElementById('verdictReasons').innerHTML = "";
+    document.getElementById('verdictScore').innerText = "-";
+    document.getElementById('fundamentalsGrid').innerHTML = "";
 
-    // Enable Chat Input
-    document.getElementById('chatInput').disabled = false;
-    document.getElementById('sendMessageBtn').disabled = false;
-    document.getElementById('chatInput').placeholder = `Ask about ${ticker}...`;
-    // Add initial bot message about the new stock
-    appendMessage('bot', `I'm ready to answer questions about ${ticker}.`);
-
-    // Fetch Data
+    // Fetch
+    fetchDashboardData(ticker);
     fetchInfo(ticker);
     fetchNews(ticker);
     fetchAI(ticker);
-    fetchML(ticker);
 });
 
-function resetTab(name) {
-    document.getElementById(`${name}Loading`).classList.remove('d-none');
-    document.getElementById(`${name}Content`).classList.add('d-none');
+function fetchDashboardData(ticker) {
+    console.log("Fetching dashboard data for", ticker);
+    fetch(`/api/dashboard_data?ticker=${ticker}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        console.log("Dashboard data received", data);
+        
+        document.getElementById('chartLoader').classList.add('d-none');
+        try {
+            renderCharts(data);
+            renderVerdict(data.verdict);
+        } catch (e) {
+            console.error("Error rendering charts/verdict:", e);
+        }
+    })
+    .catch(err => {
+        console.error("Dashboard Fetch Error:", err);
+        document.getElementById('chartLoader').innerHTML = `<p class="text-danger">Error loading chart data: ${err.message}</p>`;
+    });
 }
 
-function showContent(name) {
-    document.getElementById(`${name}Loading`).classList.add('d-none');
-    document.getElementById(`${name}Content`).classList.remove('d-none');
+function renderCharts(data) {
+    const container = document.getElementById('chartContainer');
+    container.innerHTML = '';
+
+    // Create 3 divs
+    const mainDiv = document.createElement('div');
+    mainDiv.id = 'mainChartDiv';
+    mainDiv.style.height = '65%';
+    mainDiv.style.width = '100%';
+    container.appendChild(mainDiv);
+
+    const rsiDiv = document.createElement('div');
+    rsiDiv.style.height = '17%';
+    rsiDiv.style.width = '100%';
+    container.appendChild(rsiDiv);
+
+    const macdDiv = document.createElement('div');
+    macdDiv.style.height = '18%';
+    macdDiv.style.width = '100%';
+    container.appendChild(macdDiv);
+
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+
+    const chartOptions = {
+        layout: { background: { type: 'solid', color: 'transparent' }, textColor: textColor },
+        grid: { vertLines: { color: gridColor }, horzLines: { color: gridColor } },
+        timeScale: { borderColor: gridColor, timeVisible: true },
+        rightPriceScale: { borderColor: gridColor },
+        width: container.clientWidth, // Set initial width
+        height: container.clientHeight * 0.65 // Set initial height
+    };
+
+    // 1. Main Chart
+    chartInstance = LightweightCharts.createChart(mainDiv, chartOptions);
+    candlestickSeries = chartInstance.addCandlestickSeries({
+        upColor: '#10b981', downColor: '#ef4444', borderVisible: false, wickUpColor: '#10b981', wickDownColor: '#ef4444',
+    });
+    candlestickSeries.setData(data.ohlc);
+
+    volumeSeries = chartInstance.addHistogramSeries({
+        priceFormat: { type: 'volume' },
+        priceScaleId: '',
+    });
+    volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    volumeSeries.setData(data.volume);
+
+    sma50Series = chartInstance.addLineSeries({ color: '#FF9800', lineWidth: 2 });
+    sma50Series.setData(data.indicators.sma50);
+
+    sma200Series = chartInstance.addLineSeries({ color: '#2962FF', lineWidth: 2 });
+    sma200Series.setData(data.indicators.sma200);
+
+    bbUpper = chartInstance.addLineSeries({ color: 'rgba(38, 166, 154, 0.6)', lineWidth: 1, lineStyle: 2 });
+    bbUpper.setData(data.indicators.bb_upper);
+    bbLower = chartInstance.addLineSeries({ color: 'rgba(38, 166, 154, 0.6)', lineWidth: 1, lineStyle: 2 });
+    bbLower.setData(data.indicators.bb_lower);
+
+    // Add Markers (Crosses & Squeezes)
+    if (data.markers && data.markers.length > 0) {
+        candlestickSeries.setMarkers(data.markers);
+    }
+
+    // 2. RSI
+    rsiChartInstance = LightweightCharts.createChart(rsiDiv, {
+        ...chartOptions,
+        height: container.clientHeight * 0.17,
+        timeScale: { visible: false }
+    });
+    rsiSeries = rsiChartInstance.addLineSeries({ color: '#8b5cf6', lineWidth: 2 });
+    rsiSeries.setData(data.indicators.rsi);
+
+    const rsi70 = rsiChartInstance.addLineSeries({ color: '#ef4444', lineWidth: 1, lineStyle: 2 });
+    rsi70.setData(data.indicators.rsi.map(d => ({ time: d.time, value: 70 })));
+    const rsi30 = rsiChartInstance.addLineSeries({ color: '#10b981', lineWidth: 1, lineStyle: 2 });
+    rsi30.setData(data.indicators.rsi.map(d => ({ time: d.time, value: 30 })));
+
+    // 3. MACD
+    macdChartInstance = LightweightCharts.createChart(macdDiv, {
+        ...chartOptions,
+        height: container.clientHeight * 0.18,
+        timeScale: { visible: true }
+    });
+    macdHistSeries = macdChartInstance.addHistogramSeries({ color: '#26a69a' });
+    macdHistSeries.setData(data.indicators.macd_hist);
+    macdLineSeries = macdChartInstance.addLineSeries({ color: '#2962FF', lineWidth: 2 });
+    macdLineSeries.setData(data.indicators.macd_line);
+    macdSignalSeries = macdChartInstance.addLineSeries({ color: '#FF6D00', lineWidth: 2 });
+    macdSignalSeries.setData(data.indicators.macd_signal);
+
+    // Force resize
+    const resize = () => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        console.log("Resizing charts to", w, h);
+        if (w === 0 || h === 0) return;
+        
+        chartInstance.resize(w, h * 0.65);
+        rsiChartInstance.resize(w, h * 0.17);
+        macdChartInstance.resize(w, h * 0.18);
+
+        // Fit content after resize
+        chartInstance.timeScale().fitContent();
+        rsiChartInstance.timeScale().fitContent();
+        macdChartInstance.timeScale().fitContent();
+    };
+
+    new ResizeObserver(resize).observe(container);
+
+    // Call resize immediately
+    setTimeout(resize, 0);
+
+    // Sync
+    const charts = [chartInstance, rsiChartInstance, macdChartInstance];
+    charts.forEach(c => {
+        c.timeScale().subscribeVisibleLogicalRangeChange(range => {
+            charts.forEach(other => {
+                if (other !== c) other.timeScale().setVisibleLogicalRange(range);
+            });
+        });
+    });
+}
+
+function applyChartTheme(c1, c2, c3) {
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+    const opts = {
+        layout: { textColor: textColor },
+        grid: { vertLines: { color: gridColor }, horzLines: { color: gridColor } },
+        timeScale: { borderColor: gridColor },
+        rightPriceScale: { borderColor: gridColor }
+    };
+    [c1, c2, c3].forEach(c => { if(c) c.applyOptions(opts); });
+}
+
+function renderVerdict(verdict) {
+    console.log("Rendering Verdict", verdict);
+    document.getElementById('verdictScore').innerText = verdict.score;
+    document.getElementById('verdictSignal').innerText = verdict.signal;
+    document.getElementById('verdictSignal').style.color = verdict.color;
+
+    const circle = document.getElementById('verdictCircle');
+    circle.className = 'verdict-circle';
+    if (verdict.score >= 1) circle.classList.add('buy');
+    else if (verdict.score <= -1) circle.classList.add('sell');
+    else circle.classList.add('neutral');
+    circle.style.borderColor = verdict.color;
+    circle.style.color = verdict.color;
+
+    const list = document.getElementById('verdictReasons');
+    list.innerHTML = '';
+    verdict.reasons.forEach(r => {
+        const li = document.createElement('li');
+        let icon = '<i class="fa-solid fa-circle-info text-muted"></i>';
+        if (r.includes("Bullish") || r.includes("Uptrend") || r.includes("Oversold")) icon = '<i class="fa-solid fa-circle-check text-success"></i>';
+        if (r.includes("Bearish") || r.includes("Downtrend") || r.includes("Overbought")) icon = '<i class="fa-solid fa-circle-xmark text-danger"></i>';
+        li.innerHTML = `${icon} <span class="ms-2">${r}</span>`;
+        list.appendChild(li);
+    });
+    document.getElementById('verdictSummary').innerText = `Based on current technical indicators, the asset is showing a ${verdict.signal} signal with a composite score of ${verdict.score}.`;
 }
 
 function fetchInfo(ticker) {
-    // Changed to GET request for caching
     fetch(`/api/info?ticker=${ticker}`)
     .then(response => response.json())
     .then(data => {
-        if (data.error) throw new Error(data.error);
-
+        if (data.error) return console.error("Info Error:", data.error);
         const info = data.info;
-        const techs = data.technicals;
+        document.getElementById('stockName').innerText = info.name;
+        document.getElementById('stockSector').innerText = info.sector;
+        document.getElementById('currentPrice').innerText = `$${info.currentPrice}`;
 
-        // Update Logo
-        const logoWrapper = document.querySelector('.logo-wrapper');
-        let logoImg = document.getElementById('companyLogo');
-        
-        // Ensure logoImg exists
-        if (!logoImg && logoWrapper) {
-             logoImg = document.createElement('img');
-             logoImg.id = 'companyLogo';
-             logoImg.className = 'd-none company-logo';
-             logoImg.alt = '';
-             logoWrapper.appendChild(logoImg);
-        }
-
-        if (logoWrapper) {
-            // Clear any previous content (like fallback icons) but keep the image
-            // We can't just innerHTML='' because that removes the image if it's there.
-            // But we can just remove all 'i' tags.
-            const icons = logoWrapper.querySelectorAll('i');
-            icons.forEach(icon => icon.remove());
-            
-            if (!logoWrapper.contains(logoImg)) {
-                logoWrapper.appendChild(logoImg);
-            }
-        }
-
+        const logoImg = document.getElementById('companyLogo');
+        const defaultIcon = document.querySelector('.default-logo');
         if (info.logo) {
             logoImg.src = info.logo;
             logoImg.classList.remove('d-none');
-            logoImg.onerror = function() {
-                this.classList.add('d-none');
-                if (logoWrapper) {
-                    // Check if icon already exists to avoid duplicates
-                    if (!logoWrapper.querySelector('.fa-building')) {
-                        logoWrapper.insertAdjacentHTML('beforeend', `<i class="fa-solid fa-building fs-3 text-primary"></i>`);
-                    }
-                }
-            };
+            defaultIcon.classList.add('d-none');
         } else {
-            if (logoWrapper) {
-                 logoWrapper.insertAdjacentHTML('beforeend', `<i class="fa-solid fa-building fs-3 text-primary"></i>`);
-            }
+            logoImg.classList.add('d-none');
+            defaultIcon.classList.remove('d-none');
         }
 
-        // Update Title
-        document.getElementById('stockTitle').innerText = info.name || ticker;
-        
-        // Update sector info
-        const sectorEl = document.getElementById('stockSector');
-        if (sectorEl) {
-            sectorEl.innerText = info.sector ? `${info.sector} • ${info.country || 'Global'}` : 'Market Data';
-        }
-        
-        // Update large price display
-        const priceLargeEl = document.getElementById('stockPriceLarge');
-        if (priceLargeEl && info.currentPrice) {
-            priceLargeEl.innerText = `$${info.currentPrice}`;
-        }
-        
-        // Update stock change (if available from data)
-        const changeEl = document.getElementById('stockChange');
-        if (changeEl) {
-            changeEl.innerText = '+0.00 (0.00%)'; // Placeholder - update if you have this data
-            changeEl.style.color = '#10b981'; // Green for positive
-        }
-
-        // Render Key Metrics Cards
-        const metrics = [
-            { label: 'Current Price', value: `$${info.currentPrice}` },
-            { label: 'Market Cap', value: formatNumber(info.marketCap) },
-            { label: 'Sector', value: info.sector },
-            { label: 'PE Ratio', value: info.peRatio !== 'N/A' ? info.peRatio.toFixed(2) : 'N/A' },
-            { label: 'Div Yield', value: info.dividendYield !== 'N/A' ? (info.dividendYield * 100).toFixed(2) + '%' : 'N/A' },
-            { label: '52W High', value: `$${info.fiftyTwoWeekHigh}` }
-        ];
-
-        let metricsHtml = '';
-        metrics.forEach(m => {
-            metricsHtml += `
-                <div class="col-6 col-md-4 col-lg-2">
-                    <div class="metric-card h-100">
-                        <h6>${m.label}</h6>
-                        <div class="value">${m.value}</div>
-                    </div>
-                </div>
-            `;
-        });
-        document.getElementById('keyMetrics').innerHTML = metricsHtml;
-        document.getElementById('companySummary').innerText = info.summary;
-
-        // Technicals List
-        let techHtml = '';
-        for (const [key, value] of Object.entries(techs)) {
-            techHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                ${key}
-                <span class="badge bg-primary rounded-pill">${value}</span>
-            </li>`;
-        }
-        document.getElementById('technicalsList').innerHTML = techHtml;
-
-        showContent('info');
-        
-        // Fetch History Chart for Overview
-        fetchHistory(ticker);
+        const grid = document.getElementById('fundamentalsGrid');
+        grid.innerHTML = `
+            <div class="stat-item"><div class="stat-label">Mkt Cap</div><div class="stat-value">${formatNumber(info.marketCap)}</div></div>
+            <div class="stat-item"><div class="stat-label">P/E Ratio</div><div class="stat-value">${info.peRatio}</div></div>
+            <div class="stat-item"><div class="stat-label">Div Yield</div><div class="stat-value">${info.dividendYield !== 'N/A' ? (info.dividendYield * 100).toFixed(2) + '%' : 'N/A'}</div></div>
+            <div class="stat-item"><div class="stat-label">52W High</div><div class="stat-value">$${info.fiftyTwoWeekHigh}</div></div>
+            <div class="stat-item"><div class="stat-label">52W Low</div><div class="stat-value">$${info.fiftyTwoWeekLow}</div></div>
+        `;
     })
-    .catch(err => {
-        document.getElementById('infoContent').innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
-        showContent('info');
-    });
-}
-
-function fetchHistory(ticker) {
-    fetch(`/api/history?ticker=${ticker}&period=1y`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) throw new Error(data.error);
-        renderHistoryChart(data);
-    })
-    .catch(err => console.error("History fetch error:", err));
-}
-
-function renderHistoryChart(data) {
-    const ctx = document.getElementById('historyChart').getContext('2d');
-    if (historyChartInstance) historyChartInstance.destroy();
-
-    // Create gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)'); // var(--primary)
-    gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
-
-    // Dynamic grid color based on theme
-    const isDark = document.body.getAttribute('data-theme') === 'dark';
-    const gridColor = isDark ? '#1e293b' : '#f1f5f9';
-    const textColor = isDark ? '#94a3b8' : '#64748b';
-
-    historyChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.dates,
-            datasets: [{
-                label: 'Close Price',
-                data: data.close,
-                borderColor: '#2563eb', // var(--primary)
-                backgroundColor: gradient,
-                borderWidth: 2,
-                pointRadius: 0,
-                pointHoverRadius: 6,
-                pointHoverBackgroundColor: '#2563eb',
-                pointHoverBorderColor: '#ffffff',
-                pointHoverBorderWidth: 2,
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                    titleColor: isDark ? '#f8fafc' : '#0f172a',
-                    bodyColor: isDark ? '#cbd5e1' : '#334155',
-                    borderColor: isDark ? '#1e293b' : '#e2e8f0',
-                    borderWidth: 1,
-                    padding: 12,
-                    cornerRadius: 8,
-                    displayColors: false,
-                    callbacks: {
-                        label: function(context) {
-                            return '$' + context.parsed.y.toFixed(2);
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: { 
-                    grid: { display: false },
-                    ticks: { color: textColor, maxTicksLimit: 8 }
-                },
-                y: { 
-                    grid: { color: gridColor, borderDash: [4, 4] },
-                    ticks: { color: textColor }
-                }
-            }
-        }
-    });
+    .catch(console.error);
 }
 
 function fetchNews(ticker) {
-    // Changed to GET request for caching
     fetch(`/api/news?ticker=${ticker}`)
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
-        if (data.error) throw new Error(data.error);
+        const list = document.getElementById('newsList');
+        document.getElementById('newsLoading').classList.add('d-none');
+        list.innerHTML = '';
 
-        let newsHtml = '';
+        if (!data.articles) return; // Handle missing articles
+
         data.articles.forEach(article => {
-            // Fallback image if none provided
-            const imgUrl = article.image || 'https://via.placeholder.com/400x200?text=No+Image';
-            const date = new Date(article.publishedAt).toLocaleDateString();
+            let sentimentColor = 'text-muted';
+            if (article.sentiment === 'positive') sentimentColor = 'text-success';
+            if (article.sentiment === 'negative') sentimentColor = 'text-danger';
 
-            let sentimentIcon = '';
-            let sentimentClass = '';
-            let sentimentLabel = '';
-
-            // Sentiment logic
-            if (article.sentiment === 'positive') {
-                sentimentIcon = '<i class="fa-solid fa-arrow-trend-up"></i>';
-                sentimentClass = 'sentiment-positive';
-                sentimentLabel = 'Bullish';
-            } else if (article.sentiment === 'negative') {
-                sentimentIcon = '<i class="fa-solid fa-arrow-trend-down"></i>';
-                sentimentClass = 'sentiment-negative';
-                sentimentLabel = 'Bearish';
-            } else {
-                sentimentIcon = '<i class="fa-solid fa-minus"></i>';
-                sentimentClass = 'sentiment-neutral';
-                sentimentLabel = 'Neutral';
-            }
-
-            newsHtml += `
-                <div class="col-md-4">
-                    <div class="card news-card h-100 border-0 shadow-sm">
-                        <div class="position-relative">
-                            <img src="${imgUrl}" class="card-img-top news-card-img" alt="${article.title}" onerror="this.src='https://via.placeholder.com/400x200?text=Image+Error'">
-                            <div class="sentiment-badge ${sentimentClass}">
-                                ${sentimentIcon}
-                                <span>${sentimentLabel}</span>
-                            </div>
-                        </div>
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title mb-3">
-                                <a href="${article.url}" target="_blank" class="text-decoration-none stretched-link text-reset hover-primary">
-                                    ${article.title}
-                                </a>
-                            </h5>
-                            <div class="news-meta mt-auto">
-                                <span class="d-flex align-items-center gap-2">
-                                    <i class="fa-regular fa-newspaper"></i>
-                                    ${article.source}
-                                </span>
-                                <span>${date}</span>
-                            </div>
-                        </div>
-                    </div>
+            const item = document.createElement('a');
+            item.href = article.url;
+            item.target = '_blank';
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-start px-3 py-3';
+            item.innerHTML = `
+                <div class="ms-2 me-auto">
+                    <div class="fw-bold mb-1">${article.title}</div>
+                    <div class="small text-muted">${article.source} • ${new Date(article.publishedAt).toLocaleDateString()}</div>
                 </div>
+                <span class="badge rounded-pill bg-light ${sentimentColor} border ms-2">${article.sentiment}</span>
             `;
+            list.appendChild(item);
         });
-        document.getElementById('newsGrid').innerHTML = newsHtml;
-        showContent('news');
     })
-    .catch(err => {
-        document.getElementById('newsContent').innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
-        showContent('news');
-    });
+    .catch(e => document.getElementById('newsList').innerHTML = `<div class="p-3 text-danger">News unavailable</div>`);
 }
 
 function fetchAI(ticker) {
-    // Changed to GET request for caching
+    document.getElementById('aiContent').classList.add('d-none');
+    document.getElementById('aiLoading').classList.remove('d-none');
+
     fetch(`/api/ai?ticker=${ticker}`)
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
-        if (data.error) throw new Error(data.error);
-        // Render Markdown
-        document.getElementById('aiResponse').innerHTML = marked.parse(data.summary);
-        showContent('ai');
+        document.getElementById('aiLoading').classList.add('d-none');
+        const content = document.getElementById('aiContent');
+        content.classList.remove('d-none');
+        content.innerHTML = marked.parse(data.summary || "No analysis available.");
     })
-    .catch(err => {
-        document.getElementById('aiContent').innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
-        showContent('ai');
-    });
-}
-
-function fetchML(ticker) {
-    // Changed to GET request for caching
-    fetch(`/api/ml?ticker=${ticker}`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) throw new Error(data.error);
-
-        const analysis = data.analysis;
-        document.getElementById('mlMessage').innerText = analysis.message;
-
-        // Table
-        let html = `
-            <tr><th>Current Price</th><td>$${analysis.current_price}</td></tr>
-            <tr><th>Predicted Next Close</th><td>$${analysis.predicted_next_close}</td></tr>
-            <tr><th>Trend (60 Days)</th><td>${analysis.trend_60_days}</td></tr>
-            <tr><th>Slope</th><td>${analysis.slope}</td></tr>
-            <tr><th>Model Score (R²)</th><td>${analysis.model_score}</td></tr>
-        `;
-        document.getElementById('mlTable').innerHTML = html;
-
-        // Chart
-        renderChart(data.graph_data);
-
-        showContent('ml');
-    })
-    .catch(err => {
-        document.getElementById('mlContent').innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
-        showContent('ml');
-    });
-}
-
-function renderChart(graphData) {
-    const ctx = document.getElementById('mlChart').getContext('2d');
-
-    if (mlChartInstance) {
-        mlChartInstance.destroy();
-    }
-
-    // Dynamic colors based on theme
-    const isDark = document.body.getAttribute('data-theme') === 'dark';
-    const gridColor = isDark ? '#1e293b' : '#f1f5f9';
-    const textColor = isDark ? '#94a3b8' : '#64748b';
-
-    // Create gradient for the area chart
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)'); // Primary
-    gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
-
-    mlChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: graphData.dates,
-            datasets: [
-                {
-                    label: 'Actual Price',
-                    data: graphData.prices,
-                    borderColor: '#2563eb', // Primary Blue
-                    backgroundColor: gradient,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    pointHoverRadius: 6,
-                    pointHoverBackgroundColor: '#2563eb',
-                    pointHoverBorderColor: '#ffffff',
-                    pointHoverBorderWidth: 2,
-                    fill: true,
-                    tension: 0.3 // Smoother curve
-                },
-                {
-                    label: 'Trend Line',
-                    data: graphData.regression,
-                    borderColor: '#ef4444', // Accent Red
-                    borderWidth: 2,
-                    borderDash: [6, 6],
-                    pointRadius: 0,
-                    pointHoverRadius: 0,
-                    fill: false,
-                    tension: 0
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    align: 'end',
-                    labels: {
-                        usePointStyle: true,
-                        boxWidth: 8,
-                        padding: 20,
-                        font: {
-                            family: "'Inter', sans-serif",
-                            size: 12,
-                            weight: 500
-                        },
-                        color: textColor
-                    }
-                },
-                tooltip: {
-                    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                    titleColor: isDark ? '#f8fafc' : '#0f172a',
-                    bodyColor: isDark ? '#cbd5e1' : '#334155',
-                    borderColor: isDark ? '#1e293b' : '#e2e8f0',
-                    borderWidth: 1,
-                    padding: 12,
-                    cornerRadius: 8,
-                    displayColors: true,
-                    boxPadding: 4,
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
-                            }
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    grid: {
-                        color: gridColor,
-                        borderDash: [4, 4],
-                        drawBorder: false,
-                    },
-                    ticks: {
-                        font: {
-                            family: "'Inter', sans-serif",
-                            size: 11
-                        },
-                        color: textColor,
-                        callback: function(value) {
-                            return '$' + value;
-                        }
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        font: {
-                            family: "'Inter', sans-serif",
-                            size: 11
-                        },
-                        color: textColor,
-                        maxTicksLimit: 8,
-                        maxRotation: 0
-                    }
-                }
-            }
-        }
+    .catch(e => {
+        document.getElementById('aiLoading').classList.add('d-none');
+        document.getElementById('aiContent').classList.remove('d-none');
+        document.getElementById('aiContent').innerText = "AI Analysis unavailable.";
     });
 }
 
 function formatNumber(num) {
-    if (!num) return 'N/A';
+    if (!num || num === 'N/A') return 'N/A';
     if (num >= 1.0e+12) return (num / 1.0e+12).toFixed(2) + "T";
     if (num >= 1.0e+9) return (num / 1.0e+9).toFixed(2) + "B";
     if (num >= 1.0e+6) return (num / 1.0e+6).toFixed(2) + "M";
     return num;
 }
 
-// Chat Bot Logic
+// Chat Bot
 const chatToggle = document.getElementById('chatToggle');
 const chatContainer = document.getElementById('chatContainer');
 const closeChat = document.getElementById('closeChat');
@@ -626,11 +411,9 @@ const chatBody = document.getElementById('chatBody');
 chatToggle.addEventListener('click', () => {
     chatContainer.classList.toggle('open');
 });
-
 closeChat.addEventListener('click', () => {
     chatContainer.classList.remove('open');
 });
-
 sendMessageBtn.addEventListener('click', sendMessage);
 chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
@@ -638,19 +421,16 @@ chatInput.addEventListener('keypress', (e) => {
 
 function sendMessage() {
     const message = chatInput.value.trim();
-    const ticker = document.getElementById('tickerInput').value.toUpperCase();
-
+    const ticker = document.getElementById('stockSymbol').innerText;
     if (!message) return;
-    if (!ticker) {
-        appendMessage('bot', 'Please search for a stock first so I know what to talk about!');
+    if (ticker === '---' || !ticker) {
+        appendMessage('bot', 'Please search for a stock first!');
         return;
     }
-
     appendMessage('user', message);
     chatInput.value = '';
     chatInput.disabled = true;
 
-    // Call Backend
     fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -658,7 +438,6 @@ function sendMessage() {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.error) throw new Error(data.error);
         appendMessage('bot', data.reply);
     })
     .catch(err => {
@@ -669,7 +448,6 @@ function sendMessage() {
         chatInput.focus();
     });
 }
-
 function appendMessage(sender, text) {
     const div = document.createElement('div');
     div.classList.add('chat-message', `${sender}-message`);
