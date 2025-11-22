@@ -148,6 +148,7 @@ class MassiveService:
         """
         if not self.client: return []
         try:
+             # Reduce limit to conserve bandwidth if needed, though 10 is small.
              news = self.client.list_ticker_news(limit=10)
              articles = []
              for n in news:
@@ -160,7 +161,12 @@ class MassiveService:
                  })
              return articles
         except Exception as e:
-            print(f"Massive News Error: {e}")
+            # If rate limited (429), avoid noisy stack traces if possible or just return empty gracefully
+            if "429" in str(e) or "Max retries exceeded" in str(e):
+                # print("Massive Rate Limit Hit (News). Falling back to yfinance.")
+                pass
+            else:
+                print(f"Massive News Error: {e}")
             return []
 
     def get_unusual_activity(self):
