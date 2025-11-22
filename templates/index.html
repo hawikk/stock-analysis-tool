@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Insights Pro</title>
+    <title>Massive Market Terminal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,236 +12,270 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Lightweight Charts (Pinned Version) -->
+    <!-- Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
     <!-- Marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Chart.js (Legacy support for ML chart if needed, otherwise remove) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="dark-theme">
 
     <!-- Dark Mode Toggle -->
-    <button id="themeToggle" class="floating-btn position-fixed top-0 end-0 m-4" aria-label="Toggle Dark Mode">
-        <i class="fa-solid fa-moon fs-5"></i>
+    <button id="themeToggle" class="floating-btn position-fixed top-0 end-0 m-4" aria-label="Toggle Dark Mode" style="z-index: 2000;">
+        <i class="fa-solid fa-sun fs-5"></i>
     </button>
 
-    <!-- Top Navigation / Search Bar -->
-    <nav class="navbar navbar-expand-lg sticky-top glass-nav p-3">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
-                <i class="fa-solid fa-layer-group text-primary"></i>
-                Market Insights <span class="badge bg-primary ms-2 rounded-pill text-white" style="font-size: 0.6em;">PRO</span>
+    <!-- Top Navigation / Global Search -->
+    <nav class="navbar navbar-expand-lg sticky-top terminal-nav p-0 border-bottom border-secondary">
+        <div class="container-fluid px-3 py-2">
+            <a class="navbar-brand fw-bold font-monospace d-flex align-items-center gap-2 text-warning" href="/">
+                <i class="fa-solid fa-terminal"></i> MASSIVE TERMINAL <span class="badge bg-danger ms-2 rounded-1" style="font-size: 0.5em;">LITE</span>
             </a>
             
-            <div class="d-flex align-items-center flex-grow-1 mx-lg-5 position-relative">
-                <div class="search-container w-100" style="max-width: 600px;">
-                     <div class="input-group">
-                        <span class="input-group-text bg-transparent border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                        <input type="text" id="tickerInput" class="form-control border-start-0 shadow-none" placeholder="Search ticker (e.g. NVDA)..." autocomplete="off">
-                        <button class="btn btn-primary" type="button" id="searchBtn">Search</button>
+            <div class="d-flex align-items-center flex-grow-1 mx-lg-4 position-relative">
+                <div class="search-container w-100">
+                     <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-dark border-secondary text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="tickerInput" class="form-control bg-dark border-secondary text-white shadow-none font-monospace" placeholder="COMMAND LINE: Search Ticker..." autocomplete="off">
                      </div>
-                     <!-- Autocomplete -->
-                     <div id="suggestionsBox" class="suggestions-box d-none"></div>
+                     <div id="suggestionsBox" class="suggestions-box d-none font-monospace"></div>
                 </div>
             </div>
 
-             <div class="d-none d-lg-flex align-items-center gap-3">
-                <span class="ticker-chip-nav">NVDA</span>
-                <span class="ticker-chip-nav">AAPL</span>
-                <span class="ticker-chip-nav">TSLA</span>
+             <div class="d-none d-lg-flex align-items-center gap-3 font-monospace small text-muted">
+                <span><i class="fa-solid fa-clock me-1"></i> <span id="clock">--:--:--</span> UTC</span>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-4 py-4">
+    <div class="container-fluid p-2">
 
-        <!-- Initial State -->
-        <div id="initialState" class="text-center py-5 mt-5">
-            <h1 class="display-5 fw-bold mb-3">Professional Trading Dashboard</h1>
-            <p class="text-muted lead mb-4">Enter a stock ticker to view real-time institutional-grade technical analysis.</p>
-            <div class="d-flex justify-content-center gap-3">
-                <div class="feature-icon-box"><i class="fa-solid fa-chart-candlestick"></i><span>Interactive Charts</span></div>
-                <div class="feature-icon-box"><i class="fa-solid fa-bolt"></i><span>Live Signals</span></div>
-                <div class="feature-icon-box"><i class="fa-solid fa-brain"></i><span>AI Insights</span></div>
+        <!-- Market Overview Bar (Indices) -->
+        <div id="marketTickerBar" class="d-flex gap-2 overflow-auto pb-2 mb-2 scrollbar-hidden">
+            <div class="placeholder-glow w-100 d-flex gap-2">
+                <span class="placeholder col-2 bg-secondary rounded"></span>
+                <span class="placeholder col-2 bg-secondary rounded"></span>
+                <span class="placeholder col-2 bg-secondary rounded"></span>
             </div>
         </div>
 
-        <!-- Dashboard Content -->
-        <div id="dashboard" class="d-none">
+        <!-- Main Grid Layout -->
+        <div class="row g-2">
             
-            <!-- Header Info -->
-            <div class="row align-items-end mb-4">
-                <div class="col-md-6">
-                    <div class="d-flex align-items-center gap-3">
-                         <div class="logo-wrapper-sm bg-white rounded p-1">
-                             <img id="companyLogo" src="" class="d-none" width="40" height="40">
-                             <i class="fa-solid fa-building fs-4 text-primary d-none default-logo"></i>
-                         </div>
-                         <div>
-                             <h2 class="mb-0 fw-bold"><span id="stockSymbol">---</span> <small class="text-muted fs-5 fw-normal" id="stockName">---</small></h2>
-                             <div class="d-flex gap-3 text-muted small">
-                                 <span id="stockSector">---</span>
-                                 <span>•</span>
-                                 <span id="marketStatus"><span class="live-dot"></span> Market Open</span>
-                             </div>
-                         </div>
-                    </div>
-                </div>
-                <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                    <h2 class="mb-0 font-monospace" id="currentPrice">---</h2>
-                    <div id="priceChange" class="fw-medium">---</div>
+            <!-- LEFT COLUMN: Navigation / Tools -->
+            <div class="col-lg-1 d-none d-lg-block">
+                <div class="d-flex flex-column gap-2 h-100">
+                    <button class="btn btn-outline-secondary btn-sm active text-start w-100" data-view="dashboard"><i class="fa-solid fa-table-columns me-2"></i>Dash</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="chart"><i class="fa-solid fa-chart-line me-2"></i>Chart</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="screener"><i class="fa-solid fa-filter me-2"></i>Scan</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="news"><i class="fa-regular fa-newspaper me-2"></i>News</button>
                 </div>
             </div>
 
-            <!-- Main Grid -->
-            <div class="row g-3 h-100">
+            <!-- CENTER: Main Content Area -->
+            <div class="col-lg-11">
                 
-                <!-- Left Column: Chart -->
-                <div class="col-xl-9 col-lg-8">
-                    <div class="card h-100 border-0 shadow-sm dashboard-card">
-                        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-3 px-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <h6 class="mb-0 fw-bold"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Technical Chart</h6>
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">Daily</span>
-                            </div>
-                            <div class="d-flex gap-2 small text-muted">
-                                <span class="d-flex align-items-center"><span class="legend-dot" style="background: #2962FF"></span> SMA 200</span>
-                                <span class="d-flex align-items-center"><span class="legend-dot" style="background: #FF9800"></span> SMA 50</span>
-                                <span class="d-flex align-items-center"><span class="legend-dot" style="background: rgba(38, 166, 154, 0.6)"></span> Bollinger</span>
+                <!-- VIEW: MARKET DASHBOARD (Default) -->
+                <div id="viewDashboard" class="view-section">
+                    <div class="row g-2">
+                        <!-- Top Movers -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-secondary bg-darker">
+                                <div class="card-header border-secondary py-1 px-2 font-monospace small text-uppercase fw-bold text-success">
+                                    <i class="fa-solid fa-arrow-trend-up me-1"></i> Top Gainers (24h)
+                                </div>
+                                <div class="card-body p-0 overflow-auto" style="max-height: 300px;">
+                                    <table class="table table-dark table-sm table-hover mb-0 small font-monospace">
+                                        <thead>
+                                            <tr><th class="text-muted">TICKER</th><th class="text-end text-muted">LAST</th><th class="text-end text-muted">%CHG</th></tr>
+                                        </thead>
+                                        <tbody id="gainersTable"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-body p-0 position-relative">
-                             <div id="chartContainer" style="width: 100%; height: 600px;"></div>
-                             <div id="chartLoader" class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-glass d-none">
-                                 <div class="spinner-border text-primary" role="status"></div>
-                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Right Column: Verdict & Stats -->
-                <div class="col-xl-3 col-lg-4">
-                    <div class="d-flex flex-column gap-3 h-100">
-
-                        <!-- The Verdict Card -->
-                        <div class="card border-0 shadow-sm dashboard-card flex-grow-0">
-                            <div class="card-header bg-transparent border-0 pt-3 px-3">
-                                <h6 class="mb-0 fw-bold"><i class="fa-solid fa-gavel me-2 text-primary"></i>Technical Verdict</h6>
-                            </div>
-                            <div class="card-body text-center pt-1 pb-4">
-                                <div class="verdict-gauge mb-3 position-relative d-inline-block">
-                                    <!-- Dynamic Gauge/Circle -->
-                                    <div id="verdictCircle" class="verdict-circle neutral">
-                                        <span id="verdictScore">0</span>
+                        <!-- Whale Alert Widget -->
+                        <div class="col-12">
+                            <div class="card border-secondary bg-darker mt-2">
+                                <div class="card-header border-secondary py-1 px-2 font-monospace small text-uppercase fw-bold text-warning">
+                                    <i class="fa-solid fa-skull me-1"></i> UNUSUAL WHALE ACTIVITY (LITE)
+                                </div>
+                                <div class="card-body p-2 overflow-auto">
+                                    <div id="whaleTicker" class="d-flex gap-3">
+                                        <!-- JS Populated -->
+                                        <span class="text-muted small">Loading...</span>
                                     </div>
                                 </div>
-                                <h3 id="verdictSignal" class="fw-bold mb-2">NEUTRAL</h3>
-                                <p id="verdictSummary" class="text-muted small mb-3 px-2">Loading analysis...</p>
+                            </div>
+                        </div>
 
-                                <div class="text-start px-2">
-                                    <h6 class="small fw-bold text-uppercase text-muted mb-2">Key Drivers</h6>
-                                    <ul id="verdictReasons" class="list-unstyled small d-flex flex-column gap-2">
-                                        <!-- JS populated -->
-                                    </ul>
+                        <div class="col-md-4">
+                            <div class="card h-100 border-secondary bg-darker">
+                                <div class="card-header border-secondary py-1 px-2 font-monospace small text-uppercase fw-bold text-danger">
+                                    <i class="fa-solid fa-arrow-trend-down me-1"></i> Top Losers (24h)
+                                </div>
+                                <div class="card-body p-0 overflow-auto" style="max-height: 300px;">
+                                    <table class="table table-dark table-sm table-hover mb-0 small font-monospace">
+                                        <thead>
+                                            <tr><th class="text-muted">TICKER</th><th class="text-end text-muted">LAST</th><th class="text-end text-muted">%CHG</th></tr>
+                                        </thead>
+                                        <tbody id="losersTable"></tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Key Stats Card -->
-                        <div class="card border-0 shadow-sm dashboard-card flex-grow-1">
-                            <div class="card-header bg-transparent border-0 pt-3 px-3">
-                                <h6 class="mb-0 fw-bold"><i class="fa-solid fa-list-check me-2 text-primary"></i>Fundamentals</h6>
-                            </div>
-                            <div class="card-body px-3">
-                                <div class="stats-grid" id="fundamentalsGrid">
-                                    <!-- JS Populated -->
+                        <div class="col-md-4">
+                             <div class="card h-100 border-secondary bg-darker">
+                                <div class="card-header border-secondary py-1 px-2 font-monospace small text-uppercase fw-bold text-info">
+                                    <i class="fa-solid fa-fire me-1"></i> Most Active
+                                </div>
+                                <div class="card-body p-0 overflow-auto" style="max-height: 300px;">
+                                    <table class="table table-dark table-sm table-hover mb-0 small font-monospace">
+                                        <thead>
+                                            <tr><th class="text-muted">TICKER</th><th class="text-end text-muted">VOL</th><th class="text-end text-muted">%CHG</th></tr>
+                                        </thead>
+                                        <tbody id="activeTable"></tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
 
-                    </div>
-                </div>
-
-            </div> <!-- End Main Grid -->
-
-            <!-- Bottom Grid: News & AI -->
-            <div class="row g-3 mt-1">
-
-                <!-- AI Insights -->
-                <div class="col-lg-6">
-                    <div class="card border-0 shadow-sm dashboard-card h-100">
-                         <div class="card-header bg-transparent border-0 pt-3 px-3 d-flex justify-content-between">
-                            <h6 class="mb-0 fw-bold"><i class="fa-solid fa-brain me-2 text-primary"></i>AI Analyst</h6>
-                            <span class="badge bg-primary-subtle text-primary rounded-pill">GPT-4o</span>
-                        </div>
-                        <div class="card-body p-4 position-relative">
-                            <div id="aiLoading" class="text-center py-4">
-                                <div class="spinner-grow text-primary spinner-grow-sm" role="status"></div>
-                                <span class="ms-2 small text-muted">Analyzing...</span>
-                            </div>
-                            <div id="aiContent" class="markdown-body small d-none" style="max-height: 300px; overflow-y: auto;">
-                                <!-- Markdown -->
+                        <!-- Market News -->
+                        <div class="col-12">
+                            <div class="card border-secondary bg-darker mt-2">
+                                <div class="card-header border-secondary py-1 px-2 font-monospace small text-uppercase fw-bold text-warning">
+                                    <i class="fa-solid fa-rss me-1"></i> Market Wire
+                                </div>
+                                <div class="card-body p-2">
+                                    <div id="marketNewsGrid" class="row g-2"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- News Feed -->
-                <div class="col-lg-6">
-                     <div class="card border-0 shadow-sm dashboard-card h-100">
-                        <div class="card-header bg-transparent border-0 pt-3 px-3">
-                            <h6 class="mb-0 fw-bold"><i class="fa-regular fa-newspaper me-2 text-primary"></i>Latest Headlines</h6>
+                <!-- VIEW: SINGLE STOCK ANALYSIS -->
+                <div id="viewStock" class="view-section d-none">
+                    <!-- Stock Header -->
+                     <div class="d-flex justify-content-between align-items-end mb-2 p-2 bg-darker border border-secondary rounded">
+                        <div>
+                            <h2 class="mb-0 fw-bold font-monospace text-warning"><span id="stockSymbol">---</span></h2>
+                            <div class="text-muted small font-monospace" id="stockName">---</div>
+                        </div>
+                        <div class="text-end">
+                            <h3 class="mb-0 font-monospace text-white" id="currentPrice">---</h3>
+                            <div id="priceChange" class="font-monospace small">---</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <!-- Main Chart -->
+                        <div class="col-lg-8">
+                            <div class="card border-secondary bg-darker h-100">
+                                <div class="card-header border-secondary py-1 px-2 font-monospace small d-flex justify-content-between align-items-center">
+                                    <span><i class="fa-solid fa-chart-candlestick me-1"></i> PRICE ACTION</span>
+                                    <div class="input-group input-group-sm w-auto">
+                                        <input type="text" id="compareInput" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="Compare (e.g. SPY)">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="triggerComparison()">Add</button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0 position-relative">
+                                    <div id="chartContainer" style="width: 100%; height: 500px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Stats & Verdict -->
+                        <div class="col-lg-4">
+                            <div class="d-flex flex-column gap-2 h-100">
+                                <div class="card border-secondary bg-darker">
+                                    <div class="card-header border-secondary py-1 px-2 font-monospace small fw-bold">VERDICT</div>
+                                    <div class="card-body text-center py-3">
+                                        <h4 id="verdictSignal" class="fw-bold font-monospace mb-2">NEUTRAL</h4>
+                                        <div class="progress mb-3 bg-secondary" style="height: 6px;">
+                                            <div id="verdictBar" class="progress-bar bg-warning" role="progressbar" style="width: 50%"></div>
+                                        </div>
+                                        <ul id="verdictReasons" class="text-start small font-monospace list-unstyled text-muted mb-0"></ul>
+                                    </div>
+                                </div>
+
+                                <div class="card border-secondary bg-darker flex-grow-1">
+                                    <div class="card-header border-secondary py-1 px-2 font-monospace small fw-bold">DATA</div>
+                                    <div class="card-body p-2 small font-monospace">
+                                        <div id="fundamentalsGrid" class="d-flex flex-column gap-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Analysis & News -->
+                    <div class="row g-2 mt-1">
+                        <div class="col-lg-6">
+                            <div class="card border-secondary bg-darker h-100">
+                                <div class="card-header border-secondary py-1 px-2 font-monospace small fw-bold text-info">
+                                    <i class="fa-solid fa-robot me-1"></i> AI ANALYST
+                                </div>
+                                <div class="card-body p-3 small font-monospace text-light" id="aiContent">
+                                    <div class="spinner-border spinner-border-sm text-secondary" role="status"></div> Analyzing...
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card border-secondary bg-darker h-100">
+                                <div class="card-header border-secondary py-1 px-2 font-monospace small fw-bold text-white">
+                                    <i class="fa-regular fa-newspaper me-1"></i> NEWS WIRE
+                                </div>
+                                <div class="card-body p-0">
+                                    <div id="newsList" class="list-group list-group-flush"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End View Stock -->
+
+                <!-- VIEW: SCREENER -->
+                <div id="viewScreener" class="view-section d-none">
+                    <div class="card border-secondary bg-darker">
+                        <div class="card-header border-secondary py-1 px-2 font-monospace small fw-bold text-primary">
+                            <i class="fa-solid fa-filter me-1"></i> LIVE SCREENER (>2% MOVERS)
                         </div>
                         <div class="card-body p-0">
-                            <div id="newsLoading" class="text-center py-4">
-                                <div class="spinner-border spinner-border-sm text-muted" role="status"></div>
-                            </div>
-                            <div id="newsList" class="list-group list-group-flush small" style="max-height: 350px; overflow-y: auto;">
-                                <!-- JS Populated -->
-                            </div>
+                            <table class="table table-dark table-sm table-hover mb-0 font-monospace">
+                                <thead>
+                                    <tr>
+                                        <th>TICKER</th>
+                                        <th class="text-end">PRICE</th>
+                                        <th class="text-end">CHANGE %</th>
+                                        <th class="text-end">VOLUME</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="screenerTableBody">
+                                    <!-- JS Populated -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
             </div>
-
-        </div> <!-- End Dashboard -->
-    </div>
-
-    <!-- Chat Bot -->
-    <div id="chatContainer" class="chat-container">
-        <div class="chat-header">
-            <div class="d-flex align-items-center">
-                <div class="chat-avatar me-2">
-                    <i class="fa-solid fa-robot"></i>
-                </div>
-                <div>
-                    <span class="fw-semibold">Clanky AI</span>
-                    <div class="chat-status">Ready to assist</div>
-                </div>
-            </div>
-            <button id="closeChat" class="btn btn-sm text-white opacity-75 hover-opacity-100"><i class="fa-solid fa-times"></i></button>
-        </div>
-        <div class="chat-body" id="chatBody">
-            <div class="chat-message bot-message">
-                👋 I'm here to help you analyze the charts.
-            </div>
-        </div>
-        <div class="chat-footer">
-            <div class="input-group">
-                <input type="text" id="chatInput" placeholder="Ask about this stock..." disabled>
-                <button class="btn" type="button" id="sendMessageBtn" disabled><i class="fa-solid fa-paper-plane"></i></button>
-            </div>
         </div>
     </div>
-
-    <button id="chatToggle" class="floating-btn position-fixed bottom-0 start-0 m-4 chat-fab">
-        <i class="fa-solid fa-comments fs-5"></i>
-        <span class="chat-badge">AI</span>
-    </button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Simple clock
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toISOString().split('T')[1].split('.')[0];
+        }, 1000);
+
+        function triggerComparison() {
+            const ticker = document.getElementById('compareInput').value.toUpperCase();
+            if(ticker) addComparison(ticker);
+        }
+    </script>
 </body>
 </html>
