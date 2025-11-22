@@ -251,7 +251,50 @@ class MassiveService:
             return results
 
         except Exception as e:
-            print(f"Unusual Error: {e}")
+            print(f"Unusual Options Error (Falling back to Stocks): {e}")
+            return self._get_unusual_stock_activity_fallback()
+
+    def _get_unusual_stock_activity_fallback(self):
+        """
+        Fallback: Returns top liquid stocks if options are restricted.
+        """
+        if not self.client: return []
+        try:
+            target_date = self._get_last_trading_day()
+            aggs = self.client.get_grouped_daily_aggs(target_date)
+
+            data = []
+            for a in aggs:
+                if a.open and a.close and a.volume:
+                    notional = a.close * a.volume
+                    change_pct = ((a.close - a.open) / a.open) * 100
+
+                    # Filter for significant volume (e.g. > $10M notional) to be 'Whale' like
+                    # or just take top 50
+                    data.append({
+                        'ticker': a.ticker,
+                        'contract': 'SHARE',
+                        'type': 'EQ',
+                        'dte': '-',
+                        'stock_price': a.close,
+                        'strike': 0,
+                        'otm_pct': 0,
+                        'otm_status': '',
+                        'price': a.close,
+                        'change_pct': round(change_pct, 1),
+                        'vol': a.volume,
+                        'oi': 0,
+                        'premium': notional, # Use premium col for notional
+                        'iv': 0,
+                        'sentiment': 'BULLISH' if change_pct > 0 else 'BEARISH'
+                    })
+
+            # Sort by Notional Value (Premium) desc
+            data.sort(key=lambda x: x['premium'], reverse=True)
+            return data[:50]
+
+        except Exception as e:
+            print(f"Stock Fallback Error: {e}")
             return []
 
     def _parse_option_ticker(self, ticker):

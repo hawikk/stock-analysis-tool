@@ -110,8 +110,12 @@ function loadWhaleActivity() {
                 tr.addEventListener('click', () => loadStock(item.ticker));
 
                 // Colors
-                const typeClass = item.type === 'C' ? 'uw-call' : 'uw-put';
-                const typeLabel = item.type === 'C' ? 'CALL' : 'PUT';
+                let typeClass = 'uw-put';
+                let typeLabel = 'PUT';
+
+                if (item.type === 'C') { typeClass = 'uw-call'; typeLabel = 'CALL'; }
+                else if (item.type === 'EQ') { typeClass = 'bg-secondary text-white'; typeLabel = 'STOCK'; }
+
                 const sentimentClass = item.sentiment === 'BULLISH' ? 'text-bull' : 'text-bear';
                 const chgColor = item.change_pct >= 0 ? 'text-success' : 'text-danger';
 
@@ -122,20 +126,27 @@ function loadWhaleActivity() {
                     <td class="fw-bold text-white"><span class="d-flex align-items-center gap-2"><img src="https://logo.clearbit.com/${item.ticker}.com" style="width:16px;height:16px;border-radius:50%;" onerror="this.style.display='none'"> ${item.ticker}</span></td>
                     <td class="text-muted small">${item.contract}</td>
                     <td><span class="uw-tag ${typeClass}">${typeLabel}</span></td>
-                    <td class="text-white">${item.dte}d</td>
-                    <td class="text-end text-white">${item.strike.toFixed(2)}</td>
+                    <td class="text-white">${item.dte === '-' ? '-' : item.dte + 'd'}</td>
+                    <td class="text-end text-white">${item.strike > 0 ? item.strike.toFixed(2) : '-'}</td>
                     <td class="text-end text-muted">${item.stock_price > 0 ? item.stock_price.toFixed(2) : '-'}</td>
-                    <td class="text-end ${otmColor}">${item.otm_pct}%</td>
+                    <td class="text-end ${otmColor}">${item.otm_pct > 0 ? item.otm_pct + '%' : '-'}</td>
                     <td class="text-end text-white">${item.price.toFixed(2)}</td>
                     <td class="text-end ${chgColor}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(1)}%</td>
                     <td class="text-end text-warning fw-bold">${formatNumber(item.vol)}</td>
-                    <td class="text-end text-muted">${formatNumber(item.oi)}</td>
+                    <td class="text-end text-muted">${item.oi > 0 ? formatNumber(item.oi) : '-'}</td>
                     <td class="text-end text-white">$${formatNumber(item.premium)}</td>
-                    <td class="text-end text-muted">${item.iv}%</td>
+                    <td class="text-end text-muted">${item.iv > 0 ? item.iv + '%' : '-'}</td>
                     <td class="text-center ${sentimentClass} fw-bold small">${item.sentiment}</td>
                 `;
                 tbody.appendChild(tr);
             });
+
+            // Show notice if fallback
+            if (data.data[0].type === 'EQ') {
+                const notice = document.createElement('tr');
+                notice.innerHTML = '<td colspan="14" class="text-center text-warning small py-1 bg-darker"><i class="fa-solid fa-triangle-exclamation me-2"></i>Options data restricted by API plan. Showing High-Volume Equity Flows.</td>';
+                tbody.insertBefore(notice, tbody.firstChild);
+            }
         } else {
             tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">No unusual activity found or API limit reached.</td></tr>';
         }
