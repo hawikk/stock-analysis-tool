@@ -1,5 +1,5 @@
 import os
-from massive import RESTClient
+from polygon import RESTClient
 from datetime import date, timedelta
 import requests
 
@@ -12,6 +12,15 @@ class MassiveService:
             self.client = None
         else:
             self.client = RESTClient(self.api_key)
+
+    def _get_last_trading_day(self):
+        """Returns the last likely trading day (weekday) relative to today."""
+        # Start 2 days ago to be safe for free tier delay
+        d = date.today() - timedelta(days=2)
+        # While weekend (5=Sat, 6=Sun), go back
+        while d.weekday() >= 5:
+            d -= timedelta(days=1)
+        return d.strftime('%Y-%m-%d')
 
     def get_ticker_details(self, ticker):
         """
@@ -78,8 +87,7 @@ class MassiveService:
         """
         if not self.client: return {'gainers': [], 'losers': [], 'active': []}
         try:
-            # Use 2 days ago to ensure data availability on free tier
-            target_date = (date.today() - timedelta(days=2)).strftime('%Y-%m-%d')
+            target_date = self._get_last_trading_day()
 
             aggs = self.client.get_grouped_daily_aggs(target_date)
 

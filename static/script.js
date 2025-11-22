@@ -219,10 +219,27 @@ document.addEventListener('click', (e) => {
 
 // --- STOCK DETAILS LOGIC ---
 
+// State for current ticker and period
+let currentTicker = null;
+let currentPeriod = "1y";
+
+// Event Listeners for Time Range Buttons
+document.querySelectorAll('.time-range-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.time-range-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentPeriod = this.getAttribute('data-range');
+        if (currentTicker) {
+            fetchHistory(currentTicker);
+        }
+    });
+});
+
 function loadStock(ticker) {
     // Switch view
     document.querySelector('[data-view="chart"]').click();
 
+    currentTicker = ticker;
     // Update Header
     document.getElementById('stockSymbol').innerText = ticker;
     document.getElementById('stockName').innerText = "Loading...";
@@ -261,7 +278,7 @@ function fetchInfo(ticker) {
 }
 
 function fetchHistory(ticker) {
-    fetch(`/api/dashboard_data?ticker=${ticker}`)
+    fetch(`/api/dashboard_data?ticker=${ticker}&period=${currentPeriod}`)
     .then(res => res.json())
     .then(data => {
         renderStockChart(data);
@@ -275,6 +292,9 @@ function renderStockChart(data) {
 
     const isDark = !document.body.getAttribute('data-theme') || document.body.getAttribute('data-theme') === 'dark';
 
+    // Detect if data is intraday (contains time)
+    const isIntraday = currentPeriod === '1d' || currentPeriod === '1w';
+
     chartInstance = LightweightCharts.createChart(container, {
         layout: {
             background: { type: 'solid', color: 'transparent' },
@@ -286,18 +306,38 @@ function renderStockChart(data) {
         },
         width: container.clientWidth,
         height: container.clientHeight,
-        timeScale: { borderColor: '#444' },
+        timeScale: {
+            borderColor: '#444',
+            timeVisible: isIntraday,
+            secondsVisible: false
+        },
         rightPriceScale: { borderColor: '#444' }
     });
 
     const candleSeries = chartInstance.addCandlestickSeries({
         upColor: '#00ff00', downColor: '#ff0000', borderVisible: false, wickUpColor: '#00ff00', wickDownColor: '#ff0000'
     });
-    candleSeries.setData(data.ohlc);
+
+    // Process data for lightweight charts (needs timestamps for intraday)
+    const processedOHLC = data.ohlc.map(d => {
+        // If intraday, time is likely YYYY-MM-DD HH:MM. Lightweight charts needs unix timestamp for intraday.
+        if (d.time.includes(' ')) {
+             return { ...d, time: new Date(d.time).getTime() / 1000 };
+        }
+        return d;
+    });
+    candleSeries.setData(processedOHLC);
 
     // SMA 50
     const sma50 = chartInstance.addLineSeries({ color: '#ffff00', lineWidth: 1 });
-    sma50.setData(data.indicators.sma50);
+    // Same processing for indicators
+    const processedSMA = data.indicators.sma50.map(d => {
+         if (d.time.includes(' ')) {
+             return { ...d, time: new Date(d.time).getTime() / 1000 };
+        }
+        return d;
+    });
+    sma50.setData(processedSMA);
 
     // Markers
     if(data.markers) candleSeries.setMarkers(data.markers);

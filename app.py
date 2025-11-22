@@ -167,12 +167,20 @@ def get_info():
         if company_info.get('peRatio', 'N/A') == 'N/A':
              try:
                  # Only fetch full info if absolutely necessary, it's slow.
-                 # But user wants "Bloomberg" style, so let's try.
-                 # We can lazily fetch it or just skip it for speed.
-                 # Let's skip for speed in this "Lite" version or check if we can get it cheaply.
-                 pass
-             except:
-                 pass
+                 yf_info = stock.info
+                 company_info['peRatio'] = yf_info.get('trailingPE', 'N/A')
+                 company_info['dividendYield'] = yf_info.get('dividendYield', 'N/A')
+                 # Format dividend yield to percentage if it exists
+                 if company_info['dividendYield'] != 'N/A':
+                     company_info['dividendYield'] = f"{company_info['dividendYield'] * 100:.2f}%"
+
+                 if company_info.get('marketCap', 'N/A') == 'N/A':
+                     company_info['marketCap'] = yf_info.get('marketCap', 'N/A')
+
+                 if company_info.get('sector', 'N/A') == 'N/A':
+                      company_info['sector'] = yf_info.get('sector', 'N/A')
+             except Exception as e:
+                 print(f"YFinance Info Fallback Error: {e}")
 
         return jsonify({'info': company_info, 'technicals': technicals})
 
@@ -228,17 +236,32 @@ def get_dashboard_data():
 # Actually I'll copy the original logic back to ensure no regression.
 def get_dashboard_data_impl():
     ticker_symbol = request.args.get('ticker')
+    period = request.args.get('period', '1y')
+
     if not ticker_symbol:
         return jsonify({'error': 'No ticker provided'}), 400
 
+    # Map period to interval
+    interval = "1d"
+    if period == "1d":
+        interval = "5m"
+    elif period == "1w":
+        interval = "15m"
+    elif period == "1mo":
+        interval = "60m"
+
     try:
         stock = yf.Ticker(ticker_symbol)
-        hist = stock.history(period="1y")
+        hist = stock.history(period=period, interval=interval)
 
         if hist.empty:
              return jsonify({'error': 'No historical data found'}), 404
 
-        hist.index = hist.index.strftime('%Y-%m-%d')
+        # Format index based on interval
+        if interval == "1d":
+            hist.index = hist.index.strftime('%Y-%m-%d')
+        else:
+            hist.index = hist.index.strftime('%Y-%m-%d %H:%M')
         ohlc_data = []
         volume_data = []
 

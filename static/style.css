@@ -15,7 +15,7 @@
     --border: #333333;
     
     --text-main: #e0e0e0;
-    --text-muted: #888888;
+    --text-muted: #b0b0b0; /* Lighter gray for better legibility on dark */
     
     --font-main: 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -99,4 +99,14 @@ body {
 .live-dot {
     width: 8px; height: 8px; background: red; border-radius: 50%; display: inline-block;
     animation: blink 1s infinite;
+}
+/* Force text-muted to use our variable */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Specific overrides for table headers to ensure they are readable */
+th.text-muted {
+    color: var(--text-muted) !important;
+    font-weight: 600;
 }

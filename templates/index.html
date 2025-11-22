@@ -174,7 +174,15 @@
                         <div class="col-lg-8">
                             <div class="card border-secondary bg-darker h-100">
                                 <div class="card-header border-secondary py-1 px-2 font-monospace small d-flex justify-content-between align-items-center">
-                                    <span><i class="fa-solid fa-chart-candlestick me-1"></i> PRICE ACTION</span>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span><i class="fa-solid fa-chart-candlestick me-1"></i> PRICE ACTION</span>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-secondary p-0 px-2 time-range-btn" data-range="1d">1D</button>
+                                            <button type="button" class="btn btn-outline-secondary p-0 px-2 time-range-btn" data-range="1w">1W</button>
+                                            <button type="button" class="btn btn-outline-secondary p-0 px-2 time-range-btn" data-range="1mo">1M</button>
+                                            <button type="button" class="btn btn-outline-secondary p-0 px-2 time-range-btn active" data-range="1y">1Y</button>
+                                        </div>
+                                    </div>
                                     <div class="input-group input-group-sm w-auto">
                                         <input type="text" id="compareInput" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="Compare (e.g. SPY)">
                                         <button class="btn btn-outline-secondary" type="button" onclick="triggerComparison()">Add</button>
