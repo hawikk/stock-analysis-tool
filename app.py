@@ -75,31 +75,29 @@ def get_market_news():
     """Returns general market news"""
     try:
         articles = massive_service.get_market_news()
-        if articles:
-            return jsonify({'articles': articles})
-
-        # Fallback to NewsAPI if Massive fails
-        # We use top-headlines for general market news
-        print("Massive News failed or empty, falling back to NewsAPI")
-        url = f'https://newsapi.org/v2/top-headlines?category=business&language=en&country=us&pageSize=10&apiKey={NEWS_API_KEY}'
-        response = requests.get(url)
-        news_data = response.json()
-        
-        fallback_articles = []
-        if news_data.get('status') == 'ok':
-            for article in news_data.get('articles', []):
-                if article.get('title') == '[Removed]': continue
-                
-                fallback_articles.append({
-                    'title': article.get('title'),
-                    'source': article.get('source', {}).get('name'),
-                    'url': article.get('url'),
-                    'publishedAt': article.get('publishedAt'),
-                    'image': article.get('urlToImage')
-                })
-        
-        return jsonify({'articles': fallback_articles})
-
+        if not articles:
+            # Fallback to NewsAPI top-headlines for general market news
+            print("Massive News failed or empty, falling back to NewsAPI")
+            url = f'https://newsapi.org/v2/top-headlines?category=business&language=en&country=us&pageSize=10&apiKey={NEWS_API_KEY}'
+            response = requests.get(url)
+            news_data = response.json()
+            
+            fallback_articles = []
+            if news_data.get('status') == 'ok':
+                for article in news_data.get('articles', []):
+                    if article.get('title') == '[Removed]': 
+                        continue
+                    
+                    fallback_articles.append({
+                        'title': article.get('title'),
+                        'source': article.get('source', {}).get('name'),
+                        'url': article.get('url'),
+                        'publishedAt': article.get('publishedAt'),
+                        'image': article.get('urlToImage')
+                    })
+            
+            return jsonify({'articles': fallback_articles})
+        return jsonify({'articles': articles})
     except Exception as e:
         print(f"Market News Error: {e}")
         return jsonify({'error': str(e)}), 500
@@ -487,19 +485,31 @@ def get_news():
         return get_market_news() # Redirect to market news
 
     try:
-        # Try Massive first for ticker news if available (Massive has ticker news)
-        # If not, fallback to NewsAPI
-        # Massive is better because it's financial specific.
-        # However, Massive's free tier might rate limit.
-        # Let's stick to NewsAPI for specific ticker for now unless it fails.
-
+        # Try NewsAPI first
         url = f'https://newsapi.org/v2/everything?q={ticker_symbol}&sortBy=publishedAt&language=en&pageSize=12&apiKey={NEWS_API_KEY}'
         response = requests.get(url)
         news_data = response.json()
 
         if news_data.get('status') != 'ok':
-             # Fallback to Massive?
-             return jsonify({'error': 'Failed to fetch news', 'details': news_data}), 500
+             # Fallback to yfinance
+             try:
+                 stock = yf.Ticker(ticker_symbol)
+                 news = stock.news
+                 articles = []
+                 for n in news:
+                     c = n.get('content', n)
+                     articles.append({
+                         'title': c.get('title'),
+                         'source': c.get('provider', {}).get('displayName') if isinstance(c.get('provider'), dict) else c.get('publisher'),
+                         'url': c.get('clickThroughUrl', {}).get('url') if isinstance(c.get('clickThroughUrl'), dict) else c.get('link'),
+                         'publishedAt': c.get('pubDate') if c.get('pubDate') else (datetime.datetime.fromtimestamp(c.get('providerPublishTime', 0)).isoformat() if c.get('providerPublishTime') else None),
+                         'image': c.get('thumbnail', {}).get('resolutions', [{}])[0].get('url') if isinstance(c.get('thumbnail'), dict) else None,
+                         'sentiment': 'neutral'
+                     })
+                 return jsonify({'articles': articles})
+             except Exception as ex:
+                 print(f"YFinance News Fallback Error: {ex}")
+                 return jsonify({'error': 'Failed to fetch news', 'details': news_data}), 500
 
         articles = []
         for article in news_data.get('articles', []):
