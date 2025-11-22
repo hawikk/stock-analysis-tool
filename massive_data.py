@@ -1,5 +1,6 @@
 import os
-from polygon import RESTClient
+# Switch to 'massive' package to avoid conflict with 'polygon' geometry library
+from massive import RESTClient
 from datetime import date, timedelta
 import requests
 

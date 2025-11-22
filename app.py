@@ -75,11 +75,33 @@ def get_market_news():
     """Returns general market news"""
     try:
         articles = massive_service.get_market_news()
-        if not articles:
-             # Fallback to existing news method if massive fails or empty
-             return get_news()
-        return jsonify({'articles': articles})
+        if articles:
+            return jsonify({'articles': articles})
+
+        # Fallback to NewsAPI if Massive fails
+        # We use top-headlines for general market news
+        print("Massive News failed or empty, falling back to NewsAPI")
+        url = f'https://newsapi.org/v2/top-headlines?category=business&language=en&country=us&pageSize=10&apiKey={NEWS_API_KEY}'
+        response = requests.get(url)
+        news_data = response.json()
+        
+        fallback_articles = []
+        if news_data.get('status') == 'ok':
+            for article in news_data.get('articles', []):
+                if article.get('title') == '[Removed]': continue
+                
+                fallback_articles.append({
+                    'title': article.get('title'),
+                    'source': article.get('source', {}).get('name'),
+                    'url': article.get('url'),
+                    'publishedAt': article.get('publishedAt'),
+                    'image': article.get('urlToImage')
+                })
+        
+        return jsonify({'articles': fallback_articles})
+
     except Exception as e:
+        print(f"Market News Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/market/whale', methods=['GET'])
