@@ -41,7 +41,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini-2025-08-07")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Initialize OpenAI Client properly
+if OPENAI_API_KEY:
+    client = OpenAI(api_key=OPENAI_API_KEY)
+else:
+    client = None
 
 @app.route('/')
 def index():
@@ -52,17 +56,55 @@ def index():
 @app.route('/api/market/status', methods=['GET'])
 @cache.cached(timeout=300) # Cache for 5 mins
 def get_market_status():
-    """Returns status of major indices"""
+    """Returns status of major indices using YFinance to save Massive API calls"""
+    indices = {
+        'SPY': 'S&P 500',
+        'QQQ': 'Nasdaq 100',
+        'DIA': 'Dow Jones',
+        'IWM': 'Russell 2000'
+    }
+    results = []
     try:
-        data = massive_service.get_market_status()
-        return jsonify({'indices': data})
+        # Fetch all in one batch if possible, but yfinance works per ticker or batch
+        # Tickers: SPY QQQ DIA IWM
+        tickers = " ".join(indices.keys())
+        data = yf.tickers(tickers)
+
+        for symbol, name in indices.items():
+            ticker = data.tickers[symbol]
+            price = None
+            prev_close = None
+
+            # Try fast_info
+            if hasattr(ticker, 'fast_info'):
+                price = ticker.fast_info.get('last_price')
+                prev_close = ticker.fast_info.get('previous_close')
+
+            # Fallback to history if fast_info is missing or returned None
+            if price is None or prev_close is None:
+                hist = ticker.history(period="2d")
+                if len(hist) >= 1:
+                    price = hist['Close'].iloc[-1]
+                    prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else price
+
+            if price is not None and prev_close is not None:
+                change_pct = ((price - prev_close) / prev_close) * 100
+                results.append({
+                    'ticker': symbol,
+                    'name': name,
+                    'price': price,
+                    'change_pct': change_pct
+                })
+
+        return jsonify({'indices': results})
     except Exception as e:
+        print(f"Market Status Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/market/movers', methods=['GET'])
 @cache.cached(timeout=3600) # Cache for 1 hour (since it's based on T-2 data mostly)
 def get_market_movers():
-    """Returns top gainers/losers/active"""
+    """Returns top gainers/losers/active (Uses Massive - 1 Call)"""
     try:
         data = massive_service.get_market_movers()
         return jsonify(data)
@@ -72,32 +114,43 @@ def get_market_movers():
 @app.route('/api/market/news', methods=['GET'])
 @cache.cached(timeout=600)
 def get_market_news():
-    """Returns general market news"""
+    """Returns general market news (Uses NewsAPI to save Massive Calls)"""
     try:
-        articles = massive_service.get_market_news()
-        if not articles:
-            # Fallback to NewsAPI top-headlines for general market news
-            print("Massive News failed or empty, falling back to NewsAPI")
+        # 1. Try NewsAPI
+        if NEWS_API_KEY:
             url = f'https://newsapi.org/v2/top-headlines?category=business&language=en&country=us&pageSize=10&apiKey={NEWS_API_KEY}'
             response = requests.get(url)
             news_data = response.json()
             
-            fallback_articles = []
+            articles = []
             if news_data.get('status') == 'ok':
                 for article in news_data.get('articles', []):
-                    if article.get('title') == '[Removed]': 
-                        continue
-                    
-                    fallback_articles.append({
+                    if article.get('title') == '[Removed]': continue
+                    articles.append({
                         'title': article.get('title'),
                         'source': article.get('source', {}).get('name'),
                         'url': article.get('url'),
                         'publishedAt': article.get('publishedAt'),
                         'image': article.get('urlToImage')
                     })
-            
-            return jsonify({'articles': fallback_articles})
+                return jsonify({'articles': articles})
+
+        # 2. Fallback to YFinance General News (if NewsAPI fails or no key)
+        # Using a proxy ticker like 'SPY' for general market news
+        spy = yf.Ticker("SPY")
+        news = spy.news
+        articles = []
+        for n in news:
+             c = n.get('content', n)
+             articles.append({
+                 'title': c.get('title'),
+                 'source': c.get('provider', {}).get('displayName') if isinstance(c.get('provider'), dict) else c.get('publisher'),
+                 'url': c.get('clickThroughUrl', {}).get('url') if isinstance(c.get('clickThroughUrl'), dict) else c.get('link'),
+                 'publishedAt': c.get('pubDate') if c.get('pubDate') else (datetime.datetime.fromtimestamp(c.get('providerPublishTime', 0)).isoformat() if c.get('providerPublishTime') else None),
+                 'image': c.get('thumbnail', {}).get('resolutions', [{}])[0].get('url') if isinstance(c.get('thumbnail'), dict) else None
+             })
         return jsonify({'articles': articles})
+
     except Exception as e:
         print(f"Market News Error: {e}")
         return jsonify({'error': str(e)}), 500
@@ -105,7 +158,7 @@ def get_market_news():
 @app.route('/api/market/whale', methods=['GET'])
 @cache.cached(timeout=300)
 def get_whale_activity():
-    """Returns unusual activity"""
+    """Returns unusual activity (Uses Massive - 2 Calls)"""
     try:
         data = massive_service.get_unusual_activity()
         return jsonify({'data': data})
@@ -123,36 +176,29 @@ def get_info():
         return jsonify({'error': 'No ticker provided'}), 400
 
     try:
-        # 1. Get Reference Data from Massive (Fast & Reliable Metadata)
+        # 1. Get Reference Data from Massive (Fast & Reliable Metadata) - 1 Call
         company_info = massive_service.get_ticker_details(ticker_symbol)
         
         # 2. Get Price Data (Hybrid Approach)
-        # Try to get real-time price from YFinance for accuracy, fall back to Massive Prev Close
         current_price = "N/A"
         try:
             # Fast fetch for price only
             stock = yf.Ticker(ticker_symbol)
-            # Use fast_info if available (newer yfinance versions)
             if hasattr(stock, 'fast_info'):
                 current_price = stock.fast_info['last_price']
             else:
                 current_price = stock.info.get('currentPrice')
         except:
-            # Fallback to Massive Prev Close
-            prev = massive_service.get_previous_close(ticker_symbol)
-            if prev:
-                current_price = prev['close']
+            pass
 
         # Update company_info with price
         company_info['currentPrice'] = round(current_price, 2) if isinstance(current_price, (int, float)) else current_price
 
         # 3. Technicals (Requires History) -> Use YFinance
-        # We still need history for indicators.
         hist = stock.history(period="1y")
 
         technicals = {}
         if not hist.empty:
-            # Calculate Technicals (Same as before)
             rsi = RSIIndicator(close=hist["Close"], window=14)
             current_rsi = rsi.rsi().iloc[-1]
 
@@ -180,17 +226,12 @@ def get_info():
                 'Bollinger Low': round(current_bb_low, 2)
             }
 
-        # Fill missing fields in company_info if Massive didn't provide them
-        # (Massive doesn't give PE Ratio or Dividend easily in reference endpoint, might need Fundamentals API)
-        # For now, we'll leave them as N/A or try to fetch from yfinance info if we did a full fetch.
-        # Note: We only did fast fetch. If we want PE, we need full info.
+        # Fill missing fields
         if company_info.get('peRatio', 'N/A') == 'N/A':
              try:
-                 # Only fetch full info if absolutely necessary, it's slow.
                  yf_info = stock.info
                  company_info['peRatio'] = yf_info.get('trailingPE', 'N/A')
                  company_info['dividendYield'] = yf_info.get('dividendYield', 'N/A')
-                 # Format dividend yield to percentage if it exists
                  if company_info['dividendYield'] != 'N/A':
                      company_info['dividendYield'] = f"{company_info['dividendYield'] * 100:.2f}%"
 
@@ -208,7 +249,6 @@ def get_info():
         print(f"Error in info: {e}")
         return jsonify({'error': str(e)}), 500
 
-# ... (Keep existing /api/history as is, strictly yfinance) ...
 @app.route('/api/history', methods=['GET'])
 @cache.cached(query_string=True)
 def get_history():
@@ -244,16 +284,11 @@ def get_history():
         print(f"Error in history: {e}")
         return jsonify({'error': str(e)}), 500
 
-# ... (Keep existing /api/dashboard_data as is) ...
 @app.route('/api/dashboard_data', methods=['GET'])
 @cache.cached(query_string=True)
 def get_dashboard_data():
-    # This function is huge, we keep it as is for now, it uses yfinance which is fine for charts.
-    # Just ensuring it's imported correctly.
     return get_dashboard_data_impl()
 
-# Extracted logic for cleaner file (optional, but I'll just paste the original code for safety)
-# Actually I'll copy the original logic back to ensure no regression.
 def get_dashboard_data_impl():
     ticker_symbol = request.args.get('ticker')
     period = request.args.get('period', '1y')
@@ -261,7 +296,6 @@ def get_dashboard_data_impl():
     if not ticker_symbol:
         return jsonify({'error': 'No ticker provided'}), 400
 
-    # Map period to interval
     interval = "1d"
     if period == "1d":
         interval = "5m"
@@ -277,7 +311,6 @@ def get_dashboard_data_impl():
         if hist.empty:
              return jsonify({'error': 'No historical data found'}), 404
 
-        # Format index based on interval
         if interval == "1d":
             hist.index = hist.index.strftime('%Y-%m-%d')
         else:
@@ -451,7 +484,6 @@ def get_dashboard_data_impl():
 
 @app.route('/api/search', methods=['GET'])
 def search_ticker():
-    # Keep existing search
     query = request.args.get('q')
     if not query:
         return jsonify({'results': []})
@@ -478,20 +510,15 @@ def search_ticker():
 @cache.cached(query_string=True)
 def get_news():
     ticker_symbol = request.args.get('ticker')
-    # If ticker provided, use NewsAPI or Massive specific news
-    # If no ticker, use NewsAPI general or Massive general
-
     if not ticker_symbol:
-        return get_market_news() # Redirect to market news
+        return get_market_news()
 
     try:
-        # Try NewsAPI first
         url = f'https://newsapi.org/v2/everything?q={ticker_symbol}&sortBy=publishedAt&language=en&pageSize=12&apiKey={NEWS_API_KEY}'
         response = requests.get(url)
         news_data = response.json()
 
         if news_data.get('status') != 'ok':
-             # Fallback to yfinance
              try:
                  stock = yf.Ticker(ticker_symbol)
                  news = stock.news
@@ -544,6 +571,9 @@ def get_ai_summary():
     if not ticker_symbol:
         return jsonify({'error': 'No ticker provided'}), 400
     
+    if not client:
+        return jsonify({'error': 'AI features disabled (missing key)'}), 503
+
     try:
         prompt = f"Provide a comprehensive summary for the stock {ticker_symbol}. Include a breakdown of key strengths, risks, and a prediction for the future. Format the response using Markdown with headers (##), bold text (**text**), and bullet points."
         
@@ -606,6 +636,9 @@ def get_ml_analysis():
 
 @app.route('/api/chat', methods=['POST'])
 def chat_bot():
+    if not client:
+         return jsonify({'error': 'Chat disabled (missing AI key)'}), 503
+
     data = request.get_json()
     ticker_symbol = data.get('ticker')
     user_message = data.get('message')

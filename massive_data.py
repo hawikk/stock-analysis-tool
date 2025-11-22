@@ -120,57 +120,6 @@ class MassiveService:
             print(f"Massive Market Movers Error: {e}")
             return {'gainers': [], 'losers': [], 'active': []}
 
-    def get_market_status(self):
-        """
-        Fetches status of major indices.
-        """
-        indices = {
-            'SPY': 'S&P 500 ETF',
-            'QQQ': 'Nasdaq 100 ETF',
-            'DIA': 'Dow Jones ETF',
-            'IWM': 'Russell 2000 ETF'
-        }
-
-        results = []
-        for ticker, name in indices.items():
-            data = self.get_previous_close(ticker)
-            if data:
-                change = ((data['close'] - data['open']) / data['open']) * 100
-                results.append({
-                    'ticker': ticker,
-                    'name': name,
-                    'price': data['close'],
-                    'change_pct': change
-                })
-        return results
-
-    def get_market_news(self):
-        """
-        Fetches general market news
-        """
-        if not self.client: return []
-        try:
-             # Reduce limit to conserve bandwidth if needed, though 10 is small.
-             news = self.client.list_ticker_news(limit=10)
-             articles = []
-             for n in news:
-                 articles.append({
-                     'title': n.title,
-                     'source': n.author if n.author else n.publisher.name,
-                     'url': n.article_url,
-                     'publishedAt': n.published_utc,
-                     'image': n.image_url
-                 })
-             return articles
-        except Exception as e:
-            # If rate limited (429), avoid noisy stack traces if possible or just return empty gracefully
-            if "429" in str(e) or "Max retries exceeded" in str(e):
-                # print("Massive Rate Limit Hit (News). Falling back to yfinance.")
-                pass
-            else:
-                print(f"Massive News Error: {e}")
-            return []
-
     def get_unusual_activity(self):
         """
         Returns real Unusual Options Activity by fetching Universal Snapshots
