@@ -34,9 +34,9 @@ themeToggleBtn.addEventListener('click', () => {
 // Initialize Data
 document.addEventListener('DOMContentLoaded', () => {
     loadMarketStatus();
-    loadMarketMovers();
+    loadWhaleActivity(); // New Main Feature
     loadMarketNews();
-    loadWhaleActivity();
+    loadScreenerData(); // Restore Screener Data
 
     // Initialize clock
     setInterval(() => {
@@ -84,7 +84,7 @@ function loadMarketStatus() {
                 const div = document.createElement('div');
                 div.className = 'd-flex align-items-center gap-2 px-3 py-1 bg-darker border border-secondary rounded font-monospace small text-nowrap';
                 div.innerHTML = `
-                    <span class="fw-bold text-warning">${idx.ticker}</span>
+                    <span class="fw-bold text-white">${idx.ticker}</span>
                     <span class="${color}">${idx.price.toFixed(2)}</span>
                     <span class="${color} small">${arrow} ${Math.abs(idx.change_pct).toFixed(2)}%</span>
                 `;
@@ -96,57 +96,86 @@ function loadMarketStatus() {
 }
 
 function loadWhaleActivity() {
+    const tbody = document.getElementById('whaleTableBody');
+    tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div> Fetching Unusual Flow...</td></tr>';
+
     fetch('/api/market/whale')
     .then(res => res.json())
     .then(data => {
-        const container = document.getElementById('whaleTicker');
-        container.innerHTML = '';
-        if(data.data) {
+        tbody.innerHTML = '';
+        if(data.data && data.data.length > 0) {
             data.data.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'd-flex align-items-center gap-2 px-2 py-1 border border-warning rounded bg-darker small text-nowrap';
-                div.innerHTML = `
-                    <span class="fw-bold text-warning">${item.ticker}</span>
-                    <span class="text-white">${item.type}</span>
-                    <span class="text-muted small">${item.detail}</span>
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.addEventListener('click', () => loadStock(item.ticker));
+
+                // Colors
+                const typeClass = item.type === 'C' ? 'uw-call' : 'uw-put';
+                const typeLabel = item.type === 'C' ? 'CALL' : 'PUT';
+                const sentimentClass = item.sentiment === 'BULLISH' ? 'text-bull' : 'text-bear';
+                const chgColor = item.change_pct >= 0 ? 'text-success' : 'text-danger';
+
+                // OTM Format
+                const otmColor = item.otm_status === 'OTM' ? 'text-muted' : 'text-white';
+
+                tr.innerHTML = `
+                    <td class="fw-bold text-white"><span class="d-flex align-items-center gap-2"><img src="https://logo.clearbit.com/${item.ticker}.com" style="width:16px;height:16px;border-radius:50%;" onerror="this.style.display='none'"> ${item.ticker}</span></td>
+                    <td class="text-muted small">${item.contract}</td>
+                    <td><span class="uw-tag ${typeClass}">${typeLabel}</span></td>
+                    <td class="text-white">${item.dte}d</td>
+                    <td class="text-end text-white">${item.strike.toFixed(2)}</td>
+                    <td class="text-end text-muted">${item.stock_price > 0 ? item.stock_price.toFixed(2) : '-'}</td>
+                    <td class="text-end ${otmColor}">${item.otm_pct}%</td>
+                    <td class="text-end text-white">${item.price.toFixed(2)}</td>
+                    <td class="text-end ${chgColor}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(1)}%</td>
+                    <td class="text-end text-warning fw-bold">${formatNumber(item.vol)}</td>
+                    <td class="text-end text-muted">${formatNumber(item.oi)}</td>
+                    <td class="text-end text-white">$${formatNumber(item.premium)}</td>
+                    <td class="text-end text-muted">${item.iv}%</td>
+                    <td class="text-center ${sentimentClass} fw-bold small">${item.sentiment}</td>
                 `;
-                div.style.cursor = 'pointer';
-                div.addEventListener('click', () => loadStock(item.ticker));
-                container.appendChild(div);
+                tbody.appendChild(tr);
             });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">No unusual activity found or API limit reached.</td></tr>';
         }
     })
-    .catch(console.error);
+    .catch(err => {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-danger py-4">Error fetching data.</td></tr>';
+    });
 }
 
-function loadMarketMovers() {
+// Restore Screener Logic (using the same /api/market/movers endpoint)
+function loadScreenerData() {
     fetch('/api/market/movers')
     .then(res => res.json())
     .then(data => {
-        if(data.gainers) renderTable('gainersTable', data.gainers);
-        if(data.losers) renderTable('losersTable', data.losers);
-        if(data.active) renderTable('activeTable', data.active);
-
-        // Populate Screener with Gainers data initially (Client-side lite version)
         if (data.gainers) populateScreener(data.gainers);
     })
     .catch(console.error);
 }
 
-function renderTable(id, items) {
-    const tbody = document.getElementById(id);
-    tbody.innerHTML = '';
-    items.forEach(item => {
-        const color = item.change_pct >= 0 ? 'text-success' : 'text-danger';
+// Reuse existing populateScreener function
+function populateScreener(data) {
+    const container = document.getElementById('screenerTableBody');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Filter logic (e.g. > 2% change)
+    const filtered = data.filter(d => Math.abs(d.change_pct) > 2);
+
+    filtered.forEach(item => {
         const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        tr.addEventListener('click', () => loadStock(item.ticker));
         tr.innerHTML = `
-            <td class="fw-bold text-white">${item.ticker}</td>
+            <td class="text-white fw-bold">${item.ticker}</td>
             <td class="text-end text-muted">${item.price.toFixed(2)}</td>
-            <td class="text-end ${color}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(2)}%</td>
+            <td class="text-end ${item.change_pct > 0 ? 'text-success' : 'text-danger'}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(2)}%</td>
+            <td class="text-end text-white">${formatNumber(item.volume)}</td>
         `;
-        tbody.appendChild(tr);
+        tr.addEventListener('click', () => loadStock(item.ticker));
+        tr.style.cursor = 'pointer';
+        container.appendChild(tr);
     });
 }
 
@@ -159,14 +188,17 @@ function loadMarketNews() {
         if(data.articles) {
             data.articles.forEach(a => {
                 const div = document.createElement('div');
-                div.className = 'col-md-6';
+                div.className = 'col-md-6 col-lg-4';
                 div.innerHTML = `
                     <a href="${a.url}" target="_blank" class="text-decoration-none">
-                        <div class="d-flex gap-2 align-items-center p-2 bg-dark border border-secondary hover-bg">
-                            <i class="fa-solid fa-newspaper text-muted"></i>
+                        <div class="d-flex gap-3 align-items-start p-2 bg-darker border border-secondary hover-bg h-100 rounded">
+                            <div style="width: 4px; height: 100%; background: #2962ff; border-radius: 2px;"></div>
                             <div class="overflow-hidden">
-                                <div class="text-white small text-truncate fw-bold">${a.title}</div>
-                                <div class="text-muted x-small" style="font-size: 0.7em;">${a.source} • ${new Date(a.publishedAt).toLocaleTimeString()}</div>
+                                <div class="text-white small fw-bold mb-1">${a.title}</div>
+                                <div class="text-muted x-small d-flex justify-content-between">
+                                    <span>${a.source}</span>
+                                    <span>${new Date(a.publishedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
                             </div>
                         </div>
                     </a>
@@ -200,7 +232,7 @@ tickerInput.addEventListener('input', function() {
                     data.results.forEach(item => {
                         const div = document.createElement('div');
                         div.classList.add('suggestion-item');
-                        div.innerHTML = `<span>${item.symbol}</span> <span class="text-muted small ms-2">${item.shortname}</span>`;
+                        div.innerHTML = `<span class="fw-bold text-white">${item.symbol}</span> <span class="text-muted small ms-2">${item.shortname}</span>`;
                         div.addEventListener('click', () => {
                             tickerInput.value = item.symbol;
                             suggestionsBox.classList.add('d-none');
@@ -269,10 +301,10 @@ function fetchInfo(ticker) {
         // Render Fundamentals with safe access
         const grid = document.getElementById('fundamentalsGrid');
         grid.innerHTML = `
-             <div class="d-flex justify-content-between border-bottom border-secondary py-1"><span>MKT CAP</span> <span class="text-white">${formatNumber(info.marketCap)}</span></div>
-             <div class="d-flex justify-content-between border-bottom border-secondary py-1"><span>P/E</span> <span class="text-white">${safe(info.peRatio)}</span></div>
-             <div class="d-flex justify-content-between border-bottom border-secondary py-1"><span>DIV</span> <span class="text-white">${safe(info.dividendYield)}</span></div>
-             <div class="d-flex justify-content-between border-bottom border-secondary py-1"><span>SECTOR</span> <span class="text-white text-truncate" style="max-width: 100px;">${safe(info.sector)}</span></div>
+             <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>MKT CAP</span> <span class="text-white font-monospace">${formatNumber(info.marketCap)}</span></div>
+             <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>P/E</span> <span class="text-white font-monospace">${safe(info.peRatio)}</span></div>
+             <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>DIV</span> <span class="text-white font-monospace">${safe(info.dividendYield)}</span></div>
+             <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>SECTOR</span> <span class="text-white text-truncate font-monospace" style="max-width: 100px;">${safe(info.sector)}</span></div>
         `;
     });
 }
@@ -291,6 +323,8 @@ function renderStockChart(data) {
     container.innerHTML = '';
 
     const isDark = !document.body.getAttribute('data-theme') || document.body.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#ecedee' : '#131722';
+    const gridColor = isDark ? '#2a2e39' : '#e0e3eb';
 
     // Detect if data is intraday (contains time)
     const isIntraday = currentPeriod === '1d' || currentPeriod === '1w';
@@ -298,24 +332,24 @@ function renderStockChart(data) {
     chartInstance = LightweightCharts.createChart(container, {
         layout: {
             background: { type: 'solid', color: 'transparent' },
-            textColor: isDark ? '#ccc' : '#333',
+            textColor: textColor,
         },
         grid: {
-            vertLines: { color: isDark ? '#333' : '#eee' },
-            horzLines: { color: isDark ? '#333' : '#eee' }
+            vertLines: { color: gridColor },
+            horzLines: { color: gridColor }
         },
         width: container.clientWidth,
         height: container.clientHeight,
         timeScale: {
-            borderColor: '#444',
+            borderColor: gridColor,
             timeVisible: isIntraday,
             secondsVisible: false
         },
-        rightPriceScale: { borderColor: '#444' }
+        rightPriceScale: { borderColor: gridColor }
     });
 
     const candleSeries = chartInstance.addCandlestickSeries({
-        upColor: '#00ff00', downColor: '#ff0000', borderVisible: false, wickUpColor: '#00ff00', wickDownColor: '#ff0000'
+        upColor: '#00b894', downColor: '#ff4757', borderVisible: false, wickUpColor: '#00b894', wickDownColor: '#ff4757'
     });
 
     // Process data for lightweight charts (needs timestamps for intraday)
@@ -329,7 +363,7 @@ function renderStockChart(data) {
     candleSeries.setData(processedOHLC);
 
     // SMA 50
-    const sma50 = chartInstance.addLineSeries({ color: '#ffff00', lineWidth: 1 });
+    const sma50 = chartInstance.addLineSeries({ color: '#fbc531', lineWidth: 1 });
     // Same processing for indicators
     const processedSMA = data.indicators.sma50.map(d => {
          if (d.time.includes(' ')) {
@@ -427,34 +461,12 @@ function fetchStockNews(ticker) {
     });
 }
 
-// --- FEATURE: SCREENER (Lite) ---
-function populateScreener(data) {
-    const container = document.getElementById('screenerTableBody');
-    if (!container) return;
-    container.innerHTML = '';
-
-    // Filter logic (e.g. > 5% change)
-    const filtered = data.filter(d => Math.abs(d.change_pct) > 2);
-
-    filtered.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="text-white">${item.ticker}</td>
-            <td class="text-end">${item.price.toFixed(2)}</td>
-            <td class="text-end ${item.change_pct > 0 ? 'text-success' : 'text-danger'}">${item.change_pct.toFixed(2)}%</td>
-            <td class="text-end">${formatNumber(item.volume)}</td>
-        `;
-        tr.addEventListener('click', () => loadStock(item.ticker));
-        tr.style.cursor = 'pointer';
-        container.appendChild(tr);
-    });
-}
-
 
 function formatNumber(num) {
     if (!num || num === 'N/A') return 'N/A';
     if (num >= 1.0e+12) return (num / 1.0e+12).toFixed(2) + "T";
     if (num >= 1.0e+9) return (num / 1.0e+9).toFixed(2) + "B";
     if (num >= 1.0e+6) return (num / 1.0e+6).toFixed(2) + "M";
-    return num;
+    if (num >= 1.0e+3) return (num / 1.0e+3).toFixed(1) + "k";
+    return num.toFixed(2);
 }

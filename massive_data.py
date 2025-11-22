@@ -1,8 +1,9 @@
 import os
 # Switch to 'massive' package to avoid conflict with 'polygon' geometry library
 from massive import RESTClient
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import requests
+import re
 
 class MassiveService:
     def __init__(self):
@@ -172,28 +173,172 @@ class MassiveService:
 
     def get_unusual_activity(self):
         """
-        Returns a mock list of unusual activity since Real-Time Options is expensive.
-        We'll use High Volume stocks as a proxy for now.
+        Returns real Unusual Options Activity by fetching Universal Snapshots
+        for options, sorted by Volume.
         """
-        # In a real paid version, we would query options contracts:
-        # self.client.list_options_contracts(...)
-        # For now, we reuse movers logic but filter for EXTREME volume
+        if not self.client: return []
         try:
-            movers = self.get_market_movers()
-            # Filter for active
-            active = movers.get('active', [])
-            unusual = []
-            for a in active[:5]:
-                unusual.append({
-                    'ticker': a['ticker'],
-                    'type': 'HIGH VOL',
-                    'detail': f"Vol: {a['volume']:,}",
-                    'sentiment': 'BULLISH' if a['change_pct'] > 0 else 'BEARISH'
+            # 1. Fetch top active options (High Volume)
+            # Use 'option' type and sort by volume desc
+            snapshots = self.client.list_universal_snapshots(
+                type='option',
+                limit=30, # Get enough to filter
+                sort='volume',
+                order='desc'
+            )
+
+            raw_options = []
+            underlyings = set()
+            today = date.today()
+
+            for s in snapshots:
+                # Basic validation
+                if not hasattr(s, 'day') or not s.day.volume:
+                    continue
+
+                ticker = s.ticker
+                details = self._parse_option_ticker(ticker)
+
+                # Filter out crazy short dated if needed, or just keep all
+                underlyings.add(details['underlying'])
+                raw_options.append({
+                    'snapshot': s,
+                    'details': details
                 })
-            return unusual
+
+            # 2. Fetch Underlying Prices (for OTM calc)
+            # We use universal snapshot for stocks (ticker_any_of)
+            stock_map = {}
+            if underlyings:
+                try:
+                    # Convert set to list
+                    u_list = list(underlyings)
+                    # Split into chunks if > 250 (unlikely here with limit=30)
+                    stock_snaps = self.client.list_universal_snapshots(
+                        type='stocks',
+                        ticker_any_of=u_list
+                    )
+                    for ss in stock_snaps:
+                        stock_map[ss.ticker] = getattr(ss.day, 'close', 0)
+                except Exception as ex:
+                    print(f"Failed to fetch underlying prices: {ex}")
+
+            # 3. Build Final Result List
+            results = []
+            for item in raw_options:
+                s = item['snapshot']
+                d = item['details']
+
+                # Attributes
+                vol = getattr(s.day, 'volume', 0)
+                close = getattr(s.day, 'close', 0)
+                open_p = getattr(s.day, 'open', 0)
+
+                change_pct = 0
+                if open_p and open_p > 0:
+                    change_pct = ((close - open_p) / open_p) * 100
+
+                oi = getattr(s, 'open_interest', 0)
+                iv = getattr(s, 'implied_volatility', 0)
+                if iv: iv = iv * 100
+
+                # Greeks (if available in snapshot)
+                # Usually in s.greeks dict/object
+
+                # Premium = Vol * Close * 100
+                premium = vol * close * 100
+
+                # Underlying Price & OTM
+                stock_price = stock_map.get(d['underlying'], 0)
+                otm_pct = 0
+                otm_status = ""
+
+                if stock_price > 0:
+                    if d['type'] == 'C':
+                        if stock_price < d['strike']:
+                            diff = d['strike'] - stock_price
+                            otm_pct = (diff / stock_price) * 100
+                            otm_status = "OTM"
+                        else:
+                             otm_status = "ITM"
+                    elif d['type'] == 'P':
+                        if stock_price > d['strike']:
+                            diff = stock_price - d['strike']
+                            otm_pct = (diff / stock_price) * 100
+                            otm_status = "OTM"
+                        else:
+                             otm_status = "ITM"
+
+                # DTE
+                dte = (d['exp_date'] - today).days
+
+                # OI Change (Not available in snapshot, need history. Set to N/A)
+                oi_chg = 0
+
+                # Sentiment (Crude approximation)
+                sentiment = 'NEUTRAL'
+                if d['type'] == 'C': sentiment = 'BULLISH'
+                elif d['type'] == 'P': sentiment = 'BEARISH'
+
+                results.append({
+                    'ticker': d['underlying'],
+                    'contract': d['contract_name'], # e.g. SPY 440 C
+                    'dte': dte,
+                    'stock_price': stock_price,
+                    'strike': d['strike'],
+                    'otm_pct': round(otm_pct, 1),
+                    'otm_status': otm_status,
+                    'price': close, # Last
+                    'change_pct': round(change_pct, 1),
+                    'vol': vol,
+                    'oi': oi,
+                    'oi_chg': 0, # Placeholder
+                    'premium': premium,
+                    'iv': round(iv, 2) if iv else 0,
+                    'sentiment': sentiment,
+                    'type': d['type']
+                })
+
+            return results
+
         except Exception as e:
             print(f"Unusual Error: {e}")
             return []
+
+    def _parse_option_ticker(self, ticker):
+        """
+        Parses Polygon Option Ticker: O:SPY230915C00440000
+        """
+        try:
+            clean = ticker.replace("O:", "")
+            # Regex to parse: SYMBOL + 6DIGIT_DATE + C/P + 8DIGIT_PRICE
+            match = re.match(r"([A-Z]+)(\d{6})([CP])(\d{8})", clean)
+            if match:
+                sym, date_str, type_, strike_str = match.groups()
+                exp_date = datetime.strptime(date_str, "%y%m%d").date()
+                strike = float(strike_str) / 1000.0
+
+                # Pretty contract name
+                c_name = f"{sym} ${strike} {type_}"
+
+                return {
+                    'underlying': sym,
+                    'contract_name': c_name,
+                    'exp_date': exp_date,
+                    'type': type_,
+                    'strike': strike
+                }
+        except Exception as e:
+            # Fallback for non-standard or failed parse
+            pass
+
+        return {
+            'underlying': ticker,
+            'contract_name': ticker,
+            'exp_date': date.today(),
+            'type': '?',
+            'strike': 0
+        }
 
 # Singleton instance
 massive_service = MassiveService()
