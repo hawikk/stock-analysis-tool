@@ -747,14 +747,17 @@ function renderStockChart(data) {
             textColor: textColor,
         },
         grid: {
-            vertLines: { color: gridColor },
-            horzLines: { color: gridColor }
+            vertLines: { color: gridColor, style: 1 }, // Dotted line style
+            horzLines: { color: gridColor, style: 1 }
         },
         width: container.clientWidth,
         height: container.clientHeight,
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+        },
         timeScale: {
             borderColor: gridColor,
-            timeVisible: isIntraday,
+            timeVisible: true, // Always show time for better granularity
             secondsVisible: false
         },
         rightPriceScale: { borderColor: gridColor }

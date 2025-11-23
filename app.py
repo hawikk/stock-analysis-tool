@@ -746,17 +746,23 @@ def get_dashboard_data_impl():
     if not ticker_symbol:
         return jsonify({'error': 'No ticker provided'}), 400
 
+    # Map frontend period to yfinance period & interval for better granularity
+    yf_period = period
     interval = "1d"
+
     if period == "1d":
-        interval = "5m"
+        yf_period = "1d"
+        interval = "2m"  # Granularity increased (was 5m)
     elif period == "1w":
-        interval = "15m"
+        yf_period = "5d" # Fix: yfinance doesn't support '1w', uses '5d'
+        interval = "5m"  # Granularity increased (was 15m)
     elif period == "1mo":
-        interval = "60m"
+        yf_period = "1mo"
+        interval = "30m" # Granularity increased (was 60m)
 
     try:
         stock = yf.Ticker(ticker_symbol)
-        hist = stock.history(period=period, interval=interval)
+        hist = stock.history(period=yf_period, interval=interval)
 
         if hist.empty:
              return jsonify({'error': 'No historical data found'}), 404
