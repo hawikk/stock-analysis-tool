@@ -433,8 +433,7 @@ def get_tech_screener():
 def get_earnings_calendar():
     """Returns upcoming earnings for major stocks (Live Scan - Top 15 High Impact)"""
     # Reduced list to Top 15 High Beta / Popular names to ensure performance
-    # fetching 40+ tickers serially via yfinance is too slow for a web request.
-    tickers = [
+    tickers_list = [
         "NVDA", "TSLA", "AAPL", "AMD", "AMZN", "MSFT", "GOOGL", "META",
         "NFLX", "GME", "PLTR", "COIN", "MSTR", "CRM", "AVGO"
     ]
@@ -443,9 +442,14 @@ def get_earnings_calendar():
     today = datetime.date.today()
 
     try:
-        for sym in tickers:
+        # Batch object creation (utilizes yfinance threads where possible)
+        tickers = yf.Tickers(" ".join(tickers_list))
+
+        for sym in tickers_list:
             try:
-                t = yf.Ticker(sym)
+                t = tickers.tickers[sym]
+                # Accessing .calendar may still trigger a request per ticker,
+                # but yf.Tickers manages the session better.
                 cal = t.calendar
                 if cal and 'Earnings Date' in cal:
                     dates = cal['Earnings Date']
@@ -455,7 +459,7 @@ def get_earnings_calendar():
                             if d >= today:
                                 earnings_list.append({
                                     'ticker': sym,
-                                    'name': sym, # Avoid extra API call for name to speed up loop
+                                    'name': sym,
                                     'date': d.strftime('%Y-%m-%d'),
                                     'time': 'N/A'
                                 })
