@@ -513,14 +513,12 @@ def get_macro_data():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/market/forex', methods=['GET'])
-@cache.cached(timeout=1800) # Cache for 30 mins
+@cache.cached(timeout=1800, query_string=True) # Cache for 30 mins, vary by query params
 def get_forex_data():
-    """Returns major currency pairs and their 1-month evolution"""
-    # Pairs to track: EUR/USD, USD/JPY, GBP/USD, and specifically 'Relation to EUR'
-    # 'EUR=X' in yfinance is USD/EUR. 'EURUSD=X' is EUR/USD.
-    # User asked for "Relation to EUR", so standard pairs vs EUR are good.
+    """Returns currency pairs and their 1-month evolution. Supports custom tickers."""
 
-    pairs = {
+    # Default list
+    default_pairs = {
         'EURUSD=X': 'EUR/USD',
         'JPY=X': 'USD/JPY',
         'GBPUSD=X': 'GBP/USD',
@@ -529,24 +527,42 @@ def get_forex_data():
         'EURCHF=X': 'EUR/CHF'
     }
 
+    # Check for custom list from frontend
+    custom_tickers_param = request.args.get('tickers')
+
+    target_pairs = {}
+    if custom_tickers_param:
+        # Split and clean
+        symbols = [s.strip() for s in custom_tickers_param.split(',') if s.strip()]
+        for s in symbols:
+            # If it's in our default map, use the nice name, otherwise use symbol as name
+            target_pairs[s] = default_pairs.get(s, s)
+    else:
+        target_pairs = default_pairs
+
     results = []
     try:
         # Batch download
-        tickers_str = " ".join(pairs.keys())
+        tickers_str = " ".join(target_pairs.keys())
         # Download 1mo + 1d history to calculate 1-month change
         # Note: yfinance download for multi-tickers returns MultiIndex
         data = yf.download(tickers_str, period="1mo", interval="1d", progress=False, group_by='ticker')
 
-        for symbol, name in pairs.items():
+        for symbol, name in target_pairs.items():
             try:
-                if symbol in data.columns.levels[0] if isinstance(data.columns, pd.MultiIndex) else False:
-                    df = data[symbol]
-                elif len(pairs) == 1:
+                # Handle multi-index or single index
+                df = pd.DataFrame()
+
+                # If only 1 ticker requested, data is single index
+                if len(target_pairs) == 1:
                     df = data
+                # If multiple, check if symbol exists in top level
+                elif isinstance(data.columns, pd.MultiIndex) and symbol in data.columns.levels[0]:
+                    df = data[symbol]
                 else:
-                    # Single ticker fallback if batch structure is weird
-                    t = yf.Ticker(symbol)
-                    df = t.history(period="1mo")
+                    # Fallback or missing data
+                    # Sometimes user adds a symbol that fails download, just skip
+                    continue
 
                 if df.empty: continue
                 df = df.dropna()
@@ -746,17 +762,23 @@ def get_dashboard_data_impl():
     if not ticker_symbol:
         return jsonify({'error': 'No ticker provided'}), 400
 
+    # Map frontend period to yfinance period & interval for better granularity
+    yf_period = period
     interval = "1d"
+
     if period == "1d":
-        interval = "5m"
+        yf_period = "1d"
+        interval = "2m"  # Granularity increased (was 5m)
     elif period == "1w":
-        interval = "15m"
+        yf_period = "5d" # Fix: yfinance doesn't support '1w', uses '5d'
+        interval = "5m"  # Granularity increased (was 15m)
     elif period == "1mo":
-        interval = "60m"
+        yf_period = "1mo"
+        interval = "30m" # Granularity increased (was 60m)
 
     try:
         stock = yf.Ticker(ticker_symbol)
-        hist = stock.history(period=period, interval=interval)
+        hist = stock.history(period=yf_period, interval=interval)
 
         if hist.empty:
              return jsonify({'error': 'No historical data found'}), 404

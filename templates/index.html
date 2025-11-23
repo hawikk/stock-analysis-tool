@@ -328,11 +328,15 @@
                 <!-- VIEW: FOREX -->
                 <div id="viewForex" class="view-section d-none">
                     <div class="card">
-                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-primary">
-                            <i class="fa-solid fa-money-bill-transfer me-1"></i> FOREX (1 Month Evolution vs EUR)
+                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-primary d-flex justify-content-between align-items-center">
+                            <span><i class="fa-solid fa-money-bill-transfer me-1"></i> FOREX (1 Month Evolution)</span>
+                            <div class="input-group input-group-sm w-auto">
+                                <input type="text" id="forexInput" class="form-control bg-dark text-white border-secondary" placeholder="Add Pair (e.g. EUR/JPY)...">
+                                <button class="btn btn-outline-secondary" onclick="addForexPair()">Add</button>
+                            </div>
                         </div>
                         <div class="card-body p-0">
-                            <table class="table table-dark table-sm mb-0 font-monospace align-middle">
+                            <table class="table table-dark table-sm table-hover mb-0 font-monospace align-middle">
                                 <thead>
                                     <tr>
                                         <th>PAIR</th>
