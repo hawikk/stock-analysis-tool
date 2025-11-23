@@ -69,6 +69,7 @@ document.querySelectorAll('[data-view]').forEach(btn => {
             if (viewName === 'heatmap') loadHeatmap();
             if (viewName === 'calendar') loadCalendar();
             if (viewName === 'earnings') loadEarnings();
+            if (viewName === 'forex') loadForex();
             if (viewName === 'macro_social') { loadMacro(); loadSocial(); }
         } else {
             // Handle partial mapping for existing logic
@@ -272,7 +273,7 @@ function loadHeatmap() {
 
 function loadCalendar() {
     const tbody = document.getElementById('calendarBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading Calendar...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading Calendar...</td></tr>';
 
     fetch('/api/market/calendar')
     .then(res => res.json())
@@ -285,8 +286,13 @@ function loadCalendar() {
                 if(e.impact === 'High') impactColor = 'text-danger fw-bold';
                 if(e.impact === 'Medium') impactColor = 'text-warning';
 
+                // Format Date (YYYY-MM-DD -> Short Date)
+                const dateObj = new Date(e.date);
+                const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', weekday: 'short' });
+
                 tr.innerHTML = `
-                    <td class="text-white">${e.time}</td>
+                    <td class="text-white fw-bold">${dateStr}</td>
+                    <td class="text-muted">${e.time}</td>
                     <td class="text-white">${e.event}</td>
                     <td class="${impactColor}">${e.impact}</td>
                     <td class="text-muted">${e.previous}</td>
@@ -316,6 +322,62 @@ function loadEarnings() {
                     <td class="text-warning">${e.time}</td>
                 `;
                 tbody.appendChild(tr);
+            });
+        }
+    });
+}
+
+function loadForex() {
+    const tbody = document.getElementById('forexBody');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading Forex Data...</td></tr>';
+
+    fetch('/api/market/forex')
+    .then(res => res.json())
+    .then(data => {
+        tbody.innerHTML = '';
+        if(data.forex) {
+            data.forex.forEach(item => {
+                const tr = document.createElement('tr');
+                const chgColor = item.change_1mo >= 0 ? 'text-success' : 'text-danger';
+
+                // Simple Sparkline using ASCII or just a trend text for now since canvas is complex in table row
+                // Or we can use a tiny canvas. Let's use a simple ASCII approach or just color bar.
+                // Actually, let's create a mini canvas for sparkline.
+                const canvasId = `spark-${item.ticker.replace('=','').replace('^','')}`;
+
+                tr.innerHTML = `
+                    <td class="fw-bold text-white">${item.name} <span class="text-muted x-small">(${item.ticker})</span></td>
+                    <td class="text-end text-white">${item.price}</td>
+                    <td class="text-end ${chgColor}">${item.change_1mo > 0 ? '+' : ''}${item.change_1mo}%</td>
+                    <td class="text-end p-1" style="height: 40px;"><div id="${canvasId}" style="width: 100%; height: 100%;"></div></td>
+                `;
+                tbody.appendChild(tr);
+
+                // Draw sparkline
+                setTimeout(() => {
+                    const chartDiv = document.getElementById(canvasId);
+                    if(chartDiv && item.sparkline) {
+                        const chart = LightweightCharts.createChart(chartDiv, {
+                            layout: { background: { type: 'solid', color: 'transparent' }, attributionLogo: false },
+                            grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+                            width: chartDiv.clientWidth,
+                            height: chartDiv.clientHeight,
+                            rightPriceScale: { visible: false },
+                            timeScale: { visible: false },
+                            handleScroll: false,
+                            handleScale: false
+                        });
+                        const line = chart.addLineSeries({
+                            color: item.change_1mo >= 0 ? '#00b894' : '#ff4757',
+                            lineWidth: 2,
+                            crosshairMarkerVisible: false
+                        });
+                        // Map data to dummy time
+                        const data = item.sparkline.map((val, idx) => ({ time: '2023-01-' + (idx+10).toString().padStart(2, '0'), value: val }));
+                        line.setData(data);
+                        chart.timeScale().fitContent();
+                    }
+                }, 100);
             });
         }
     });

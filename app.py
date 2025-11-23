@@ -512,6 +512,70 @@ def get_macro_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/market/forex', methods=['GET'])
+@cache.cached(timeout=1800) # Cache for 30 mins
+def get_forex_data():
+    """Returns major currency pairs and their 1-month evolution"""
+    # Pairs to track: EUR/USD, USD/JPY, GBP/USD, and specifically 'Relation to EUR'
+    # 'EUR=X' in yfinance is USD/EUR. 'EURUSD=X' is EUR/USD.
+    # User asked for "Relation to EUR", so standard pairs vs EUR are good.
+
+    pairs = {
+        'EURUSD=X': 'EUR/USD',
+        'JPY=X': 'USD/JPY',
+        'GBPUSD=X': 'GBP/USD',
+        'EURJPY=X': 'EUR/JPY',
+        'EURGBP=X': 'EUR/GBP',
+        'EURCHF=X': 'EUR/CHF'
+    }
+
+    results = []
+    try:
+        # Batch download
+        tickers_str = " ".join(pairs.keys())
+        # Download 1mo + 1d history to calculate 1-month change
+        # Note: yfinance download for multi-tickers returns MultiIndex
+        data = yf.download(tickers_str, period="1mo", interval="1d", progress=False, group_by='ticker')
+
+        for symbol, name in pairs.items():
+            try:
+                if symbol in data.columns.levels[0] if isinstance(data.columns, pd.MultiIndex) else False:
+                    df = data[symbol]
+                elif len(pairs) == 1:
+                    df = data
+                else:
+                    # Single ticker fallback if batch structure is weird
+                    t = yf.Ticker(symbol)
+                    df = t.history(period="1mo")
+
+                if df.empty: continue
+                df = df.dropna()
+                if len(df) < 2: continue
+
+                current = df['Close'].iloc[-1]
+                start_price = df['Close'].iloc[0] # Price ~1 month ago
+
+                change_pct = ((current - start_price) / start_price) * 100
+
+                # Sparkline data (simplified)
+                sparkline = df['Close'].tolist()
+
+                results.append({
+                    'ticker': symbol,
+                    'name': name,
+                    'price': round(float(current), 4),
+                    'change_1mo': round(float(change_pct), 2),
+                    'sparkline': sparkline
+                })
+
+            except Exception as ex:
+                print(f"Forex error {symbol}: {ex}")
+                continue
+
+        return jsonify({'forex': results})
+    except Exception as e:
+         return jsonify({'error': str(e)}), 500
+
 @app.route('/api/market/social', methods=['GET'])
 @cache.cached(timeout=600)
 def get_social_sentiment():
