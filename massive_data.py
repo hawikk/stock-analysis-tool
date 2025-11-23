@@ -311,7 +311,9 @@ class MassiveService:
                 strike = float(strike_str) / 1000.0
 
                 # Pretty contract name
-                c_name = f"{sym} ${strike} {type_}"
+                # Format: "295 call 2025-11-21"
+                type_full = "call" if type_ == 'C' else "put"
+                c_name = f"{strike:g} {type_full} {exp_date}"
 
                 return {
                     'underlying': sym,
