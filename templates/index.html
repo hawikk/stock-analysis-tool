@@ -63,11 +63,18 @@
             
             <!-- LEFT COLUMN: Navigation / Tools -->
             <div class="col-lg-1 d-none d-lg-block">
-                <div class="d-flex flex-column gap-2 h-100">
+                <div class="d-flex flex-column gap-2 h-100 overflow-auto" style="max-height: 90vh;">
                     <button class="btn btn-outline-secondary btn-sm active text-start w-100" data-view="dashboard"><i class="fa-solid fa-table-columns me-2"></i>Dash</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="watchlist"><i class="fa-solid fa-list me-2"></i>Watch</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="chart"><i class="fa-solid fa-chart-line me-2"></i>Chart</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="screener"><i class="fa-solid fa-filter me-2"></i>Scan</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="news"><i class="fa-regular fa-newspaper me-2"></i>News</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="heatmap"><i class="fa-solid fa-border-all me-2"></i>Map</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="calendar"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="earnings"><i class="fa-solid fa-sack-dollar me-2"></i>Earn</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="macro"><i class="fa-solid fa-earth-americas me-2"></i>Macro</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="social"><i class="fa-brands fa-reddit me-2"></i>Social</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="alerts"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="wiki"><i class="fa-solid fa-book me-2"></i>Wiki</button>
                 </div>
             </div>
 
@@ -217,11 +224,39 @@
                     </div>
                 </div> <!-- End View Stock -->
 
-                <!-- VIEW: SCREENER -->
+                <!-- VIEW: SCREENER (TECH) -->
                 <div id="viewScreener" class="view-section d-none">
                     <div class="card">
                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-primary">
-                            <i class="fa-solid fa-filter me-1"></i> LIVE SCREENER (>2% MOVERS)
+                            <i class="fa-solid fa-filter me-1"></i> TECH SCREENER (S&P 100 SIGNALS)
+                        </div>
+                        <div class="card-body p-0 overflow-auto" style="max-height: 80vh;">
+                            <table class="table table-dark table-sm table-hover mb-0 font-monospace">
+                                <thead class="sticky-top bg-darker">
+                                    <tr>
+                                        <th>TICKER</th>
+                                        <th class="text-end">PRICE</th>
+                                        <th class="text-end">CHG %</th>
+                                        <th class="text-end">RSI</th>
+                                        <th class="text-end">REL VOL</th>
+                                        <th>SIGNALS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="screenerTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: WATCHLIST -->
+                <div id="viewWatchlist" class="view-section d-none">
+                    <div class="card">
+                        <div class="card-header py-2 px-3 font-monospace small fw-bold text-warning d-flex justify-content-between align-items-center">
+                            <span><i class="fa-solid fa-list me-1"></i> MY WATCHLIST</span>
+                            <div class="input-group input-group-sm w-auto">
+                                <input type="text" id="watchlistInput" class="form-control bg-dark text-white border-secondary" placeholder="Add Ticker...">
+                                <button class="btn btn-outline-secondary" onclick="addToWatchlist()">Add</button>
+                            </div>
                         </div>
                         <div class="card-body p-0">
                             <table class="table table-dark table-sm table-hover mb-0 font-monospace">
@@ -230,15 +265,157 @@
                                         <th>TICKER</th>
                                         <th class="text-end">PRICE</th>
                                         <th class="text-end">CHANGE %</th>
-                                        <th class="text-end">VOLUME</th>
+                                        <th class="text-end">ACTION</th>
                                     </tr>
                                 </thead>
-                                <tbody id="screenerTableBody">
-                                    <!-- JS Populated -->
-                                </tbody>
+                                <tbody id="watchlistBody"></tbody>
                             </table>
                         </div>
                     </div>
+                </div>
+
+                <!-- VIEW: HEATMAP -->
+                <div id="viewHeatmap" class="view-section d-none">
+                    <h5 class="font-monospace mb-3">SECTOR HEATMAP</h5>
+                    <div id="heatmapGrid" class="row g-2"></div>
+                </div>
+
+                <!-- VIEW: CALENDAR -->
+                <div id="viewCalendar" class="view-section d-none">
+                    <div class="card">
+                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-info">
+                            <i class="fa-regular fa-calendar me-1"></i> ECONOMIC CALENDAR
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-dark table-sm mb-0 font-monospace">
+                                <thead>
+                                    <tr>
+                                        <th>TIME</th>
+                                        <th>EVENT</th>
+                                        <th>IMPACT</th>
+                                        <th>PREV</th>
+                                        <th>FCST</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="calendarBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: EARNINGS -->
+                <div id="viewEarnings" class="view-section d-none">
+                    <div class="card">
+                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-success">
+                            <i class="fa-solid fa-sack-dollar me-1"></i> UPCOMING EARNINGS
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-dark table-sm mb-0 font-monospace">
+                                <thead>
+                                    <tr>
+                                        <th>TICKER</th>
+                                        <th>NAME</th>
+                                        <th>DATE</th>
+                                        <th>TIME</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="earningsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: MACRO -->
+                <div id="viewMacro" class="view-section d-none">
+                    <h5 class="font-monospace mb-3">CRYPTO & MACRO</h5>
+                    <div id="macroGrid" class="row g-2"></div>
+                </div>
+
+                <!-- VIEW: SOCIAL -->
+                <div id="viewSocial" class="view-section d-none">
+                    <h5 class="font-monospace mb-3">SOCIAL SENTIMENT (HYPE/MEME)</h5>
+                    <div id="socialGrid" class="row g-2"></div>
+                </div>
+
+                <!-- VIEW: ALERTS -->
+                <div id="viewAlerts" class="view-section d-none">
+                    <div class="card">
+                        <div class="card-header py-2 px-3 font-monospace small fw-bold text-danger d-flex justify-content-between align-items-center">
+                            <span><i class="fa-solid fa-bell me-1"></i> PRICE ALERTS</span>
+                            <div class="d-flex gap-2">
+                                <input type="text" id="alertTicker" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ticker" style="width: 80px;">
+                                <select id="alertCondition" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 60px;">
+                                    <option value="gt">&gt;</option>
+                                    <option value="lt">&lt;</option>
+                                </select>
+                                <input type="number" id="alertPrice" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Price" style="width: 80px;">
+                                <button class="btn btn-sm btn-outline-danger" onclick="addAlert()">Set</button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-dark table-sm mb-0 font-monospace">
+                                <thead>
+                                    <tr>
+                                        <th>TICKER</th>
+                                        <th>CONDITION</th>
+                                        <th>TARGET</th>
+                                        <th>CURRENT</th>
+                                        <th>STATUS</th>
+                                        <th>ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alertsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: WIKI -->
+                <div id="viewWiki" class="view-section d-none">
+                     <h5 class="font-monospace mb-3">TRADER'S WIKI</h5>
+                     <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header text-warning">BULL FLAG</div>
+                                <div class="card-body small text-muted">
+                                    <p>A continuation pattern where a strong upward move (flagpole) is followed by a consolidation channel (flag). Breakout is usually upwards.</p>
+                                    <div class="bg-secondary bg-opacity-25 p-2 text-center rounded">Target = Pole Height</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header text-danger">HEAD & SHOULDERS</div>
+                                <div class="card-body small text-muted">
+                                    <p>A reversal pattern. Left shoulder, Head (highest), Right shoulder. A break below the neckline confirms a bearish trend reversal.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header text-info">GOLDEN CROSS</div>
+                                <div class="card-body small text-muted">
+                                    <p>When the 50-day SMA crosses ABOVE the 200-day SMA. Indicates a potential long-term bull market.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header text-warning">RSI OVERSOLD</div>
+                                <div class="card-body small text-muted">
+                                    <p>RSI < 30. Indicates the asset may be undervalued and due for a bounce. Watch for divergence.</p>
+                                </div>
+                            </div>
+                        </div>
+                         <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header text-success">CUP AND HANDLE</div>
+                                <div class="card-body small text-muted">
+                                    <p>A bullish continuation pattern resembling a cup with a handle. Breakout above the handle suggests further upside.</p>
+                                </div>
+                            </div>
+                        </div>
+                     </div>
                 </div>
 
             </div>

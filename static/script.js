@@ -36,13 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMarketStatus();
     loadWhaleActivity(); // New Main Feature
     loadMarketNews();
-    loadScreenerData(); // Restore Screener Data
+    loadWatchlist(); // Load Watchlist from LocalStorage
+    loadAlerts(); // Load Alerts from LocalStorage
 
     // Initialize clock
     setInterval(() => {
         const now = new Date();
         document.getElementById('clock').innerText = now.toISOString().split('T')[1].split('.')[0];
     }, 1000);
+
+    // Run Alert Checks periodically (every 60s)
+    setInterval(checkAlerts, 60000);
 });
 
 // View Navigation
@@ -53,15 +57,23 @@ document.querySelectorAll('[data-view]').forEach(btn => {
         this.classList.add('active');
 
         // Sections
-        const viewId = 'view' + this.getAttribute('data-view').charAt(0).toUpperCase() + this.getAttribute('data-view').slice(1);
+        const viewName = this.getAttribute('data-view');
+        const viewId = 'view' + viewName.charAt(0).toUpperCase() + viewName.slice(1);
         document.querySelectorAll('.view-section').forEach(el => el.classList.add('d-none'));
 
         const target = document.getElementById(viewId);
         if(target) {
             target.classList.remove('d-none');
+            // Trigger data load based on view
+            if (viewName === 'screener') loadTechScreener();
+            if (viewName === 'heatmap') loadHeatmap();
+            if (viewName === 'calendar') loadCalendar();
+            if (viewName === 'earnings') loadEarnings();
+            if (viewName === 'macro') loadMacro();
+            if (viewName === 'social') loadSocial();
         } else {
-            // Handle partial mapping
-            if(this.getAttribute('data-view') === 'chart') document.getElementById('viewStock').classList.remove('d-none');
+            // Handle partial mapping for existing logic
+            if(viewName === 'chart') document.getElementById('viewStock').classList.remove('d-none');
             else document.getElementById('viewDashboard').classList.remove('d-none');
         }
     });
@@ -97,6 +109,7 @@ function loadMarketStatus() {
 
 function loadWhaleActivity() {
     const tbody = document.getElementById('whaleTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div> Fetching Unusual Flow...</td></tr>';
 
     fetch('/api/market/whale')
@@ -153,40 +166,7 @@ function loadWhaleActivity() {
     })
     .catch(err => {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-danger py-4">Error fetching data.</td></tr>';
-    });
-}
-
-// Restore Screener Logic (using the same /api/market/movers endpoint)
-function loadScreenerData() {
-    fetch('/api/market/movers')
-    .then(res => res.json())
-    .then(data => {
-        if (data.gainers) populateScreener(data.gainers);
-    })
-    .catch(console.error);
-}
-
-// Reuse existing populateScreener function
-function populateScreener(data) {
-    const container = document.getElementById('screenerTableBody');
-    if (!container) return;
-    container.innerHTML = '';
-
-    // Filter logic (e.g. > 2% change)
-    const filtered = data.filter(d => Math.abs(d.change_pct) > 2);
-
-    filtered.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="text-white fw-bold">${item.ticker}</td>
-            <td class="text-end text-muted">${item.price.toFixed(2)}</td>
-            <td class="text-end ${item.change_pct > 0 ? 'text-success' : 'text-danger'}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(2)}%</td>
-            <td class="text-end text-white">${formatNumber(item.volume)}</td>
-        `;
-        tr.addEventListener('click', () => loadStock(item.ticker));
-        tr.style.cursor = 'pointer';
-        container.appendChild(tr);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="14" class="text-center text-danger py-4">Error fetching data.</td></tr>';
     });
 }
 
@@ -195,6 +175,7 @@ function loadMarketNews() {
     .then(res => res.json())
     .then(data => {
         const grid = document.getElementById('marketNewsGrid');
+        if(!grid) return;
         grid.innerHTML = '';
         if(data.articles) {
             data.articles.forEach(a => {
@@ -221,8 +202,367 @@ function loadMarketNews() {
     .catch(console.error);
 }
 
+// --- NEW FEATURES IMPLEMENTATION ---
 
-// --- SEARCH & STOCK VIEW ---
+function loadTechScreener() {
+    const tbody = document.getElementById('screenerTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div> Scanning S&P 100...</td></tr>';
+
+    fetch('/api/market/screener_tech')
+    .then(res => res.json())
+    .then(data => {
+        tbody.innerHTML = '';
+        if (data.results && data.results.length > 0) {
+            data.results.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.addEventListener('click', () => loadStock(item.ticker));
+
+                const chgColor = item.change >= 0 ? 'text-success' : 'text-danger';
+                // Highlight RSI
+                let rsiClass = 'text-white';
+                if(item.rsi < 30) rsiClass = 'text-success fw-bold'; // Oversold
+                if(item.rsi > 70) rsiClass = 'text-danger fw-bold'; // Overbought
+
+                tr.innerHTML = `
+                    <td class="fw-bold text-white">${item.ticker}</td>
+                    <td class="text-end text-white">${item.price.toFixed(2)}</td>
+                    <td class="text-end ${chgColor}">${item.change > 0 ? '+' : ''}${item.change.toFixed(2)}%</td>
+                    <td class="text-end ${rsiClass}">${item.rsi}</td>
+                    <td class="text-end text-white">${item.rel_vol}x</td>
+                    <td class="small text-warning">${item.setups}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No signals found matching criteria.</td></tr>';
+        }
+    });
+}
+
+function loadHeatmap() {
+    const grid = document.getElementById('heatmapGrid');
+    grid.innerHTML = '<div class="col-12 text-center text-muted py-5"><div class="spinner-border spinner-border-sm"></div> Loading Heatmap...</div>';
+
+    fetch('/api/market/heatmap')
+    .then(res => res.json())
+    .then(data => {
+        grid.innerHTML = '';
+        if (data.sectors) {
+            data.sectors.forEach(sec => {
+                const div = document.createElement('div');
+                div.className = 'col-md-4 col-lg-3';
+
+                // Color Scale
+                let bg = 'rgba(108, 117, 125, 0.2)'; // Neutral
+                if (sec.change_pct > 0) bg = `rgba(0, 184, 148, ${Math.min(0.8, sec.change_pct / 2)})`;
+                if (sec.change_pct < 0) bg = `rgba(255, 71, 87, ${Math.min(0.8, Math.abs(sec.change_pct) / 2)})`;
+
+                div.innerHTML = `
+                    <div class="p-3 text-center rounded border border-secondary h-100 d-flex flex-column justify-content-center" style="background: ${bg}; min-height: 100px;">
+                        <div class="fw-bold text-white h5 mb-0">${sec.sector}</div>
+                        <div class="small text-white-50 mb-2">${sec.symbol}</div>
+                        <div class="fw-bold text-white h4 mb-0">${sec.change_pct > 0 ? '+' : ''}${sec.change_pct.toFixed(2)}%</div>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+    });
+}
+
+function loadCalendar() {
+    const tbody = document.getElementById('calendarBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading Calendar...</td></tr>';
+
+    fetch('/api/market/calendar')
+    .then(res => res.json())
+    .then(data => {
+        tbody.innerHTML = '';
+        if(data.events) {
+            data.events.forEach(e => {
+                const tr = document.createElement('tr');
+                let impactColor = 'text-muted';
+                if(e.impact === 'High') impactColor = 'text-danger fw-bold';
+                if(e.impact === 'Medium') impactColor = 'text-warning';
+
+                tr.innerHTML = `
+                    <td class="text-white">${e.time}</td>
+                    <td class="text-white">${e.event}</td>
+                    <td class="${impactColor}">${e.impact}</td>
+                    <td class="text-muted">${e.previous}</td>
+                    <td class="text-info">${e.forecast}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    });
+}
+
+function loadEarnings() {
+    const tbody = document.getElementById('earningsBody');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading Earnings...</td></tr>';
+
+    fetch('/api/market/earnings')
+    .then(res => res.json())
+    .then(data => {
+        tbody.innerHTML = '';
+        if(data.earnings) {
+            data.earnings.forEach(e => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-white fw-bold">${e.ticker}</td>
+                    <td class="text-muted">${e.name}</td>
+                    <td class="text-white">${e.date}</td>
+                    <td class="text-warning">${e.time}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    });
+}
+
+function loadMacro() {
+    const grid = document.getElementById('macroGrid');
+    grid.innerHTML = '<div class="col-12 text-center text-muted">Loading Macro Data...</div>';
+
+    fetch('/api/market/macro')
+    .then(res => res.json())
+    .then(data => {
+        grid.innerHTML = '';
+        if(data.data) {
+            data.data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'col-md-3';
+                const chgColor = item.change_pct >= 0 ? 'text-success' : 'text-danger';
+
+                div.innerHTML = `
+                    <div class="card bg-darker border-secondary h-100">
+                        <div class="card-body text-center">
+                            <div class="text-muted small text-uppercase mb-1">${item.name}</div>
+                            <div class="h4 text-white fw-bold mb-0">${formatNumber(item.price)}</div>
+                            <div class="${chgColor} small">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(2)}%</div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+    });
+}
+
+function loadSocial() {
+    const grid = document.getElementById('socialGrid');
+    grid.innerHTML = '<div class="col-12 text-center text-muted">Loading Social Sentiment...</div>';
+
+    fetch('/api/market/social')
+    .then(res => res.json())
+    .then(data => {
+        grid.innerHTML = '';
+        if(data.social) {
+            data.social.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'col-md-3';
+
+                let statusColor = 'text-muted';
+                if(item.status.includes('Bullish')) statusColor = 'text-success';
+                if(item.status.includes('Bearish')) statusColor = 'text-danger';
+
+                div.innerHTML = `
+                    <div class="card bg-darker border-secondary h-100">
+                        <div class="card-body text-center">
+                            <h5 class="text-white fw-bold mb-1">${item.ticker}</h5>
+                            <div class="progress bg-dark mb-2" style="height: 6px;">
+                                <div class="progress-bar ${item.sentiment_score > 50 ? 'bg-success' : 'bg-danger'}" role="progressbar" style="width: ${item.sentiment_score}%"></div>
+                            </div>
+                            <div class="${statusColor} fw-bold small mb-1">${item.status}</div>
+                            <div class="text-muted x-small"><i class="fa-brands fa-reddit-alien me-1"></i> ${item.mentions} Mentions</div>
+                        </div>
+                    </div>
+                `;
+                div.style.cursor = 'pointer';
+                div.addEventListener('click', () => loadStock(item.ticker));
+                grid.appendChild(div);
+            });
+        }
+    });
+}
+
+// --- WATCHLIST (LOCAL STORAGE) ---
+
+function loadWatchlist() {
+    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+    const tbody = document.getElementById('watchlistBody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+
+    if(watchlist.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Watchlist is empty. Add a ticker above.</td></tr>';
+        return;
+    }
+
+    // Fetch current prices for watchlist items (One by one or batch if endpoint supported)
+    // For now, we reuse the /api/info or just display static if lazy, but let's try to be dynamic
+    // We will make a quick fetch for each (not efficient but works for small lists)
+
+    watchlist.forEach(ticker => {
+        // Creating a row skeleton first
+        const tr = document.createElement('tr');
+        tr.id = `wl-${ticker}`;
+        tr.innerHTML = `
+            <td class="fw-bold text-white">${ticker}</td>
+            <td class="text-end text-muted">...</td>
+            <td class="text-end text-muted">...</td>
+            <td class="text-end"><button class="btn btn-sm btn-outline-danger py-0" onclick="removeFromWatchlist('${ticker}')"><i class="fa-solid fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+
+        // Fetch Data
+        fetch(`/api/info?ticker=${ticker}`)
+        .then(res => res.json())
+        .then(data => {
+            if(data.info && data.technicals) {
+                // We need change pct, which might be in dashboard_data or calc here if we had prev close
+                // Let's use macro endpoint style logic or just fetch dashboard data for 1d
+                 fetch(`/api/dashboard_data?ticker=${ticker}&period=1d`)
+                 .then(r => r.json())
+                 .then(d => {
+                     if(d.ohlc && d.ohlc.length > 0) {
+                         const close = d.ohlc[d.ohlc.length-1].close;
+                         const open = d.ohlc[0].open;
+                         const change = ((close - open) / open) * 100;
+
+                         const row = document.getElementById(`wl-${ticker}`);
+                         if(row) {
+                             const chgColor = change >= 0 ? 'text-success' : 'text-danger';
+                             row.innerHTML = `
+                                <td class="fw-bold text-white cursor-pointer" onclick="loadStock('${ticker}')">${ticker}</td>
+                                <td class="text-end text-white">${close.toFixed(2)}</td>
+                                <td class="text-end ${chgColor}">${change > 0 ? '+' : ''}${change.toFixed(2)}%</td>
+                                <td class="text-end"><button class="btn btn-sm btn-outline-danger py-0" onclick="removeFromWatchlist('${ticker}')"><i class="fa-solid fa-trash"></i></button></td>
+                             `;
+                         }
+                     }
+                 });
+            }
+        });
+    });
+}
+
+function addToWatchlist() {
+    const input = document.getElementById('watchlistInput');
+    const ticker = input.value.toUpperCase().trim();
+    if(!ticker) return;
+
+    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+    if(!watchlist.includes(ticker)) {
+        watchlist.push(ticker);
+        localStorage.setItem('watchlist', JSON.stringify(watchlist));
+        loadWatchlist();
+    }
+    input.value = '';
+}
+
+function removeFromWatchlist(ticker) {
+    let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+    watchlist = watchlist.filter(t => t !== ticker);
+    localStorage.setItem('watchlist', JSON.stringify(watchlist));
+    loadWatchlist();
+}
+
+// --- ALERTS (LOCAL STORAGE) ---
+
+function loadAlerts() {
+    const alerts = JSON.parse(localStorage.getItem('alerts') || '[]');
+    const tbody = document.getElementById('alertsBody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+
+    if(alerts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No alerts set.</td></tr>';
+        return;
+    }
+
+    alerts.forEach((alert, index) => {
+        const tr = document.createElement('tr');
+        const statusColor = alert.triggered ? 'text-danger fw-bold' : 'text-muted';
+        const statusText = alert.triggered ? 'TRIGGERED' : 'ACTIVE';
+
+        tr.innerHTML = `
+            <td class="text-white fw-bold">${alert.ticker}</td>
+            <td class="text-info">${alert.condition === 'gt' ? '>' : '<'}</td>
+            <td class="text-white">${alert.target}</td>
+            <td class="text-muted" id="alert-curr-${index}">...</td>
+            <td class="${statusColor}">${statusText}</td>
+            <td><button class="btn btn-sm btn-outline-danger py-0" onclick="removeAlert(${index})"><i class="fa-solid fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function addAlert() {
+    const ticker = document.getElementById('alertTicker').value.toUpperCase().trim();
+    const condition = document.getElementById('alertCondition').value;
+    const price = parseFloat(document.getElementById('alertPrice').value);
+
+    if(!ticker || !price) return;
+
+    const alerts = JSON.parse(localStorage.getItem('alerts') || '[]');
+    alerts.push({
+        ticker: ticker,
+        condition: condition,
+        target: price,
+        triggered: false
+    });
+    localStorage.setItem('alerts', JSON.stringify(alerts));
+
+    document.getElementById('alertTicker').value = '';
+    document.getElementById('alertPrice').value = '';
+    loadAlerts();
+}
+
+function removeAlert(index) {
+    const alerts = JSON.parse(localStorage.getItem('alerts') || '[]');
+    alerts.splice(index, 1);
+    localStorage.setItem('alerts', JSON.stringify(alerts));
+    loadAlerts();
+}
+
+function checkAlerts() {
+    const alerts = JSON.parse(localStorage.getItem('alerts') || '[]');
+    if(alerts.length === 0) return;
+
+    // For each active alert, check price
+    // Note: This is client-side polling. In prod, this should be backend/websocket.
+    alerts.forEach((alert, index) => {
+        if(alert.triggered) return; // Skip triggered
+
+        fetch(`/api/info?ticker=${alert.ticker}`)
+        .then(res => res.json())
+        .then(data => {
+            if(data.info && data.info.currentPrice) {
+                const price = data.info.currentPrice;
+                const cell = document.getElementById(`alert-curr-${index}`);
+                if(cell) cell.innerText = price;
+
+                let trigger = false;
+                if(alert.condition === 'gt' && price > alert.target) trigger = true;
+                if(alert.condition === 'lt' && price < alert.target) trigger = true;
+
+                if(trigger) {
+                    alert.triggered = true;
+                    localStorage.setItem('alerts', JSON.stringify(alerts));
+                    loadAlerts();
+                    // Browser Notification (Optional)
+                    alert(`PRICE ALERT: ${alert.ticker} is ${price} (${alert.condition === 'gt' ? 'Above' : 'Below'} ${alert.target})`);
+                }
+            }
+        });
+    });
+}
+
+
+// --- SEARCH & STOCK VIEW (EXISTING) ---
 
 const tickerInput = document.getElementById('tickerInput');
 const suggestionsBox = document.getElementById('suggestionsBox');
@@ -260,7 +600,7 @@ document.addEventListener('click', (e) => {
     if (e.target !== tickerInput && e.target !== suggestionsBox) suggestionsBox.classList.add('d-none');
 });
 
-// --- STOCK DETAILS LOGIC ---
+// --- STOCK DETAILS LOGIC (EXISTING) ---
 
 // State for current ticker and period
 let currentTicker = null;
