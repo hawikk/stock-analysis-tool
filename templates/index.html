@@ -71,10 +71,9 @@
                     <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="heatmap"><i class="fa-solid fa-border-all me-2"></i>Map</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="calendar"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="earnings"><i class="fa-solid fa-sack-dollar me-2"></i>Earn</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="macro"><i class="fa-solid fa-earth-americas me-2"></i>Macro</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="social"><i class="fa-brands fa-reddit me-2"></i>Social</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="forex"><i class="fa-solid fa-money-bill-transfer me-2"></i>Forex</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="macro_social"><i class="fa-solid fa-earth-americas me-2"></i>Macro & Soc</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="alerts"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="wiki"><i class="fa-solid fa-book me-2"></i>Wiki</button>
                 </div>
             </div>
 
@@ -290,6 +289,7 @@
                             <table class="table table-dark table-sm mb-0 font-monospace">
                                 <thead>
                                     <tr>
+                                        <th>DATE</th>
                                         <th>TIME</th>
                                         <th>EVENT</th>
                                         <th>IMPACT</th>
@@ -325,16 +325,40 @@
                     </div>
                 </div>
 
-                <!-- VIEW: MACRO -->
-                <div id="viewMacro" class="view-section d-none">
-                    <h5 class="font-monospace mb-3">CRYPTO & MACRO</h5>
-                    <div id="macroGrid" class="row g-2"></div>
+                <!-- VIEW: FOREX -->
+                <div id="viewForex" class="view-section d-none">
+                    <div class="card">
+                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-primary">
+                            <i class="fa-solid fa-money-bill-transfer me-1"></i> FOREX (1 Month Evolution vs EUR)
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-dark table-sm mb-0 font-monospace align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>PAIR</th>
+                                        <th class="text-end">PRICE</th>
+                                        <th class="text-end">1M CHG%</th>
+                                        <th class="text-end" style="width: 150px;">TREND (1M)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="forexBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- VIEW: SOCIAL -->
-                <div id="viewSocial" class="view-section d-none">
-                    <h5 class="font-monospace mb-3">SOCIAL SENTIMENT (HYPE/MEME)</h5>
-                    <div id="socialGrid" class="row g-2"></div>
+                <!-- VIEW: MACRO & SOCIAL (Merged) -->
+                <div id="viewMacro_social" class="view-section d-none">
+                    <div class="row g-4">
+                        <div class="col-12">
+                             <h5 class="font-monospace mb-3 text-info"><i class="fa-solid fa-earth-americas me-2"></i>CRYPTO & MACRO</h5>
+                             <div id="macroGrid" class="row g-2"></div>
+                        </div>
+                        <div class="col-12">
+                             <h5 class="font-monospace mb-3 text-warning"><i class="fa-brands fa-reddit me-2"></i>SOCIAL SENTIMENT (HYPE/MEME)</h5>
+                             <div id="socialGrid" class="row g-2"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- VIEW: ALERTS -->
@@ -368,54 +392,6 @@
                             </table>
                         </div>
                     </div>
-                </div>
-
-                <!-- VIEW: WIKI -->
-                <div id="viewWiki" class="view-section d-none">
-                     <h5 class="font-monospace mb-3">TRADER'S WIKI</h5>
-                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="card h-100">
-                                <div class="card-header text-warning">BULL FLAG</div>
-                                <div class="card-body small text-muted">
-                                    <p>A continuation pattern where a strong upward move (flagpole) is followed by a consolidation channel (flag). Breakout is usually upwards.</p>
-                                    <div class="bg-secondary bg-opacity-25 p-2 text-center rounded">Target = Pole Height</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card h-100">
-                                <div class="card-header text-danger">HEAD & SHOULDERS</div>
-                                <div class="card-body small text-muted">
-                                    <p>A reversal pattern. Left shoulder, Head (highest), Right shoulder. A break below the neckline confirms a bearish trend reversal.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card h-100">
-                                <div class="card-header text-info">GOLDEN CROSS</div>
-                                <div class="card-body small text-muted">
-                                    <p>When the 50-day SMA crosses ABOVE the 200-day SMA. Indicates a potential long-term bull market.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card h-100">
-                                <div class="card-header text-warning">RSI OVERSOLD</div>
-                                <div class="card-body small text-muted">
-                                    <p>RSI < 30. Indicates the asset may be undervalued and due for a bounce. Watch for divergence.</p>
-                                </div>
-                            </div>
-                        </div>
-                         <div class="col-md-4">
-                            <div class="card h-100">
-                                <div class="card-header text-success">CUP AND HANDLE</div>
-                                <div class="card-body small text-muted">
-                                    <p>A bullish continuation pattern resembling a cup with a handle. Breakout above the handle suggests further upside.</p>
-                                </div>
-                            </div>
-                        </div>
-                     </div>
                 </div>
 
             </div>
