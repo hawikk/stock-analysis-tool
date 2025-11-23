@@ -34,6 +34,7 @@ cache = Cache(app, config={
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini-2025-08-07")
+MASSIVE_API_KEY = os.getenv("MASSIVE_API_KEY")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
