@@ -21,18 +21,6 @@
     --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Light Theme (Preserved but muted) */
-[data-theme="light"] {
-    --bg-main: #f0f3fa;
-    --bg-card: #ffffff;
-    --bg-hover: #eef2f5;
-    --border: #e0e3eb;
-    --text-main: #131722;
-    --text-muted: #646b80;
-    --bull: #00876c;
-    --bear: #d43d4e;
-}
-
 body {
     background-color: var(--bg-main);
     color: var(--text-main);
@@ -61,6 +49,19 @@ body {
     color: var(--text-main);
     border-color: var(--primary);
     box-shadow: 0 0 0 2px rgba(41, 98, 255, 0.2);
+}
+
+/* Mobile Search Fixes */
+@media (max-width: 991px) {
+    .suggestions-box {
+        position: fixed !important;
+        top: 60px !important;
+        left: 0 !important;
+        width: 100% !important;
+        max-height: 50vh;
+        overflow-y: auto;
+        border-radius: 0 0 8px 8px;
+    }
 }
 
 .suggestion-item {

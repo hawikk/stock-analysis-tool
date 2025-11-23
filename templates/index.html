@@ -19,14 +19,36 @@
 </head>
 <body class="dark-theme">
 
-    <!-- Dark Mode Toggle -->
-    <button id="themeToggle" class="floating-btn position-fixed top-0 end-0 m-4 btn btn-sm btn-outline-secondary rounded-circle" aria-label="Toggle Dark Mode" style="z-index: 2000; width: 40px; height: 40px;">
-        <i class="fa-solid fa-sun"></i>
-    </button>
+    <!-- Mobile Nav Offcanvas -->
+    <div class="offcanvas offcanvas-start bg-darker text-white" tabindex="-1" id="mobileNav" aria-labelledby="mobileNavLabel">
+        <div class="offcanvas-header border-bottom border-secondary">
+            <h5 class="offcanvas-title font-monospace" id="mobileNavLabel">MENU</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-3">
+             <div class="d-flex flex-column gap-2 h-100 overflow-auto">
+                <button class="btn btn-outline-secondary btn-sm active text-start w-100 nav-btn" data-view="dashboard" data-bs-dismiss="offcanvas"><i class="fa-solid fa-table-columns me-2"></i>Dash</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="watchlist" data-bs-dismiss="offcanvas"><i class="fa-solid fa-list me-2"></i>Watch</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chart" data-bs-dismiss="offcanvas"><i class="fa-solid fa-chart-line me-2"></i>Chart</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="screener" data-bs-dismiss="offcanvas"><i class="fa-solid fa-filter me-2"></i>Scan</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="heatmap" data-bs-dismiss="offcanvas"><i class="fa-solid fa-border-all me-2"></i>Map</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="calendar" data-bs-dismiss="offcanvas"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="earnings" data-bs-dismiss="offcanvas"><i class="fa-solid fa-sack-dollar me-2"></i>Earn</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="forex" data-bs-dismiss="offcanvas"><i class="fa-solid fa-money-bill-transfer me-2"></i>Forex</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="macro_social" data-bs-dismiss="offcanvas"><i class="fa-solid fa-earth-americas me-2"></i>Macro & Soc</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="alerts" data-bs-dismiss="offcanvas"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Top Navigation / Global Search -->
     <nav class="navbar navbar-expand-lg sticky-top terminal-nav p-0">
         <div class="container-fluid px-3 py-2">
+            <!-- Mobile Menu Trigger -->
+            <button class="btn btn-outline-secondary btn-sm d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-label="Toggle Navigation">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
             <a class="navbar-brand fw-bold font-monospace d-flex align-items-center gap-2 text-white" href="/">
                 <i class="fa-solid fa-layer-group text-primary"></i> MASSIVE TERMINAL <span class="badge bg-secondary ms-2 rounded-1" style="font-size: 0.5em; opacity: 0.7;">PRO</span>
             </a>
@@ -64,16 +86,16 @@
             <!-- LEFT COLUMN: Navigation / Tools -->
             <div class="col-lg-1 d-none d-lg-block">
                 <div class="d-flex flex-column gap-2 h-100 overflow-auto" style="max-height: 90vh;">
-                    <button class="btn btn-outline-secondary btn-sm active text-start w-100" data-view="dashboard"><i class="fa-solid fa-table-columns me-2"></i>Dash</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="watchlist"><i class="fa-solid fa-list me-2"></i>Watch</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="chart"><i class="fa-solid fa-chart-line me-2"></i>Chart</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="screener"><i class="fa-solid fa-filter me-2"></i>Scan</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="heatmap"><i class="fa-solid fa-border-all me-2"></i>Map</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="calendar"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="earnings"><i class="fa-solid fa-sack-dollar me-2"></i>Earn</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="forex"><i class="fa-solid fa-money-bill-transfer me-2"></i>Forex</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="macro_social"><i class="fa-solid fa-earth-americas me-2"></i>Macro & Soc</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100" data-view="alerts"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
+                    <button class="btn btn-outline-secondary btn-sm active text-start w-100 nav-btn" data-view="dashboard"><i class="fa-solid fa-table-columns me-2"></i>Dash</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="watchlist"><i class="fa-solid fa-list me-2"></i>Watch</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chart"><i class="fa-solid fa-chart-line me-2"></i>Chart</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="screener"><i class="fa-solid fa-filter me-2"></i>Scan</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="heatmap"><i class="fa-solid fa-border-all me-2"></i>Map</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="calendar"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="earnings"><i class="fa-solid fa-sack-dollar me-2"></i>Earn</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="forex"><i class="fa-solid fa-money-bill-transfer me-2"></i>Forex</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="macro_social"><i class="fa-solid fa-earth-americas me-2"></i>Macro & Soc</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="alerts"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
                 </div>
             </div>
 
@@ -410,18 +432,20 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <!-- Modular Scripts -->
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
     <script>
         // Simple clock
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toISOString().split('T')[1].split('.')[0];
         }, 1000);
-
-        function triggerComparison() {
-            const ticker = document.getElementById('compareInput').value.toUpperCase();
-            if(ticker) addComparison(ticker);
-        }
     </script>
 </body>
 </html>
