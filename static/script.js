@@ -331,18 +331,26 @@ function loadForex() {
     const tbody = document.getElementById('forexBody');
     tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading Forex Data...</td></tr>';
 
-    fetch('/api/market/forex')
+    // Get list from local storage or default
+    let pairs = JSON.parse(localStorage.getItem('forexList') || 'null');
+    let url = '/api/market/forex';
+
+    if (pairs && pairs.length > 0) {
+        url += '?tickers=' + encodeURIComponent(pairs.join(','));
+    }
+
+    fetch(url)
     .then(res => res.json())
     .then(data => {
         tbody.innerHTML = '';
         if(data.forex) {
             data.forex.forEach(item => {
                 const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.onclick = () => loadStock(item.ticker); // Make Clickable
+
                 const chgColor = item.change_1mo >= 0 ? 'text-success' : 'text-danger';
 
-                // Simple Sparkline using ASCII or just a trend text for now since canvas is complex in table row
-                // Or we can use a tiny canvas. Let's use a simple ASCII approach or just color bar.
-                // Actually, let's create a mini canvas for sparkline.
                 const canvasId = `spark-${item.ticker.replace('=','').replace('^','')}`;
 
                 tr.innerHTML = `
@@ -379,6 +387,40 @@ function loadForex() {
                     }
                 }, 100);
             });
+        }
+    });
+}
+
+function addForexPair() {
+    const input = document.getElementById('forexInput');
+    const query = input.value.trim();
+    if(!query) return;
+
+    // Search to find correct ticker (e.g. EUR/JPY -> EURJPY=X)
+    fetch(`/api/search?q=${query}`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.results && data.results.length > 0) {
+            // Prefer the first result that looks like a currency
+            const best = data.results[0]; // Yahoo usually puts best match first
+            const ticker = best.symbol;
+
+            let pairs = JSON.parse(localStorage.getItem('forexList') || '[]');
+            // If default list wasn't set yet, init it with the defaults from backend (hardcoded here to persist)
+            if (pairs.length === 0) {
+                 pairs = ['EURUSD=X', 'JPY=X', 'GBPUSD=X', 'EURJPY=X', 'EURGBP=X', 'EURCHF=X'];
+            }
+
+            if(!pairs.includes(ticker)) {
+                pairs.push(ticker);
+                localStorage.setItem('forexList', JSON.stringify(pairs));
+                loadForex();
+                input.value = '';
+            } else {
+                alert('Pair already in list.');
+            }
+        } else {
+            alert('Currency pair not found. Try format "EUR/JPY"');
         }
     });
 }
