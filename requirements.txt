@@ -10,3 +10,5 @@ python-dotenv
 Flask-Caching
 gunicorn
 textblob
+polygon-api-client
+massive
