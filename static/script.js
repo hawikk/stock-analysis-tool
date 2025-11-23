@@ -69,8 +69,7 @@ document.querySelectorAll('[data-view]').forEach(btn => {
             if (viewName === 'heatmap') loadHeatmap();
             if (viewName === 'calendar') loadCalendar();
             if (viewName === 'earnings') loadEarnings();
-            if (viewName === 'macro') loadMacro();
-            if (viewName === 'social') loadSocial();
+            if (viewName === 'macro_social') { loadMacro(); loadSocial(); }
         } else {
             // Handle partial mapping for existing logic
             if(viewName === 'chart') document.getElementById('viewStock').classList.remove('d-none');
