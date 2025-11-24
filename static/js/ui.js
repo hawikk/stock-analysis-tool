@@ -102,6 +102,22 @@ const UI = {
         tbody.innerHTML = '';
 
         if(data.data && data.data.length > 0) {
+            const isEquity = data.data[0].type === 'EQ';
+
+            // Toggle visibility of specific columns based on data type
+            const toggleColumns = (selector, show) => {
+                document.querySelectorAll(selector).forEach(el => {
+                    if (show) el.classList.remove('d-none');
+                    else el.classList.add('d-none');
+                });
+            };
+
+            // Hide/Show Headers
+            toggleColumns('.col-dte', !isEquity);
+            toggleColumns('.col-strike', !isEquity);
+            toggleColumns('.col-otm', !isEquity);
+            toggleColumns('.col-oi', !isEquity);
+
             data.data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
@@ -116,18 +132,24 @@ const UI = {
                 const chgColor = item.change_pct >= 0 ? 'text-success' : 'text-danger';
                 const otmColor = item.otm_status === 'OTM' ? 'text-muted' : 'text-white';
 
+                // Conditional Cells
+                const dteCell = `<td class="text-white col-dte ${isEquity ? 'd-none' : ''}">${item.dte === '-' ? '-' : item.dte + 'd'}</td>`;
+                const strikeCell = `<td class="text-end text-white col-strike ${isEquity ? 'd-none' : ''}">${item.strike > 0 ? item.strike.toFixed(2) : '-'}</td>`;
+                const otmCell = `<td class="text-end ${otmColor} col-otm ${isEquity ? 'd-none' : ''}">${item.otm_pct > 0 ? item.otm_pct + '%' : '-'}</td>`;
+                const oiCell = `<td class="text-end text-muted col-oi ${isEquity ? 'd-none' : ''}">${item.oi > 0 ? Utils.formatNumber(item.oi) : '-'}</td>`;
+
                 tr.innerHTML = `
                     <td class="fw-bold text-white"><span class="d-flex align-items-center gap-2">${item.ticker}</span></td>
                     <td class="text-muted small">${item.contract}</td>
                     <td><span class="uw-tag ${typeClass}">${typeLabel}</span></td>
-                    <td class="text-white">${item.dte === '-' ? '-' : item.dte + 'd'}</td>
-                    <td class="text-end text-white">${item.strike > 0 ? item.strike.toFixed(2) : '-'}</td>
+                    ${dteCell}
+                    ${strikeCell}
                     <td class="text-end text-muted">${item.stock_price > 0 ? item.stock_price.toFixed(2) : '-'}</td>
-                    <td class="text-end ${otmColor}">${item.otm_pct > 0 ? item.otm_pct + '%' : '-'}</td>
+                    ${otmCell}
                     <td class="text-end text-white">${item.price.toFixed(2)}</td>
                     <td class="text-end ${chgColor}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(1)}%</td>
                     <td class="text-end text-warning fw-bold">${Utils.formatNumber(item.vol)}</td>
-                    <td class="text-end text-muted">${item.oi > 0 ? Utils.formatNumber(item.oi) : '-'}</td>
+                    ${oiCell}
                     <td class="text-end text-white">$${Utils.formatNumber(item.premium)}</td>
                     <td class="text-end text-muted">${item.iv > 0 ? item.iv + '%' : '-'}</td>
                     <td class="text-center ${sentimentClass} fw-bold small">${item.sentiment}</td>
@@ -135,7 +157,7 @@ const UI = {
                 tbody.appendChild(tr);
             });
 
-            if (data.data[0].type === 'EQ') {
+            if (isEquity) {
                 const notice = document.createElement('tr');
                 notice.innerHTML = '<td colspan="14" class="text-center text-warning small py-1 bg-darker"><i class="fa-solid fa-triangle-exclamation me-2"></i>Options data restricted by API plan. Showing High-Volume Equity Flows.</td>';
                 tbody.insertBefore(notice, tbody.firstChild);
