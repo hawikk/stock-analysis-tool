@@ -56,37 +56,47 @@ const Utils = {
         }
     },
 
-    // Theme Management
+    // Theme Management - Dark vs Darker
     initTheme: () => {
         const savedTheme = Utils.storage.get('theme');
-        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const theme = savedTheme || systemTheme;
+        // Default to 'dark' (navy blue theme)
+        const theme = savedTheme || 'dark';
         
         document.documentElement.setAttribute('data-theme', theme);
         Utils.updateThemeIcon(theme);
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-            if (!Utils.storage.get('theme')) {
-                const newTheme = e.matches ? 'dark' : 'light';
-                document.documentElement.setAttribute('data-theme', newTheme);
-                Utils.updateThemeIcon(newTheme);
-            }
-        });
     },
 
     toggleTheme: () => {
         const current = document.documentElement.getAttribute('data-theme') || 'dark';
-        const newTheme = current === 'dark' ? 'light' : 'dark';
+        // Toggle between 'dark' (navy) and 'darker' (pitch black)
+        const newTheme = current === 'dark' ? 'darker' : 'dark';
         document.documentElement.setAttribute('data-theme', newTheme);
         Utils.storage.set('theme', newTheme);
         Utils.updateThemeIcon(newTheme);
+        
+        // Show toast to inform user
+        const message = newTheme === 'dark' 
+            ? '🌙 Dark Mode (Navy Blue)' 
+            : '🌑 Pitch Black (OLED Optimized)';
+        Utils.showToast(message, 'info', 2000);
     },
 
     updateThemeIcon: (theme) => {
         const icon = document.getElementById('themeIcon');
+        const label = document.getElementById('themeLabel');
+        const button = document.getElementById('themeToggle');
+        
         if (icon) {
-            icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            // Moon for Dark (navy), Circle for Darker (pitch black)
+            if (theme === 'dark') {
+                icon.className = 'fa-solid fa-moon';
+                if (label) label.textContent = 'Dark';
+                if (button) button.title = 'Switch to Pitch Black (OLED)';
+            } else {
+                icon.className = 'fa-solid fa-circle';
+                if (label) label.textContent = 'Black';
+                if (button) button.title = 'Switch to Dark Navy';
+            }
         }
     },
 
