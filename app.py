@@ -43,10 +43,15 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini-2025-08-07")
 MASSIVE_API_KEY = os.getenv("MASSIVE_API_KEY")
 
 # Initialize OpenAI Client properly
-if OPENAI_API_KEY:
-    client = OpenAI(api_key=OPENAI_API_KEY)
-else:
-    client = None
+client = None
+if OPENAI_API_KEY and OPENAI_API_KEY.strip():
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        print("✅ OpenAI client initialized successfully")
+    except Exception as e:
+        print(f"⚠️ OpenAI client initialization failed: {e}")
+        print("   AI features will be disabled")
+        client = None
 
 # --- ERROR HANDLING HELPER ---
 def api_error(message, status_code=500, details=None):
