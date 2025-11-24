@@ -65,6 +65,18 @@ def api_error(message, status_code=500, details=None):
 def index():
     return render_template('index.html')
 
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon or return 204 No Content to prevent 404 errors"""
+    from flask import send_from_directory
+    import os
+    favicon_path = os.path.join(app.root_path, 'static', 'favicon.ico')
+    if os.path.exists(favicon_path):
+        return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    else:
+        # Return 204 No Content instead of 404 to prevent error logs
+        return '', 204
+
 # --- CORE MARKET ENDPOINTS ---
 
 @app.route('/api/market/status', methods=['GET'])
