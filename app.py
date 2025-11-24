@@ -76,16 +76,13 @@ def get_market_status():
     try:
         # Optimized Batch Fetch
         tickers = list(indices.keys())
-        # 'group_by=ticker' ensures we get a MultiIndex or dict-like structure we can iterate comfortably
         data = yf.download(tickers, period="2d", group_by='ticker', progress=False, threads=True)
 
         for symbol, name in indices.items():
             try:
-                # Handle DataFrame structure depending on single/multi result
                 if len(tickers) == 1:
                     df = data
                 else:
-                    # Check if symbol is in top level columns
                     if symbol not in data.columns.levels[0]:
                         continue
                     df = data[symbol]
@@ -93,11 +90,6 @@ def get_market_status():
                 if len(df) >= 1:
                     price = df['Close'].iloc[-1]
                     prev_close = df['Close'].iloc[-2] if len(df) > 1 else df['Open'].iloc[-1]
-
-                    # If data is super fresh (intraday), Open might be today's open.
-                    # Ideally we want previous day close.
-                    # yf.download(period='2d') gives yesterday and today (if market open).
-
                     change_pct = ((price - prev_close) / prev_close) * 100
                     results.append({
                         'ticker': symbol,
@@ -146,7 +138,6 @@ def get_market_news():
                     })
                 return jsonify({'articles': articles})
 
-        # Fallback to SPY news
         spy = yf.Ticker("SPY")
         news = spy.news
         articles = []
@@ -186,7 +177,6 @@ def get_economic_calendar():
         if days_ahead <= 0: days_ahead += 7
         return d + datetime.timedelta(days=days_ahead)
 
-    # Jobless Claims (Thurs)
     next_thursday = next_weekday(today, 3)
     events.append({
         "date": next_thursday.strftime('%Y-%m-%d'),
@@ -197,7 +187,6 @@ def get_economic_calendar():
         "forecast": "215K"
     })
 
-    # CPI (Approx 12th)
     next_cpi_month = today.month + 1 if today.month < 12 else 1
     next_cpi_year = today.year if today.month < 12 else today.year + 1
     if today.day <= 12:
@@ -215,16 +204,12 @@ def get_economic_calendar():
         "forecast": "3.0%"
     })
 
-    # NFP (First Friday)
     next_nfp_month = today.month + 1 if today.month < 12 else 1
     next_nfp_year = today.year if today.month < 12 else today.year + 1
     d = datetime.date(next_nfp_year, next_nfp_month, 1)
     while d.weekday() != 4: d += datetime.timedelta(days=1)
-
-    # Check if this month's NFP passed
     this_month_nfp = datetime.date(today.year, today.month, 1)
     while this_month_nfp.weekday() != 4: this_month_nfp += datetime.timedelta(days=1)
-
     target_nfp = this_month_nfp if this_month_nfp >= today else d
 
     events.append({
@@ -236,8 +221,6 @@ def get_economic_calendar():
         "forecast": "170K"
     })
 
-    # FOMC
-    next_fomc = next_weekday(today, 2) # Random Wed placeholder for logic
     events.append({
         "date": (today + datetime.timedelta(days=30)).strftime('%Y-%m-%d'),
         "time": "02:00 PM",
@@ -274,8 +257,6 @@ def get_sector_heatmap():
                 else: continue
 
                 if df.empty: continue
-
-                # Check for NaNs
                 df = df.dropna()
                 if len(df) < 2: continue
 
@@ -316,7 +297,6 @@ def get_tech_screener():
                 price = close.iloc[-1]
                 change = ((price - close.iloc[-2]) / close.iloc[-2]) * 100
 
-                # Indicators
                 rsi = RSIIndicator(close=close, window=14).rsi().iloc[-1]
                 sma50 = SMAIndicator(close=close, window=50).sma_indicator().iloc[-1]
                 sma200 = SMAIndicator(close=close, window=200).sma_indicator().iloc[-1] if len(close) > 200 else 0
@@ -351,7 +331,6 @@ def get_tech_screener():
 @app.route('/api/market/earnings', methods=['GET'])
 @cache.cached(timeout=86400)
 def get_earnings_calendar():
-    """Live Earnings Scan"""
     tickers_list = ["NVDA", "TSLA", "AAPL", "AMD", "AMZN", "MSFT", "GOOGL", "META", "NFLX", "GME", "PLTR", "COIN"]
     earnings_list = []
     today = datetime.date.today()
@@ -359,7 +338,6 @@ def get_earnings_calendar():
         tickers = yf.Tickers(" ".join(tickers_list))
         for sym in tickers_list:
             try:
-                # yfinance calendar access
                 t = tickers.tickers[sym]
                 cal = t.calendar
                 if cal and 'Earnings Date' in cal:
@@ -444,10 +422,61 @@ def get_macro_data():
     except Exception as e:
         return api_error(str(e))
 
+@app.route('/api/market/social', methods=['GET'])
+@cache.cached(timeout=600)
+def get_social_sentiment():
+    """Tracks trending/hype tickers sentiment (Simulated via Price Action)"""
+    tickers = ["GME", "AMC", "TSLA", "NVDA", "PLTR", "COIN", "MSTR"]
+    results = []
+    try:
+        # Batch download for efficiency
+        data = yf.download(tickers, period="2d", group_by='ticker', progress=False, threads=True)
+
+        for t in tickers:
+            try:
+                if t in data.columns.levels[0]:
+                    df = data[t].dropna()
+                elif len(tickers) == 1:
+                    df = data
+                else: continue
+
+                if len(df) < 2: continue
+
+                # Calculate intraday or 1d change
+                # Approximating sentiment based on recent momentum
+                close = df['Close'].iloc[-1]
+                open_p = df['Open'].iloc[-1]
+
+                # If we have 2 days, use prev close for better calc
+                prev_close = df['Close'].iloc[-2]
+
+                change = ((close - prev_close) / prev_close) * 100
+
+                sentiment_score = 50 + change * 2
+                sentiment_score = max(0, min(100, sentiment_score))
+
+                status = "Neutral"
+                if sentiment_score > 65: status = "Bullish Hype"
+                elif sentiment_score < 35: status = "Bearish FUD"
+
+                results.append({
+                    'ticker': t,
+                    'sentiment_score': round(sentiment_score, 0),
+                    'status': status,
+                    'mentions': int(abs(change) * 150) + 500
+                })
+            except Exception as ex:
+                print(f"Social error {t}: {ex}")
+                continue
+
+        return jsonify({'social': results})
+    except Exception as e:
+        return api_error(str(e))
+
 # --- NEW 2.0 FEATURES ---
 
 @app.route('/api/tools/correlation', methods=['POST'])
-@cache.cached(timeout=3600, make_cache_key=lambda: request.get_data())
+@cache.cached(timeout=3600, make_cache_key=lambda: request.get_data().decode('utf-8'))
 def get_correlation_matrix():
     """Calculates correlation matrix for a list of tickers"""
     data_req = request.get_json()
@@ -581,7 +610,173 @@ def get_ai_sentiment_summary():
     except Exception as e:
         return api_error(str(e))
 
-# --- STOCK DETAILS (Existing) ---
+# --- STOCK DETAILS (Restore dashboard_data) ---
+
+@app.route('/api/dashboard_data', methods=['GET'])
+@cache.cached(query_string=True)
+def get_dashboard_data():
+    """
+    Consolidated endpoint for Chart + Verdict Data.
+    Replaces get_history and includes Verdict logic.
+    """
+    ticker_symbol = request.args.get('ticker')
+    period = request.args.get('period', '1y')
+
+    if not ticker_symbol:
+        return api_error('No ticker provided', 400)
+
+    # Map frontend period to yfinance period & interval
+    yf_period = period
+    interval = "1d"
+
+    if period == "1d":
+        yf_period = "1d"
+        interval = "2m"
+    elif period == "1w":
+        yf_period = "5d"
+        interval = "15m"
+    elif period == "1mo":
+        yf_period = "1mo"
+        interval = "60m"
+
+    try:
+        stock = yf.Ticker(ticker_symbol)
+        hist = stock.history(period=yf_period, interval=interval)
+
+        if hist.empty:
+             return api_error('No historical data found', 404)
+
+        # Fix timezone for lightweight charts if necessary
+        # Usually strftime works fine.
+
+        ohlc_data = []
+        volume_data = []
+
+        for date, row in hist.iterrows():
+            # Format time
+            time_str = date.strftime('%Y-%m-%d %H:%M') if interval != "1d" else date.strftime('%Y-%m-%d')
+
+            ohlc_data.append({
+                'time': time_str,
+                'open': row['Open'],
+                'high': row['High'],
+                'low': row['Low'],
+                'close': row['Close']
+            })
+            vol_color = 'rgba(38, 166, 154, 0.5)' if row['Close'] >= row['Open'] else 'rgba(239, 83, 80, 0.5)'
+            volume_data.append({
+                'time': time_str,
+                'value': row['Volume'],
+                'color': vol_color
+            })
+
+        # Calculate Indicators (on Close series)
+        close_series = hist['Close']
+
+        sma50_data = []
+        bb_upper_data = []
+        bb_lower_data = []
+
+        # Only calc if enough data
+        if len(close_series) >= 20:
+            bb = BollingerBands(close=close_series, window=20, window_dev=2)
+            bb_upper = bb.bollinger_hband()
+            bb_lower = bb.bollinger_lband()
+
+            bb_upper_data = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in bb_upper.items() if not np.isnan(v)]
+            bb_lower_data = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in bb_lower.items() if not np.isnan(v)]
+
+        if len(close_series) >= 50:
+            sma50 = SMAIndicator(close=close_series, window=50).sma_indicator()
+            sma50_data = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in sma50.items() if not np.isnan(v)]
+
+        # --- VERDICT LOGIC ---
+        score = 0
+        reasons = []
+
+        # Simple Tech Check
+        current_price = close_series.iloc[-1]
+
+        # SMA 200
+        sma200_val = 0
+        if len(close_series) >= 200:
+            sma200 = SMAIndicator(close=close_series, window=200).sma_indicator()
+            sma200_val = sma200.iloc[-1]
+            if not np.isnan(sma200_val):
+                if current_price > sma200_val:
+                    score += 2
+                    reasons.append("Price > SMA 200 (Long-term Uptrend)")
+                else:
+                    score -= 2
+                    reasons.append("Price < SMA 200 (Long-term Downtrend)")
+
+        # RSI
+        rsi_val = RSIIndicator(close=close_series, window=14).rsi().iloc[-1]
+        if rsi_val > 70:
+            score -= 1
+            reasons.append(f"RSI Overbought ({round(rsi_val,1)})")
+        elif rsi_val < 30:
+            score += 1
+            reasons.append(f"RSI Oversold ({round(rsi_val,1)})")
+        else:
+            reasons.append(f"RSI Neutral ({round(rsi_val,1)})")
+
+        # MACD
+        macd = MACD(close=close_series)
+        macd_diff = macd.macd_diff().iloc[-1]
+        if macd_diff > 0:
+            score += 1
+            reasons.append("MACD Momentum Positive")
+        else:
+            score -= 1
+            reasons.append("MACD Momentum Negative")
+
+        # Verdict String
+        if score >= 3:
+            signal = "Strong Buy"
+            signal_color = "#00b894" # Green
+        elif score >= 1:
+            signal = "Buy"
+            signal_color = "#55efc4"
+        elif score <= -3:
+            signal = "Strong Sell"
+            signal_color = "#d63031" # Red
+        elif score <= -1:
+            signal = "Sell"
+            signal_color = "#ff7675"
+        else:
+            signal = "Neutral"
+            signal_color = "#b2bec3"
+
+        verdict = {
+            'signal': signal,
+            'score': score,
+            'color': signal_color,
+            'reasons': reasons
+        }
+
+        # Markers (Golden Cross)
+        markers = []
+        if len(close_series) >= 200 and not sma50_data == []:
+             # simplified marker logic for performance
+             pass
+
+        response_data = {
+            'ohlc': ohlc_data,
+            'volume': volume_data,
+            'indicators': {
+                'sma50': sma50_data,
+                'bb_upper': bb_upper_data,
+                'bb_lower': bb_lower_data
+            },
+            'markers': markers,
+            'verdict': verdict
+        }
+        return jsonify(response_data)
+
+    except Exception as e:
+        print(f"Dashboard Data Error: {e}")
+        return api_error(str(e))
 
 @app.route('/api/info', methods=['GET'])
 @cache.cached(query_string=True)
@@ -593,78 +788,24 @@ def get_info():
         # Add price
         try:
             t = yf.Ticker(ticker)
-            hist = t.history(period="1y")
+            # Just get fast info if possible, else history
+            if hasattr(t, 'fast_info'):
+                 price = t.fast_info['last_price']
+            else:
+                 hist = t.history(period="1d")
+                 price = hist['Close'].iloc[-1] if not hist.empty else 'N/A'
+
+            info['currentPrice'] = round(price, 2) if isinstance(price, (int, float)) else price
+
+            # Techs (Quick calc using recent hist)
+            hist = t.history(period="6mo")
+            technicals = {}
             if not hist.empty:
-                info['currentPrice'] = round(hist['Close'].iloc[-1], 2)
-
-                # Techs
                 rsi = RSIIndicator(close=hist["Close"], window=14).rsi().iloc[-1]
-                macd = MACD(close=hist["Close"]).macd().iloc[-1]
-                sma50 = SMAIndicator(close=hist["Close"], window=50).sma_indicator().iloc[-1]
-
-                technicals = {
-                    'RSI (14)': round(rsi, 2),
-                    'MACD': round(macd, 2),
-                    'SMA (50)': round(sma50, 2)
-                }
-            else: technicals = {}
+                technicals['RSI (14)'] = round(rsi, 2)
         except: technicals = {}
 
         return jsonify({'info': info, 'technicals': technicals})
-    except Exception as e:
-        return api_error(str(e))
-
-@app.route('/api/history', methods=['GET'])
-@cache.cached(query_string=True)
-def get_history():
-    ticker = request.args.get('ticker')
-    if not ticker: return api_error("Ticker missing", 400)
-    try:
-        # Optimized period mapping
-        period = request.args.get('period', '1y')
-        # Map period to interval
-        interval = "1d"
-        if period == "1d": interval = "2m"
-        elif period == "5d": interval = "15m"
-        elif period == "1mo": interval = "60m"
-        
-        t = yf.Ticker(ticker)
-        hist = t.history(period=period, interval=interval)
-
-        if hist.empty: return api_error("No data", 404)
-
-        # Prepare for lightweight charts
-        ohlc = []
-        volume = []
-        
-        for date, row in hist.iterrows():
-            time_str = date.strftime('%Y-%m-%d %H:%M') if interval != "1d" else date.strftime('%Y-%m-%d')
-            # Handle timestamps for chart
-            # Lightweight charts prefers YYYY-MM-DD for daily, timestamp for intraday
-
-            ohlc.append({
-                'time': time_str,
-                'open': row['Open'], 'high': row['High'], 'low': row['Low'], 'close': row['Close']
-            })
-            volume.append({
-                'time': time_str, 'value': row['Volume'],
-                'color': 'rgba(38, 166, 154, 0.5)' if row['Close'] >= row['Open'] else 'rgba(239, 83, 80, 0.5)'
-            })
-
-        # Indicators for Chart
-        close = hist['Close']
-        indicators = {}
-        if len(close) > 20:
-            bb = BollingerBands(close=close, window=20)
-            indicators['bb_upper'] = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in bb.bollinger_hband().items() if not np.isnan(v)]
-            indicators['bb_lower'] = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in bb.bollinger_lband().items() if not np.isnan(v)]
-
-        if len(close) > 50:
-            sma = SMAIndicator(close=close, window=50).sma_indicator()
-            indicators['sma50'] = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in sma.items() if not np.isnan(v)]
-
-        return jsonify({'ohlc': ohlc, 'volume': volume, 'indicators': indicators})
-
     except Exception as e:
         return api_error(str(e))
 
@@ -683,7 +824,6 @@ def search_ticker():
 @app.route('/api/ai', methods=['GET'])
 @cache.cached(query_string=True)
 def get_ai_summary():
-    """Existing AI summary"""
     ticker = request.args.get('ticker')
     if not client: return api_error("AI disabled", 503)
     try:
@@ -693,21 +833,6 @@ def get_ai_summary():
             messages=[{"role": "user", "content": prompt}]
         )
         return jsonify({'summary': completion.choices[0].message.content})
-    except Exception as e: return api_error(str(e))
-
-@app.route('/api/chat', methods=['POST'])
-def chat_bot():
-    if not client: return api_error("Chat disabled", 503)
-    data = request.get_json()
-    try:
-        completion = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": f"Financial assistant for {data.get('ticker')}."},
-                {"role": "user", "content": data.get('message')}
-            ]
-        )
-        return jsonify({'reply': completion.choices[0].message.content})
     except Exception as e: return api_error(str(e))
 
 if __name__ == '__main__':
