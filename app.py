@@ -11,6 +11,7 @@ sys.path.append(current_dir)
 
 from flask import Flask, render_template, request, jsonify
 from flask_caching import Cache
+from flask_compress import Compress
 import yfinance as yf
 import requests
 from openai import OpenAI
@@ -27,6 +28,15 @@ from textblob import TextBlob
 from massive_data import massive_service
 
 app = Flask(__name__)
+
+# Enable Compression
+try:
+    compress = Compress(app)
+    app.config['COMPRESS_MIMETYPES'] = ['text/html', 'text/css', 'application/json', 'application/javascript']
+    app.config['COMPRESS_LEVEL'] = 6
+    app.config['COMPRESS_MIN_SIZE'] = 500
+except:
+    print("⚠️ Flask-Compress not available, running without compression")
 
 # Cache Configuration - Optimized for FileSystem
 cache = Cache(app, config={
@@ -263,32 +273,58 @@ def get_sector_heatmap():
     results = []
     try:
         tickers = list(sectors.keys())
-        data = yf.download(tickers, period="2d", group_by='ticker', progress=False, threads=True)
+        data = yf.download(tickers, period="2d", group_by='ticker', progress=False, threads=True, auto_adjust=True)
 
         for symbol, name in sectors.items():
             try:
-                if len(tickers) > 1 and symbol in data.columns.levels[0]:
-                    df = data[symbol]
+                # Handle both single and multi-ticker downloads
+                if len(tickers) > 1:
+                    if hasattr(data.columns, 'levels') and symbol in data.columns.levels[0]:
+                        df = data[symbol]
+                    else:
+                        # Fallback: Try direct column access
+                        df = data[[col for col in data.columns if col[0] == symbol]] if isinstance(data.columns, pd.MultiIndex) else data
                 elif len(tickers) == 1:
                     df = data
-                else: continue
+                else: 
+                    continue
 
-                if df.empty: continue
+                if df.empty: 
+                    print(f"Heatmap: {symbol} - empty dataframe")
+                    continue
+                    
                 df = df.dropna()
-                if len(df) < 2: continue
+                if len(df) < 2: 
+                    print(f"Heatmap: {symbol} - insufficient data ({len(df)} rows)")
+                    continue
 
-                change = ((df['Close'].iloc[-1] - df['Close'].iloc[-2]) / df['Close'].iloc[-2]) * 100
+                # Calculate change
+                close_col = df['Close'] if 'Close' in df.columns else df.iloc[:, 3]
+                change = ((close_col.iloc[-1] - close_col.iloc[-2]) / close_col.iloc[-2]) * 100
+                
                 results.append({
                     'symbol': symbol,
                     'sector': name,
                     'change_pct': round(float(change), 2)
                 })
-            except:
+                
+            except Exception as sector_error:
+                print(f"Heatmap error for {symbol}: {sector_error}")
+                # Add with 0 change as fallback
                 results.append({'symbol': symbol, 'sector': name, 'change_pct': 0.0})
 
+        # Always return data, even if some sectors failed
+        if len(results) == 0:
+            print("Heatmap: No sectors loaded successfully")
+            # Return empty sectors with 0 change
+            for symbol, name in sectors.items():
+                results.append({'symbol': symbol, 'sector': name, 'change_pct': 0.0})
+        
         results.sort(key=lambda x: x['change_pct'], reverse=True)
         return jsonify({'sectors': results})
+        
     except Exception as e:
+        print(f"Heatmap critical error: {e}")
         return api_error(str(e))
 
 @app.route('/api/market/screener_tech', methods=['GET'])
@@ -796,31 +832,65 @@ def get_dashboard_data():
         return api_error(str(e))
 
 @app.route('/api/info', methods=['GET'])
-@cache.cached(query_string=True)
+@cache.cached(query_string=True, timeout=1800)  # 30 min cache
 def get_info():
     ticker = request.args.get('ticker')
     if not ticker: return api_error("Ticker missing", 400)
     try:
+        # Get base info from Massive (name, sector, marketcap)
         info = massive_service.get_ticker_details(ticker)
-        # Add price
+        technicals = {}
+        
+        # Get additional data from yfinance (P/E, Dividend, Price)
         try:
             t = yf.Ticker(ticker)
-            # Just get fast info if possible, else history
+            yf_info = t.info  # Get full info dict from yfinance
+            
+            # Get current price (fast)
             if hasattr(t, 'fast_info'):
-                 price = t.fast_info['last_price']
+                price = t.fast_info.get('last_price', 'N/A')
             else:
-                 hist = t.history(period="1d")
-                 price = hist['Close'].iloc[-1] if not hist.empty else 'N/A'
+                hist = t.history(period="1d")
+                price = hist['Close'].iloc[-1] if not hist.empty else 'N/A'
 
             info['currentPrice'] = round(price, 2) if isinstance(price, (int, float)) else price
 
-            # Techs (Quick calc using recent hist)
-            hist = t.history(period="6mo")
-            technicals = {}
-            if not hist.empty:
-                rsi = RSIIndicator(close=hist["Close"], window=14).rsi().iloc[-1]
-                technicals['RSI (14)'] = round(rsi, 2)
-        except: technicals = {}
+            # Get P/E Ratio from yfinance (FREE!)
+            if yf_info and isinstance(yf_info, dict):
+                # Try multiple fields (different tickers use different keys)
+                pe_ratio = yf_info.get('trailingPE') or yf_info.get('forwardPE') or 'N/A'
+                if pe_ratio != 'N/A' and pe_ratio is not None:
+                    info['peRatio'] = round(pe_ratio, 2)
+                else:
+                    info['peRatio'] = 'N/A'
+                
+                # Get Dividend Yield from yfinance
+                div_yield = yf_info.get('dividendYield') or yf_info.get('trailingAnnualDividendYield')
+                if div_yield and div_yield != 'N/A':
+                    info['dividendYield'] = f"{round(div_yield * 100, 2)}%"  # Convert to percentage
+                else:
+                    info['dividendYield'] = 'N/A'
+                
+                # Also get sector if Massive didn't provide it
+                if info.get('sector') == 'N/A':
+                    info['sector'] = yf_info.get('sector', 'N/A')
+
+            # Techs (OPTIMIZED - use only 60 days instead of 6mo)
+            hist = t.history(period="60d")
+            if not hist.empty and len(hist) >= 14:
+                try:
+                    rsi = RSIIndicator(close=hist["Close"], window=14).rsi().iloc[-1]
+                    if not pd.isna(rsi):
+                        technicals['RSI (14)'] = round(rsi, 2)
+                except:
+                    pass
+        except Exception as e:
+            print(f"Info API error for {ticker}: {e}")
+            # Ensure fields exist even on error
+            if 'peRatio' not in info:
+                info['peRatio'] = 'N/A'
+            if 'dividendYield' not in info:
+                info['dividendYield'] = 'N/A'
 
         return jsonify({'info': info, 'technicals': technicals})
     except Exception as e:

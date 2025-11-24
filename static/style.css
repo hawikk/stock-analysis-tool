@@ -2,9 +2,9 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-    /* Modern Dark Theme (Unusual Whales Inspired) */
-    --bg-main: #131722;       /* Deep Navy/Black */
-    --bg-card: #1e222d;       /* Card Background */
+    /* Dark Theme (Default - Navy/Charcoal) */
+    --bg-main: #131722;       /* Deep Navy */
+    --bg-card: #1e222d;       /* Charcoal Card */
     --bg-hover: #2a2e39;      /* Hover State */
     --border: #2a2e39;        /* Subtle Border */
     
@@ -21,21 +21,45 @@
     --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Light Theme */
-[data-theme="light"] {
-    --bg-main: #f5f7fa;
-    --bg-card: #ffffff;
-    --bg-hover: #e8ecf1;
-    --border: #d1d7e0;
+/* Pitch Black Theme (OLED/Pure Black) */
+[data-theme="darker"] {
+    --bg-main: #000000;       /* Pure Black (OLED friendly) */
+    --bg-card: #0a0a0a;       /* Almost Black */
+    --bg-hover: #1a1a1a;      /* Dark Hover */
+    --border: #1f1f1f;        /* Slightly visible border */
     
-    --primary: #2962ff;
-    --accent: #f39c12;
+    --primary: #3b82f6;       /* Brighter Blue (better contrast) */
+    --accent: #fbbf24;        /* Brighter Yellow */
     
-    --bull: #27ae60;
-    --bear: #e74c3c;
+    --bull: #10b981;          /* Brighter Green */
+    --bear: #ef4444;          /* Brighter Red */
     
-    --text-main: #2c3e50;
-    --text-muted: #7f8c8d;
+    --text-main: #f9fafb;     /* Brighter White */
+    --text-muted: #9ca3af;    /* Lighter Grey (better readability) */
+}
+
+/* Pitch Black Theme Enhancements */
+[data-theme="darker"] .card {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="darker"] .table-dark {
+    --bs-table-border-color: #1f1f1f;
+}
+
+[data-theme="darker"] .terminal-nav {
+    border-bottom: 1px solid #1f1f1f !important;
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="darker"] .btn-outline-secondary:hover {
+    background: #1a1a1a;
+    border-color: #2a2a2a;
+}
+
+/* OLED optimization - true blacks save battery */
+[data-theme="darker"] body {
+    background: #000000;
 }
 
 body {
@@ -211,15 +235,29 @@ td {
     border: 1px solid var(--border);
     color: var(--text-main);
     border-radius: 20px;
-    padding: 4px 12px;
+    padding: 6px 14px;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .theme-toggle:hover {
     background: var(--bg-hover);
     transform: scale(1.05);
+    border-color: var(--primary);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Pitch black theme indicator */
+[data-theme="darker"] .theme-toggle {
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
 }
 
 /* Mobile Bottom Nav */

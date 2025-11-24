@@ -321,19 +321,60 @@ const App = {
 
     loadHeatmap: () => {
         const grid = document.getElementById('heatmapGrid');
-        grid.innerHTML = '<div class="col-12 text-center text-muted py-5"><div class="spinner-border spinner-border-sm"></div> Loading Heatmap...</div>';
-        API.fetch('/api/market/heatmap').then(data => {
-            grid.innerHTML = '';
-            if (data.sectors) {
+        if (!grid) {
+            console.error('Heatmap grid element not found');
+            return;
+        }
+        
+        grid.innerHTML = '<div class="col-12 text-center text-muted py-5"><div class="spinner-border spinner-border-sm"></div> Loading Sector Heatmap...</div>';
+        
+        API.fetch('/api/market/heatmap')
+           .then(data => {
+                console.log('Heatmap data received:', data);
+                grid.innerHTML = '';
+                
+                if (!data.sectors || data.sectors.length === 0) {
+                    grid.innerHTML = '<div class="col-12"><div class="alert alert-warning">No sector data available. Market may be closed.</div></div>';
+                    return;
+                }
+                
                 data.sectors.forEach(sec => {
                     const div = document.createElement('div');
-                    div.className = 'col-md-4 col-lg-3';
-                    let bg = sec.change_pct > 0 ? `rgba(0, 184, 148, ${Math.min(0.8, sec.change_pct / 2)})` : `rgba(255, 71, 87, ${Math.min(0.8, Math.abs(sec.change_pct) / 2)})`;
-                    div.innerHTML = `<div class="p-3 text-center rounded border border-secondary h-100 d-flex flex-column justify-content-center" style="background: ${bg}; min-height: 100px;"><div class="fw-bold text-white h5 mb-0">${sec.sector}</div><div class="small text-white-50 mb-2">${sec.symbol}</div><div class="fw-bold text-white h4 mb-0">${sec.change_pct > 0 ? '+' : ''}${sec.change_pct.toFixed(2)}%</div></div>`;
+                    div.className = 'col-md-4 col-lg-3 fade-in';
+                    
+                    // Calculate background color intensity
+                    let opacity = Math.min(0.8, Math.abs(sec.change_pct) / 3);
+                    let bg = sec.change_pct > 0 
+                        ? `rgba(0, 184, 148, ${opacity})` 
+                        : `rgba(255, 71, 87, ${opacity})`;
+                    
+                    div.innerHTML = `
+                        <div class="p-3 text-center rounded border border-secondary h-100 d-flex flex-column justify-content-center" 
+                             style="background: ${bg}; min-height: 100px; cursor: pointer;"
+                             onclick="console.log('Sector clicked:', '${sec.symbol}')">
+                            <div class="fw-bold text-white h5 mb-0">${sec.sector}</div>
+                            <div class="small text-white-50 mb-2">${sec.symbol}</div>
+                            <div class="fw-bold text-white h4 mb-0">
+                                ${sec.change_pct > 0 ? '+' : ''}${sec.change_pct.toFixed(2)}%
+                            </div>
+                        </div>
+                    `;
                     grid.appendChild(div);
                 });
-            }
-        });
+            })
+           .catch(err => {
+                console.error('Heatmap error:', err);
+                grid.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger">
+                            Failed to load sector heatmap: ${err.message}
+                            <button class="btn btn-sm btn-outline-light ms-2" onclick="App.loadHeatmap()">
+                                <i class="fa-solid fa-rotate"></i> Retry
+                            </button>
+                        </div>
+                    </div>
+                `;
+           });
     },
 
     loadCalendar: () => {
