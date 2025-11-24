@@ -1,22 +1,20 @@
 // static/js/charts.js
 
 let chartInstance = null;
+let chartSeries = {}; // Store references to series for toggling
 
 const Charts = {
     renderStockChart: (containerId, data, currentPeriod) => {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = '';
+        chartSeries = {}; // Reset
 
-        // Use CSS Variables for Colors
         const textColor = Utils.getCssVar('--text-main') || '#ecedee';
         const gridColor = Utils.getCssVar('--border') || '#2a2e39';
         const upColor = Utils.getCssVar('--bull') || '#00b894';
         const downColor = Utils.getCssVar('--bear') || '#ff4757';
         const accentColor = Utils.getCssVar('--accent') || '#fbc531';
-
-        // Detect if data is intraday (contains time)
-        const isIntraday = currentPeriod === '1d' || currentPeriod === '1w';
 
         chartInstance = LightweightCharts.createChart(container, {
             layout: {
@@ -29,39 +27,59 @@ const Charts = {
             },
             width: container.clientWidth,
             height: container.clientHeight,
-            crosshair: {
-                mode: LightweightCharts.CrosshairMode.Normal,
-            },
-            timeScale: {
-                borderColor: gridColor,
-                timeVisible: true,
-                secondsVisible: false
-            },
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            timeScale: { borderColor: gridColor, timeVisible: true, secondsVisible: false },
             rightPriceScale: { borderColor: gridColor }
         });
 
+        // 1. Candlestick Series (Main)
         const candleSeries = chartInstance.addCandlestickSeries({
             upColor: upColor, downColor: downColor, borderVisible: false, wickUpColor: upColor, wickDownColor: downColor
         });
 
-        // Process data
-        const processedOHLC = data.ohlc.map(d => {
-            if (d.time.includes(' ')) {
-                 return { ...d, time: new Date(d.time).getTime() / 1000 };
+        // Data Formatting Helper
+        const formatTime = (t) => {
+            if (typeof t === 'string' && t.includes(' ')) {
+                // Parse "YYYY-MM-DD HH:MM" to unix timestamp
+                // Using simplified parsing to avoid timezone hell, assuming server sends local or UTC consistent
+                return new Date(t).getTime() / 1000;
             }
-            return d;
-        });
-        candleSeries.setData(processedOHLC);
+            return t;
+        };
 
-        // SMA 50
-        const sma50 = chartInstance.addLineSeries({ color: accentColor, lineWidth: 1 });
-        const processedSMA = data.indicators.sma50.map(d => {
-             if (d.time.includes(' ')) {
-                 return { ...d, time: new Date(d.time).getTime() / 1000 };
+        const processedOHLC = data.ohlc.map(d => ({...d, time: formatTime(d.time)}));
+        candleSeries.setData(processedOHLC);
+        chartSeries['price'] = candleSeries;
+
+        // 2. Indicators (if available)
+        if (data.indicators) {
+            // SMA 50
+            if (data.indicators.sma50 && data.indicators.sma50.length > 0) {
+                const sma50 = chartInstance.addLineSeries({ color: accentColor, lineWidth: 1, title: 'SMA 50' });
+                sma50.setData(data.indicators.sma50.map(d => ({...d, time: formatTime(d.time)})));
+                chartSeries['sma50'] = sma50;
             }
-            return d;
+
+            // BB
+            if (data.indicators.bb_upper && data.indicators.bb_upper.length > 0) {
+                const bbUp = chartInstance.addLineSeries({ color: 'rgba(0, 150, 255, 0.3)', lineWidth: 1, title: 'BB' });
+                const bbLow = chartInstance.addLineSeries({ color: 'rgba(0, 150, 255, 0.3)', lineWidth: 1 });
+                bbUp.setData(data.indicators.bb_upper.map(d => ({...d, time: formatTime(d.time)})));
+                bbLow.setData(data.indicators.bb_lower.map(d => ({...d, time: formatTime(d.time)})));
+                chartSeries['bb'] = [bbUp, bbLow];
+            }
+        }
+
+        // 3. Volume (Histogram)
+        const volSeries = chartInstance.addHistogramSeries({
+            priceFormat: { type: 'volume' },
+            priceScaleId: '', // Overlay on main chart but at bottom
+            scaleMargins: { top: 0.8, bottom: 0 },
         });
-        sma50.setData(processedSMA);
+        const processedVol = data.volume.map(d => ({...d, time: formatTime(d.time)}));
+        volSeries.setData(processedVol);
+        chartSeries['volume'] = volSeries;
+
 
         // Markers
         if(data.markers) candleSeries.setMarkers(data.markers);
@@ -74,64 +92,91 @@ const Charts = {
             }
         }).observe(container);
 
-        // Force immediate resize
-        setTimeout(() => {
-            chartInstance.resize(container.clientWidth, container.clientHeight);
-            chartInstance.timeScale().fitContent();
-        }, 100);
+        setTimeout(() => chartInstance.timeScale().fitContent(), 100);
     },
 
-    addComparison: (ticker, color='#00ffff') => {
-        if(!chartInstance) return;
-        API.fetch(`/api/dashboard_data?ticker=${ticker}`)
-        .then(data => {
-            const lineSeries = chartInstance.addLineSeries({
-                color: color,
-                lineWidth: 2,
-                priceScaleId: 'left'
-            });
-            // Convert OHLC to Line data (Close price)
-            const lineData = data.ohlc.map(d => {
-                let time = d.time;
-                if (typeof time === 'string' && time.includes(' ')) {
-                    time = new Date(time).getTime() / 1000;
-                }
-                return { time: time, value: d.close };
-            });
-            lineSeries.setData(lineData);
-        });
+    toggleSeries: (name, isVisible) => {
+        if (!chartSeries[name]) return;
+
+        if (Array.isArray(chartSeries[name])) {
+            chartSeries[name].forEach(s => s.applyOptions({ visible: isVisible }));
+        } else {
+            chartSeries[name].applyOptions({ visible: isVisible });
+        }
     },
 
-    renderSparkline: (elementId, dataPoints, changePct) => {
-        const chartDiv = document.getElementById(elementId);
-        if(!chartDiv) return;
+    renderMonteCarlo: (containerId, data) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
 
-        const upColor = Utils.getCssVar('--bull');
-        const downColor = Utils.getCssVar('--bear');
-
-        const chart = LightweightCharts.createChart(chartDiv, {
-            layout: { background: { type: 'solid', color: 'transparent' }, attributionLogo: false },
-            grid: { vertLines: { visible: false }, horzLines: { visible: false } },
-            width: chartDiv.clientWidth,
-            height: chartDiv.clientHeight,
-            rightPriceScale: { visible: false },
-            timeScale: { visible: false },
-            handleScroll: false,
-            handleScale: false
+        const chart = LightweightCharts.createChart(container, {
+            layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#ccc' },
+            grid: { vertLines: { color: '#333' }, horzLines: { color: '#333' } },
+            width: container.clientWidth, height: container.clientHeight,
+            rightPriceScale: { borderColor: '#333' },
+            timeScale: { borderColor: '#333' }
         });
 
-        const line = chart.addLineSeries({
-            color: changePct >= 0 ? upColor : downColor,
-            lineWidth: 2,
-            crosshairMarkerVisible: false
+        const colors = ['#2962ff', '#e91e63', '#4caf50', '#ff9800', '#9c27b0'];
+
+        data.simulations.forEach((sim, idx) => {
+            const series = chart.addLineSeries({
+                color: colors[idx % colors.length],
+                lineWidth: 1,
+                lineType: 2 // Curved
+            });
+            // Ensure time is unique/sorted. Monte Carlo data usually is forward looking dates.
+            series.setData(sim.data);
+
+            // Only keep 50 lines max visible to save performance if many sims
+            if (idx > 50) series.applyOptions({ visible: false });
         });
 
-        const data = dataPoints.map((val, idx) => ({
-            time: '2023-01-' + (idx+10).toString().padStart(2, '0'),
-            value: val
-        }));
-
-        line.setData(data);
         chart.timeScale().fitContent();
+    },
+
+    renderHeatmap: (containerId, data) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Simple DOM Table Heatmap
+        let labels = data.labels;
+        let matrix = data.matrix; // array of {x, y, value}
+
+        let html = '<div class="table-responsive"><table class="table table-dark table-bordered table-sm text-center small font-monospace">';
+
+        // Header
+        html += '<thead><tr><th></th>';
+        labels.forEach(l => html += `<th>${l}</th>`);
+        html += '</tr></thead><tbody>';
+
+        // Body
+        labels.forEach(rowLabel => {
+            html += `<tr><th class="text-end">${rowLabel}</th>`;
+            labels.forEach(colLabel => {
+                const cell = matrix.find(m => m.x === rowLabel && m.y === colLabel);
+                const val = cell ? cell.value : 0;
+
+                // Color scale: -1 (Red) -> 0 (Grey) -> 1 (Green)
+                let bg = 'transparent';
+                let color = '#fff';
+                if (val > 0) {
+                    const opacity = Math.min(val, 1);
+                    bg = `rgba(0, 184, 148, ${opacity * 0.6})`; // Green
+                } else if (val < 0) {
+                    const opacity = Math.min(Math.abs(val), 1);
+                    bg = `rgba(214, 48, 49, ${opacity * 0.6})`; // Red
+                }
+
+                if (rowLabel === colLabel) bg = '#2d3436';
+
+                html += `<td style="background-color: ${bg}; color: ${color};">${val > 0 ? '+' : ''}${val}</td>`;
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
     }
 };
