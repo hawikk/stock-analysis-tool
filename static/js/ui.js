@@ -93,7 +93,6 @@ const UI = {
         if(data.data && data.data.length > 0) {
             const isEquity = data.data[0].type === 'EQ';
 
-            // Hide/Show Headers based on type
             const toggle = (sel, s) => document.querySelectorAll(sel).forEach(el => s ? el.classList.remove('d-none') : el.classList.add('d-none'));
             toggle('.col-dte', !isEquity);
             toggle('.col-strike', !isEquity);
@@ -171,43 +170,58 @@ const UI = {
     // New 2.0 Feature Renders
 
     renderSentimentSummary: (data) => {
-        // data is a string JSON from LLM or error
         const container = document.getElementById('sentimentSummaryContainer');
         if (!container) return;
 
+        // Fix: check if data is already an object (Flask jsonify returns dict) or needs parsing
+        let parsed = data;
         try {
-            const parsed = JSON.parse(data);
+            if (typeof data === 'string') {
+                parsed = JSON.parse(data);
+            }
+        } catch (e) {
+            // If parsing fails, display raw text if it's not [object Object]
+            // If it's an object but doesn't match expected structure, we might fail later.
+            console.error("Sentiment Parse Error", e);
+        }
 
-            let color = 'text-warning';
-            if (parsed.score >= 60) color = 'text-success';
-            if (parsed.score <= 40) color = 'text-danger';
+        // If we still don't have a valid object with expected keys, show generic message
+        if (!parsed || typeof parsed !== 'object') {
+             container.innerHTML = `<div class="text-muted small">Sentiment Data Unavailable.</div>`;
+             return;
+        }
 
-            let gaugeColor = '#fbc531';
-            if (parsed.score >= 60) gaugeColor = '#00b894';
-            if (parsed.score <= 40) gaugeColor = '#ff4757';
+        // Fallback values if AI fails to return structured JSON
+        const score = parsed.score || 50;
+        const verdict = parsed.verdict || "Neutral";
+        const narrative = parsed.narrative || "No analysis available.";
 
-            container.innerHTML = `
-                <div class="row align-items-center">
-                    <div class="col-md-3 text-center border-end border-secondary">
-                        <h1 class="display-4 fw-bold ${color} mb-0">${parsed.score}</h1>
-                        <div class="small text-muted text-uppercase font-monospace">Market Score</div>
-                        <div class="progress mt-2 bg-dark" style="height: 6px;">
-                            <div class="progress-bar" role="progressbar" style="width: ${parsed.score}%; background-color: ${gaugeColor}"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-9 ps-4">
-                         <h5 class="fw-bold text-white mb-2"><i class="fa-solid fa-robot me-2 text-info"></i>AI Market Verdict: ${parsed.verdict}</h5>
-                         <p class="text-muted small font-monospace mb-0">${parsed.narrative}</p>
+        let color = 'text-warning';
+        if (score >= 60) color = 'text-success';
+        if (score <= 40) color = 'text-danger';
+
+        let gaugeColor = '#fbc531';
+        if (score >= 60) gaugeColor = '#00b894';
+        if (score <= 40) gaugeColor = '#ff4757';
+
+        container.innerHTML = `
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center border-end border-secondary">
+                    <h1 class="display-4 fw-bold ${color} mb-0">${score}</h1>
+                    <div class="small text-muted text-uppercase font-monospace">Market Score</div>
+                    <div class="progress mt-2 bg-dark" style="height: 6px;">
+                        <div class="progress-bar" role="progressbar" style="width: ${score}%; background-color: ${gaugeColor}"></div>
                     </div>
                 </div>
-            `;
-        } catch (e) {
-            container.innerHTML = `<div class="text-muted small">${data}</div>`;
-        }
+                <div class="col-md-9 ps-4">
+                        <h5 class="fw-bold text-white mb-2"><i class="fa-solid fa-robot me-2 text-info"></i>AI Market Verdict: ${verdict}</h5>
+                        <p class="text-muted small font-monospace mb-0">${narrative}</p>
+                </div>
+            </div>
+        `;
     },
 
     showAlerts: () => {
-        // Render alerts from LocalStorage
         const tbody = document.getElementById('alertsBody');
         if(!tbody) return;
         tbody.innerHTML = '';

@@ -151,12 +151,13 @@ const App = {
             document.getElementById('currentPrice').innerText = safe(info.currentPrice) !== 'N/A' ? `$${info.currentPrice}` : '---';
 
             const grid = document.getElementById('fundamentalsGrid');
+            // Improvement: add spacing and alignment for legibility
             grid.innerHTML = `
-                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>MKT CAP</span> <span class="text-white font-monospace">${Utils.formatNumber(info.marketCap)}</span></div>
-                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>P/E</span> <span class="text-white font-monospace">${safe(info.peRatio)}</span></div>
-                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>DIV</span> <span class="text-white font-monospace">${safe(info.dividendYield)}</span></div>
-                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>SECTOR</span> <span class="text-white text-truncate font-monospace" style="max-width: 100px;">${safe(info.sector)}</span></div>
-                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span>RSI</span> <span class="text-info font-monospace">${safe(data.technicals['RSI (14)'])}</span></div>
+                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">MKT CAP</span> <span class="text-white font-monospace fw-bold">${Utils.formatNumber(info.marketCap)}</span></div>
+                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">P/E</span> <span class="text-white font-monospace fw-bold">${safe(info.peRatio)}</span></div>
+                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">DIV</span> <span class="text-white font-monospace fw-bold">${safe(info.dividendYield)}</span></div>
+                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">SECTOR</span> <span class="text-white text-truncate font-monospace fw-bold" style="max-width: 120px;">${safe(info.sector)}</span></div>
+                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">RSI (14)</span> <span class="text-info font-monospace fw-bold">${safe(data.technicals['RSI (14)'])}</span></div>
             `;
         });
     },
@@ -211,7 +212,6 @@ const App = {
     },
 
     // --- Other Views (Screener, Heatmap, Calendar etc.) ---
-    // (Previous implementations are largely same, just ensuring they are exposed)
     loadTechScreener: () => {
         const tbody = document.getElementById('screenerTableBody');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div> Scanning S&P 100...</td></tr>';
