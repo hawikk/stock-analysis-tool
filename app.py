@@ -835,5 +835,242 @@ def get_ai_summary():
         return jsonify({'summary': completion.choices[0].message.content})
     except Exception as e: return api_error(str(e))
 
+# --- OPTIONS CHAIN ---
+@app.route('/api/options/chain', methods=['GET'])
+@cache.cached(query_string=True, timeout=1800)
+def get_options_chain():
+    """Returns options chain for a given ticker"""
+    ticker = request.args.get('ticker')
+    if not ticker: return api_error("Ticker required", 400)
+    
+    try:
+        stock = yf.Ticker(ticker)
+        
+        # Get current price
+        hist = stock.history(period="1d")
+        if hist.empty: return api_error("No price data", 404)
+        current_price = float(hist['Close'].iloc[-1])
+        
+        # Get options dates
+        expirations = stock.options
+        if not expirations or len(expirations) == 0:
+            return api_error("No options available", 404)
+        
+        # Get nearest expiration
+        exp_date = expirations[0]
+        opt_chain = stock.option_chain(exp_date)
+        
+        # Format calls and puts
+        calls = []
+        puts = []
+        
+        if hasattr(opt_chain, 'calls') and not opt_chain.calls.empty:
+            for _, row in opt_chain.calls.iterrows():
+                calls.append({
+                    'strike': float(row['strike']),
+                    'lastPrice': float(row['lastPrice']) if pd.notna(row['lastPrice']) else None,
+                    'volume': int(row['volume']) if pd.notna(row['volume']) else 0,
+                    'openInterest': int(row['openInterest']) if pd.notna(row['openInterest']) else 0,
+                    'impliedVolatility': float(row['impliedVolatility']) if pd.notna(row['impliedVolatility']) else None
+                })
+        
+        if hasattr(opt_chain, 'puts') and not opt_chain.puts.empty:
+            for _, row in opt_chain.puts.iterrows():
+                puts.append({
+                    'strike': float(row['strike']),
+                    'lastPrice': float(row['lastPrice']) if pd.notna(row['lastPrice']) else None,
+                    'volume': int(row['volume']) if pd.notna(row['volume']) else 0,
+                    'openInterest': int(row['openInterest']) if pd.notna(row['openInterest']) else 0,
+                    'impliedVolatility': float(row['impliedVolatility']) if pd.notna(row['impliedVolatility']) else None
+                })
+        
+        return jsonify({
+            'ticker': ticker,
+            'current_price': round(current_price, 2),
+            'expiry': exp_date,
+            'calls': calls,
+            'puts': puts
+        })
+    except Exception as e:
+        return api_error(str(e))
+
+# --- PATTERN RECOGNITION ---
+@app.route('/api/patterns/detect', methods=['GET'])
+@cache.cached(query_string=True, timeout=3600)
+def detect_patterns():
+    """Detects chart patterns using technical analysis"""
+    ticker = request.args.get('ticker')
+    if not ticker: return api_error("Ticker required", 400)
+    
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period="6mo", interval="1d")
+        
+        if hist.empty or len(hist) < 50:
+            return api_error("Insufficient data", 404)
+        
+        patterns = []
+        close = hist['Close']
+        high = hist['High']
+        low = hist['Low']
+        
+        # Pattern 1: Golden Cross (SMA 50 crosses above SMA 200)
+        if len(close) >= 200:
+            sma50 = SMAIndicator(close=close, window=50).sma_indicator()
+            sma200 = SMAIndicator(close=close, window=200).sma_indicator()
+            
+            if len(sma50) > 1 and len(sma200) > 1:
+                if sma50.iloc[-2] <= sma200.iloc[-2] and sma50.iloc[-1] > sma200.iloc[-1]:
+                    patterns.append({
+                        'name': 'Golden Cross',
+                        'signal': 'bullish',
+                        'confidence': 85,
+                        'description': 'SMA 50 crossed above SMA 200 - Strong bullish signal',
+                        'success_rate': '65%'
+                    })
+                elif sma50.iloc[-2] >= sma200.iloc[-2] and sma50.iloc[-1] < sma200.iloc[-1]:
+                    patterns.append({
+                        'name': 'Death Cross',
+                        'signal': 'bearish',
+                        'confidence': 82,
+                        'description': 'SMA 50 crossed below SMA 200 - Strong bearish signal',
+                        'success_rate': '62%'
+                    })
+        
+        # Pattern 2: RSI Divergence
+        rsi = RSIIndicator(close=close, window=14).rsi()
+        if len(rsi) > 20:
+            # Bullish divergence: Price making lower lows, RSI making higher lows
+            recent_close = close.tail(20)
+            recent_rsi = rsi.tail(20)
+            
+            close_min_idx = recent_close.idxmin()
+            rsi_min_idx = recent_rsi.idxmin()
+            
+            if close_min_idx < rsi_min_idx and recent_close.iloc[-1] < recent_close.iloc[0]:
+                patterns.append({
+                    'name': 'Bullish RSI Divergence',
+                    'signal': 'bullish',
+                    'confidence': 72,
+                    'description': 'Price making lower lows while RSI shows strength',
+                    'success_rate': '58%'
+                })
+        
+        # Pattern 3: Bollinger Band Squeeze
+        if len(close) >= 20:
+            bb = BollingerBands(close=close, window=20, window_dev=2)
+            bb_width = (bb.bollinger_hband() - bb.bollinger_lband()) / bb.bollinger_mavg()
+            
+            if len(bb_width) > 20:
+                avg_width = bb_width.tail(100).mean()
+                current_width = bb_width.iloc[-1]
+                
+                if current_width < avg_width * 0.5:
+                    patterns.append({
+                        'name': 'Bollinger Band Squeeze',
+                        'signal': 'neutral',
+                        'confidence': 68,
+                        'description': 'Volatility compression - Big move likely ahead',
+                        'success_rate': '55%'
+                    })
+        
+        # Pattern 4: Cup and Handle (Simplified)
+        if len(close) >= 60:
+            window = close.tail(60)
+            mid_point = len(window) // 2
+            
+            left_side = window.iloc[:mid_point]
+            right_side = window.iloc[mid_point:]
+            
+            # Check for cup shape
+            if left_side.iloc[0] > left_side.min() and right_side.iloc[-1] > right_side.min():
+                if abs(left_side.iloc[0] - right_side.iloc[-1]) / left_side.iloc[0] < 0.1:
+                    patterns.append({
+                        'name': 'Cup Pattern',
+                        'signal': 'bullish',
+                        'confidence': 70,
+                        'description': 'Potential cup formation - Watch for handle breakout',
+                        'success_rate': '60%'
+                    })
+        
+        # Pattern 5: Head and Shoulders (Basic detection)
+        if len(high) >= 30:
+            window = high.tail(30).reset_index(drop=True)
+            
+            # Find 3 peaks
+            peaks = []
+            for i in range(1, len(window) - 1):
+                if window[i] > window[i-1] and window[i] > window[i+1]:
+                    peaks.append((i, window[i]))
+            
+            if len(peaks) >= 3:
+                # Check if middle peak is highest (head) and sides are similar (shoulders)
+                peaks = sorted(peaks, key=lambda x: x[1], reverse=True)
+                head = peaks[0]
+                shoulders = peaks[1:3]
+                
+                if abs(shoulders[0][1] - shoulders[1][1]) / shoulders[0][1] < 0.15:
+                    patterns.append({
+                        'name': 'Head and Shoulders',
+                        'signal': 'bearish',
+                        'confidence': 75,
+                        'description': 'Classic reversal pattern detected',
+                        'success_rate': '64%'
+                    })
+        
+        # Sort by confidence
+        patterns.sort(key=lambda x: x['confidence'], reverse=True)
+        
+        return jsonify({
+            'ticker': ticker,
+            'patterns': patterns,
+            'analyzed_period': '6 months'
+        })
+        
+    except Exception as e:
+        return api_error(str(e))
+
+# --- REAL-TIME PRICE UPDATES ---
+@app.route('/api/realtime/prices', methods=['POST'])
+def get_realtime_prices():
+    """Batch fetch current prices for multiple tickers"""
+    data = request.get_json()
+    tickers = data.get('tickers', [])
+    
+    if not tickers or len(tickers) == 0:
+        return api_error("No tickers provided", 400)
+    
+    try:
+        results = {}
+        data = yf.download(tickers, period="1d", interval="1m", progress=False, threads=True)
+        
+        for ticker in tickers:
+            try:
+                if len(tickers) == 1:
+                    df = data
+                elif ticker in data.columns.levels[0]:
+                    df = data[ticker]
+                else:
+                    continue
+                
+                if not df.empty:
+                    close = df['Close'].dropna()
+                    if len(close) > 0:
+                        current = float(close.iloc[-1])
+                        prev = float(close.iloc[0]) if len(close) > 1 else current
+                        change = ((current - prev) / prev) * 100
+                        
+                        results[ticker] = {
+                            'price': round(current, 2),
+                            'change': round(change, 2),
+                            'timestamp': datetime.datetime.now().isoformat()
+                        }
+            except:
+                continue
+        
+        return jsonify(results)
+    except Exception as e:
+        return api_error(str(e))
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

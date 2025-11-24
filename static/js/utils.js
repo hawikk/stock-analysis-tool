@@ -54,5 +54,81 @@ const Utils = {
                 banner.style.display = 'none';
             });
         }
+    },
+
+    // Theme Management
+    initTheme: () => {
+        const savedTheme = Utils.storage.get('theme');
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const theme = savedTheme || systemTheme;
+        
+        document.documentElement.setAttribute('data-theme', theme);
+        Utils.updateThemeIcon(theme);
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (!Utils.storage.get('theme')) {
+                const newTheme = e.matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                Utils.updateThemeIcon(newTheme);
+            }
+        });
+    },
+
+    toggleTheme: () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const newTheme = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        Utils.storage.set('theme', newTheme);
+        Utils.updateThemeIcon(newTheme);
+    },
+
+    updateThemeIcon: (theme) => {
+        const icon = document.getElementById('themeIcon');
+        if (icon) {
+            icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+    },
+
+    // Toast Notifications
+    showToast: (message, type = 'info', duration = 3000) => {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `custom-toast ${type}`;
+        
+        const icon = type === 'success' ? 'fa-check-circle' : 
+                     type === 'error' ? 'fa-exclamation-circle' : 
+                     'fa-info-circle';
+        
+        toast.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid ${icon}"></i>
+                <span class="flex-grow-1">${message}</span>
+                <button class="btn btn-sm btn-link text-muted p-0" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    },
+
+    // Price Flash Animation
+    flashPrice: (element, isUp) => {
+        if (!element) return;
+        element.classList.add(isUp ? 'price-flash-up' : 'price-flash-down');
+        setTimeout(() => {
+            element.classList.remove('price-flash-up', 'price-flash-down');
+        }, 600);
     }
 };
+
+// Global theme toggle function
+window.toggleTheme = Utils.toggleTheme;

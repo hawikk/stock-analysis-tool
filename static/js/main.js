@@ -8,21 +8,28 @@ const App = {
     },
 
     init: () => {
+        // Init Theme
+        Utils.initTheme();
+        
         // Init UI Components
         UI.setupNavigation();
         UI.setupSearch();
         Utils.initReferralBanner();
 
+        // Init New Features
+        if (typeof Watchlist !== 'undefined') Watchlist.init();
+        if (typeof Alerts !== 'undefined') Alerts.load();
+        if (typeof CustomIndicators !== 'undefined') CustomIndicators.loadSaved();
+
         // Load Initial Data
         App.loadMarketStatus();
         App.loadWhaleActivity();
         App.loadMarketNews();
-        App.loadWatchlist();
-        App.loadAlerts();
         App.loadSentiment();
 
-        // Auto Refresh
+        // Auto Refresh with Real-time Updates
         App.startPolling();
+        App.startRealtimeUpdates();
 
         // Listeners for Chart Time Range
         document.querySelectorAll('.time-range-btn').forEach(btn => {
@@ -45,7 +52,46 @@ const App = {
         // Market Status & Whale (every 60s)
         App.state.intervals.push(setInterval(App.loadMarketStatus, 60000));
         App.state.intervals.push(setInterval(App.loadWhaleActivity, 60000));
-        App.state.intervals.push(setInterval(App.checkAlerts, 60000));
+        
+        // Check alerts (every 60s)
+        if (typeof Alerts !== 'undefined') {
+            App.state.intervals.push(setInterval(Alerts.check, 60000));
+        }
+    },
+
+    startRealtimeUpdates: () => {
+        // Real-time price updates for watchlist (every 30s)
+        App.state.intervals.push(setInterval(() => {
+            if (typeof Watchlist !== 'undefined' && document.getElementById('viewWatchlist').classList.contains('d-none') === false) {
+                App.updateWatchlistPrices();
+            }
+        }, 30000));
+    },
+
+    updateWatchlistPrices: () => {
+        const groups = Utils.storage.get('watchlistGroups', { 'default': { name: 'Default', tickers: [] } });
+        const tickers = groups[Watchlist?.currentGroup || 'default']?.tickers || [];
+        
+        if (tickers.length === 0) return;
+
+        API.post('/api/realtime/prices', { tickers: tickers })
+           .then(data => {
+                Object.keys(data).forEach(ticker => {
+                    const row = document.getElementById(`wl-${ticker}`);
+                    if (row) {
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length >= 4) {
+                            const priceData = data[ticker];
+                            const chgColor = priceData.change >= 0 ? 'text-success' : 'text-danger';
+                            
+                            cells[2].innerHTML = `<span class="text-white">${priceData.price}</span>`;
+                            cells[3].innerHTML = `<span class="${chgColor}">${priceData.change > 0 ? '+' : ''}${priceData.change.toFixed(2)}%</span>`;
+                            
+                            Utils.flashPrice(row, priceData.change >= 0);
+                        }
+                    }
+                });
+            }).catch(err => console.error('Realtime update failed:', err));
     },
 
     // --- Data Fetchers ---
@@ -73,7 +119,13 @@ const App = {
         if (viewName === 'forex') App.loadForex();
         if (viewName === 'macro_social') { App.loadMacro(); App.loadSocial(); }
         if (viewName === 'correlation') App.loadCorrelation();
-        // Monte Carlo handles its own trigger
+        if (viewName === 'watchlist' && typeof Watchlist !== 'undefined') Watchlist.load();
+        if (viewName === 'alerts' && typeof Alerts !== 'undefined') Alerts.load();
+        if (viewName === 'customIndicators' && typeof CustomIndicators !== 'undefined') {
+            CustomIndicators.renderConditions();
+            CustomIndicators.loadSaved();
+        }
+        // Monte Carlo, Options, Comparison, Patterns handle their own triggers
     },
 
     // --- 2.0 Feature Logic ---
@@ -345,123 +397,13 @@ const App = {
         });
     },
 
-    // --- Watchlist & Alerts (Existing Logic Maintained) ---
-
-    loadWatchlist: () => {
-        const watchlist = Utils.storage.get('watchlist', []);
-        const tbody = document.getElementById('watchlistBody');
-        if(!tbody) return;
-        tbody.innerHTML = '';
-        if(watchlist.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Watchlist is empty.</td></tr>'; return; }
-
-        watchlist.forEach(ticker => {
-            const tr = document.createElement('tr');
-            tr.id = `wl-${ticker}`;
-            tr.innerHTML = `<td class="fw-bold text-white">${ticker}</td><td class="text-end text-muted">...</td><td class="text-end text-muted">...</td><td class="text-end"><button class="btn btn-sm btn-outline-danger py-0" onclick="App.removeFromWatchlist('${ticker}')"><i class="fa-solid fa-trash"></i></button></td>`;
-            tbody.appendChild(tr);
-
-            // Fetch live price for watchlist (optimized 1d)
-            API.fetch(`/api/dashboard_data?ticker=${ticker}&period=1d`).then(d => {
-                 if(d.ohlc && d.ohlc.length > 0) {
-                     const close = d.ohlc[d.ohlc.length-1].close;
-                     const open = d.ohlc[0].open;
-                     const change = ((close - open) / open) * 100;
-                     const row = document.getElementById(`wl-${ticker}`);
-                     if(row) {
-                         const chgColor = change >= 0 ? 'text-success' : 'text-danger';
-                         row.innerHTML = `<td class="fw-bold text-white cursor-pointer" onclick="App.loadStock('${ticker}')">${ticker}</td><td class="text-end text-white">${close.toFixed(2)}</td><td class="text-end ${chgColor}">${change > 0 ? '+' : ''}${change.toFixed(2)}%</td><td class="text-end"><button class="btn btn-sm btn-outline-danger py-0" onclick="App.removeFromWatchlist('${ticker}')"><i class="fa-solid fa-trash"></i></button></td>`;
-                     }
-                 }
-            });
-        });
-    },
-
-    addToWatchlist: () => {
-        const input = document.getElementById('watchlistInput');
-        const ticker = input.value.toUpperCase().trim();
-        if(!ticker) return;
-        const watchlist = Utils.storage.get('watchlist', []);
-        if(!watchlist.includes(ticker)) {
-            watchlist.push(ticker);
-            Utils.storage.set('watchlist', watchlist);
-            App.loadWatchlist();
-        }
-        input.value = '';
-    },
-    removeFromWatchlist: (ticker) => {
-        let watchlist = Utils.storage.get('watchlist', []);
-        watchlist = watchlist.filter(t => t !== ticker);
-        Utils.storage.set('watchlist', watchlist);
-        App.loadWatchlist();
-    },
-
-    loadAlerts: () => {
-        const alerts = Utils.storage.get('alerts', []);
-        const tbody = document.getElementById('alertsBody');
-        if(!tbody) return;
-        tbody.innerHTML = '';
-        if(alerts.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No alerts set.</td></tr>'; return; }
-        alerts.forEach((alert, index) => {
-            const tr = document.createElement('tr');
-            const statusColor = alert.triggered ? 'text-danger fw-bold' : 'text-muted';
-            const statusText = alert.triggered ? 'TRIGGERED' : 'ACTIVE';
-            tr.innerHTML = `<td class="text-white fw-bold">${alert.ticker}</td><td class="text-info">${alert.condition === 'gt' ? '>' : '<'}</td><td class="text-white">${alert.target}</td><td class="text-muted" id="alert-curr-${index}">...</td><td class="${statusColor}">${statusText}</td><td><button class="btn btn-sm btn-outline-danger py-0" onclick="App.removeAlert(${index})"><i class="fa-solid fa-trash"></i></button></td>`;
-            tbody.appendChild(tr);
-        });
-    },
-    addAlert: () => {
-        const ticker = document.getElementById('alertTicker').value.toUpperCase().trim();
-        const condition = document.getElementById('alertCondition').value;
-        const price = parseFloat(document.getElementById('alertPrice').value);
-        if(!ticker || !price) return;
-        const alerts = Utils.storage.get('alerts', []);
-        alerts.push({ ticker: ticker, condition: condition, target: price, triggered: false });
-        Utils.storage.set('alerts', alerts);
-        document.getElementById('alertTicker').value = '';
-        document.getElementById('alertPrice').value = '';
-        App.loadAlerts();
-    },
-    removeAlert: (index) => {
-        const alerts = Utils.storage.get('alerts', []);
-        alerts.splice(index, 1);
-        Utils.storage.set('alerts', alerts);
-        App.loadAlerts();
-    },
-    checkAlerts: () => {
-        const alerts = Utils.storage.get('alerts', []);
-        if(alerts.length === 0) return;
-        alerts.forEach((alert, index) => {
-            if(alert.triggered) return;
-            // Lightweight check using stock info
-            API.fetch(`/api/info?ticker=${alert.ticker}`).then(data => {
-                if(data.info && data.info.currentPrice) {
-                    const price = data.info.currentPrice;
-                    const cell = document.getElementById(`alert-curr-${index}`);
-                    if(cell) cell.innerText = price;
-                    let trigger = false;
-                    if(alert.condition === 'gt' && price > alert.target) trigger = true;
-                    if(alert.condition === 'lt' && price < alert.target) trigger = true;
-                    if(trigger) {
-                        alert.triggered = true;
-                        Utils.storage.set('alerts', alerts);
-                        App.loadAlerts();
-                        // Browser Notification
-                        if(Notification.permission === 'granted') {
-                            new Notification(`Price Alert: ${alert.ticker}`, { body: `Price has reached ${price}` });
-                        } else if (Notification.permission !== 'denied') {
-                             Notification.requestPermission();
-                        }
-                    }
-                }
-            });
-        });
-    }
 };
 
-window.addToWatchlist = App.addToWatchlist;
-window.removeFromWatchlist = App.removeFromWatchlist;
-window.addAlert = App.addAlert;
-window.removeAlert = App.removeAlert;
+// Backward compatibility exports
+window.addToWatchlist = () => { if (typeof Watchlist !== 'undefined') Watchlist.add(); };
+window.removeFromWatchlist = (ticker) => { if (typeof Watchlist !== 'undefined') Watchlist.remove(ticker); };
+window.addAlert = () => { if (typeof Alerts !== 'undefined') Alerts.add(); };
+window.removeAlert = (index) => { if (typeof Alerts !== 'undefined') Alerts.remove(index); };
 window.addForexPair = App.addForexPair;
 window.triggerComparison = () => { const t = document.getElementById('compareInput').value.toUpperCase(); if(t) Charts.addComparison(t); };
 
