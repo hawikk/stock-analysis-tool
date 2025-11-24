@@ -1,4 +1,5 @@
 // static/js/features.js - Advanced Features Module
+console.log('📦 features.js loading...');
 
 // ========================================
 // WATCHLIST MANAGEMENT
@@ -723,8 +724,111 @@ const Patterns = {
 
     renderChart: (data) => {
         const container = document.getElementById('patternChart');
-        container.innerHTML = '<div class="text-center text-muted py-5">Chart with pattern markers will render here</div>';
-        // Implementation: Use LightweightCharts with markers at pattern locations
+        if (!container) return;
+        
+        // Clear previous chart
+        container.innerHTML = '';
+        
+        // Show loading message
+        container.innerHTML = '<div class="text-center text-muted py-5"><div class="spinner-border spinner-border-sm"></div> Loading chart...</div>';
+        
+        // Fetch historical data for the ticker
+        const ticker = data.ticker;
+        API.fetch(`/api/dashboard_data?ticker=${ticker}&period=6mo`)
+           .then(chartData => {
+               container.innerHTML = ''; // Clear loading
+               
+               if (!chartData.ohlc || chartData.ohlc.length === 0) {
+                   container.innerHTML = '<div class="alert alert-warning small m-3">No chart data available</div>';
+                   return;
+               }
+               
+               // Create chart
+               const textColor = Utils.getCssVar('--text-main') || '#ecedee';
+               const gridColor = Utils.getCssVar('--border') || '#2a2e39';
+               const upColor = Utils.getCssVar('--bull') || '#00b894';
+               const downColor = Utils.getCssVar('--bear') || '#ff4757';
+               
+               const chart = LightweightCharts.createChart(container, {
+                   layout: {
+                       background: { type: 'solid', color: 'transparent' },
+                       textColor: textColor,
+                   },
+                   grid: {
+                       vertLines: { color: gridColor, style: 1 },
+                       horzLines: { color: gridColor, style: 1 }
+                   },
+                   width: container.clientWidth,
+                   height: 500,
+                   crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                   timeScale: { borderColor: gridColor, timeVisible: true },
+                   rightPriceScale: { borderColor: gridColor }
+               });
+               
+               // Add candlestick series
+               const candleSeries = chart.addCandlestickSeries({
+                   upColor: upColor,
+                   downColor: downColor,
+                   borderVisible: false,
+                   wickUpColor: upColor,
+                   wickDownColor: downColor
+               });
+               
+               // Format time helper
+               const formatTime = (t) => {
+                   if (typeof t === 'string' && t.includes(' ')) {
+                       return new Date(t).getTime() / 1000;
+                   }
+                   return t;
+               };
+               
+               const processedOHLC = chartData.ohlc.map(d => ({
+                   time: formatTime(d.time),
+                   open: d.open,
+                   high: d.high,
+                   low: d.low,
+                   close: d.close
+               }));
+               
+               candleSeries.setData(processedOHLC);
+               
+               // Add pattern markers
+               if (data.patterns && data.patterns.length > 0) {
+                   const markers = data.patterns.map((pattern, index) => {
+                       // Place marker at the most recent date (end of data)
+                       const lastIndex = processedOHLC.length - 1;
+                       const position = lastIndex - (index * 10); // Stagger markers
+                       
+                       if (position < 0 || position >= processedOHLC.length) return null;
+                       
+                       const dataPoint = processedOHLC[position];
+                       
+                       return {
+                           time: dataPoint.time,
+                           position: pattern.signal === 'bullish' ? 'belowBar' : 'aboveBar',
+                           color: pattern.signal === 'bullish' ? upColor : downColor,
+                           shape: pattern.signal === 'bullish' ? 'arrowUp' : 'arrowDown',
+                           text: pattern.name,
+                           size: 1
+                       };
+                   }).filter(m => m !== null);
+                   
+                   candleSeries.setMarkers(markers);
+               }
+               
+               // Resize observer
+               new ResizeObserver(() => {
+                   if (container.clientWidth > 0) {
+                       chart.resize(container.clientWidth, 500);
+                       chart.timeScale().fitContent();
+                   }
+               }).observe(container);
+               
+               setTimeout(() => chart.timeScale().fitContent(), 100);
+           })
+           .catch(err => {
+               container.innerHTML = `<div class="alert alert-danger small m-3">Chart loading failed: ${err.message}</div>`;
+           });
     }
 };
 
@@ -735,4 +839,6 @@ window.Options = Options;
 window.Comparison = Comparison;
 window.CustomIndicators = CustomIndicators;
 window.Patterns = Patterns;
+
+console.log('✅ features.js loaded successfully!');
 

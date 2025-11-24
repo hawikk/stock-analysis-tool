@@ -8,28 +8,63 @@ const App = {
     },
 
     init: () => {
+        console.log('🚀 App initializing...');
+        
         // Init Theme
-        Utils.initTheme();
+        try {
+            Utils.initTheme();
+            console.log('✅ Theme initialized');
+        } catch (e) {
+            console.error('❌ Theme init failed:', e);
+        }
         
         // Init UI Components
-        UI.setupNavigation();
-        UI.setupSearch();
-        Utils.initReferralBanner();
+        try {
+            UI.setupNavigation();
+            UI.setupSearch();
+            Utils.initReferralBanner();
+            console.log('✅ UI components initialized');
+        } catch (e) {
+            console.error('❌ UI init failed:', e);
+        }
 
         // Init New Features
-        if (typeof Watchlist !== 'undefined') Watchlist.init();
-        if (typeof Alerts !== 'undefined') Alerts.load();
-        if (typeof CustomIndicators !== 'undefined') CustomIndicators.loadSaved();
+        try {
+            if (typeof Watchlist !== 'undefined') {
+                Watchlist.init();
+                console.log('✅ Watchlist initialized');
+            }
+            if (typeof Alerts !== 'undefined') {
+                Alerts.load();
+                console.log('✅ Alerts initialized');
+            }
+            if (typeof CustomIndicators !== 'undefined') {
+                CustomIndicators.loadSaved();
+                console.log('✅ Custom Indicators initialized');
+            }
+        } catch (e) {
+            console.error('❌ Features init failed:', e);
+        }
 
         // Load Initial Data
-        App.loadMarketStatus();
-        App.loadWhaleActivity();
-        App.loadMarketNews();
-        App.loadSentiment();
+        try {
+            App.loadMarketStatus();
+            App.loadWhaleActivity();
+            App.loadMarketNews();
+            App.loadSentiment();
+            console.log('✅ Initial data loading started');
+        } catch (e) {
+            console.error('❌ Data loading failed:', e);
+        }
 
         // Auto Refresh with Real-time Updates
-        App.startPolling();
-        App.startRealtimeUpdates();
+        try {
+            App.startPolling();
+            App.startRealtimeUpdates();
+            console.log('✅ Auto-refresh started');
+        } catch (e) {
+            console.error('❌ Polling failed:', e);
+        }
 
         // Listeners for Chart Time Range
         document.querySelectorAll('.time-range-btn').forEach(btn => {
@@ -62,7 +97,8 @@ const App = {
     startRealtimeUpdates: () => {
         // Real-time price updates for watchlist (every 30s)
         App.state.intervals.push(setInterval(() => {
-            if (typeof Watchlist !== 'undefined' && document.getElementById('viewWatchlist').classList.contains('d-none') === false) {
+            const watchlistView = document.getElementById('viewWatchlist');
+            if (typeof Watchlist !== 'undefined' && watchlistView && !watchlistView.classList.contains('d-none')) {
                 App.updateWatchlistPrices();
             }
         }, 30000));
