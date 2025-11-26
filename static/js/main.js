@@ -20,9 +20,9 @@ const App = {
         
         // Init UI Components
         try {
-            UI.setupNavigation();
-            UI.setupSearch();
-            Utils.initReferralBanner();
+        UI.setupNavigation();
+        UI.setupSearch();
+        Utils.initReferralBanner();
             console.log('✅ UI components initialized');
         } catch (e) {
             console.error('❌ UI init failed:', e);
@@ -48,10 +48,10 @@ const App = {
 
         // Load Initial Data
         try {
-            App.loadMarketStatus();
-            App.loadWhaleActivity();
-            App.loadMarketNews();
-            App.loadSentiment();
+        App.loadMarketStatus();
+        App.loadWhaleActivity();
+        App.loadMarketNews();
+        App.loadSentiment();
             console.log('✅ Initial data loading started');
         } catch (e) {
             console.error('❌ Data loading failed:', e);
@@ -59,7 +59,7 @@ const App = {
 
         // Auto Refresh with Real-time Updates
         try {
-            App.startPolling();
+        App.startPolling();
             App.startRealtimeUpdates();
             console.log('✅ Auto-refresh started');
         } catch (e) {
@@ -331,7 +331,7 @@ const App = {
         API.fetch('/api/market/heatmap')
            .then(data => {
                 console.log('Heatmap data received:', data);
-                grid.innerHTML = '';
+            grid.innerHTML = '';
                 
                 if (!data.sectors || data.sectors.length === 0) {
                     grid.innerHTML = '<div class="col-12"><div class="alert alert-warning">No sector data available. Market may be closed.</div></div>';
@@ -374,7 +374,7 @@ const App = {
                         </div>
                     </div>
                 `;
-           });
+        });
     },
 
     loadCalendar: () => {
