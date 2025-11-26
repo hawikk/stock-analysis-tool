@@ -351,7 +351,7 @@
                             <span><i class="fa-solid fa-list me-1"></i> MY WATCHLIST</span>
                             <div class="d-flex gap-2 align-items-center flex-wrap">
                                 <div class="input-group input-group-sm" style="width: auto;">
-                                    <input type="text" id="watchlistInput" class="form-control bg-dark text-white border-secondary" placeholder="Add Ticker...">
+                                <input type="text" id="watchlistInput" class="form-control bg-dark text-white border-secondary" placeholder="Add Ticker...">
                                     <button class="btn btn-outline-secondary" onclick="Watchlist.add()">Add</button>
                                 </div>
                                 <button class="btn btn-sm btn-outline-primary" onclick="Watchlist.exportList()">
@@ -373,19 +373,19 @@
                                 </button>
                             </div>
                             <div class="table-responsive">
-                                <table class="table table-dark table-sm table-hover mb-0 font-monospace">
-                                    <thead>
-                                        <tr>
+                            <table class="table table-dark table-sm table-hover mb-0 font-monospace">
+                                <thead>
+                                    <tr>
                                             <th width="30"></th>
-                                            <th>TICKER</th>
-                                            <th class="text-end">PRICE</th>
-                                            <th class="text-end">CHANGE %</th>
+                                        <th>TICKER</th>
+                                        <th class="text-end">PRICE</th>
+                                        <th class="text-end">CHANGE %</th>
                                             <th class="text-end">ALERT</th>
-                                            <th class="text-end">ACTION</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="watchlistBody"></tbody>
-                                </table>
+                                        <th class="text-end">ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="watchlistBody"></tbody>
+                            </table>
                             </div>
                         </div>
                     </div>

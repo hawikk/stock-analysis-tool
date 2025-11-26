@@ -76,17 +76,17 @@ A professional-grade stock analysis platform with real-time market data, AI-powe
 
 ### Installation
 
-```bash
+    ```bash
 # 1. Clone the repository
 git clone https://github.com/hawikk/stock-analysis-tool.git
-cd stock-new
+    cd stock-new
 
 # 2. Create virtual environment
-python3 -m venv .venv
+    python3 -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # 3. Install dependencies
-pip install -r requirements.txt
+    pip install -r requirements.txt
 
 # 4. Configure environment variables (optional)
 # Create .env file:

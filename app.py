@@ -706,7 +706,7 @@ def get_dashboard_data():
         volume_data = []
 
         for date, row in hist.iterrows():
-            # Format time
+            # Format time consistently based on interval
             time_str = date.strftime('%Y-%m-%d %H:%M') if interval != "1d" else date.strftime('%Y-%m-%d')
 
             ohlc_data.append({
@@ -730,18 +730,22 @@ def get_dashboard_data():
         bb_upper_data = []
         bb_lower_data = []
 
+        # Helper function for consistent time formatting
+        def format_indicator_time(timestamp):
+            return timestamp.strftime('%Y-%m-%d %H:%M') if interval != "1d" else timestamp.strftime('%Y-%m-%d')
+
         # Only calc if enough data
         if len(close_series) >= 20:
             bb = BollingerBands(close=close_series, window=20, window_dev=2)
             bb_upper = bb.bollinger_hband()
             bb_lower = bb.bollinger_lband()
 
-            bb_upper_data = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in bb_upper.items() if not np.isnan(v)]
-            bb_lower_data = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in bb_lower.items() if not np.isnan(v)]
+            bb_upper_data = [{'time': format_indicator_time(k), 'value': v} for k, v in bb_upper.items() if not np.isnan(v)]
+            bb_lower_data = [{'time': format_indicator_time(k), 'value': v} for k, v in bb_lower.items() if not np.isnan(v)]
 
         if len(close_series) >= 50:
             sma50 = SMAIndicator(close=close_series, window=50).sma_indicator()
-            sma50_data = [{'time': k.strftime('%Y-%m-%d'), 'value': v} for k, v in sma50.items() if not np.isnan(v)]
+            sma50_data = [{'time': format_indicator_time(k), 'value': v} for k, v in sma50.items() if not np.isnan(v)]
 
         # --- VERDICT LOGIC ---
         score = 0
@@ -808,11 +812,49 @@ def get_dashboard_data():
             'reasons': reasons
         }
 
-        # Markers (Golden Cross)
+        # Markers (Golden Cross and Death Cross Detection)
         markers = []
-        if len(close_series) >= 200 and not sma50_data == []:
-             # simplified marker logic for performance
-             pass
+        
+        if len(close_series) >= 200 and len(sma50_data) > 0:
+            # Calculate SMA 200 for cross detection
+            sma50_series = SMAIndicator(close=close_series, window=50).sma_indicator()
+            sma200_series = SMAIndicator(close=close_series, window=200).sma_indicator()
+            
+            # Find crossover points
+            for i in range(1, len(sma50_series)):
+                if pd.isna(sma50_series.iloc[i]) or pd.isna(sma200_series.iloc[i]):
+                    continue
+                if pd.isna(sma50_series.iloc[i-1]) or pd.isna(sma200_series.iloc[i-1]):
+                    continue
+                    
+                sma50_current = sma50_series.iloc[i]
+                sma50_prev = sma50_series.iloc[i-1]
+                sma200_current = sma200_series.iloc[i]
+                sma200_prev = sma200_series.iloc[i-1]
+                
+                # Golden Cross: SMA 50 crosses ABOVE SMA 200
+                if sma50_prev <= sma200_prev and sma50_current > sma200_current:
+                    marker_time = format_indicator_time(sma50_series.index[i])
+                    markers.append({
+                        'time': marker_time,
+                        'position': 'belowBar',
+                        'color': '#00b894',  # Green
+                        'shape': 'arrowUp',
+                        'text': 'Golden Cross',
+                        'size': 2
+                    })
+                
+                # Death Cross: SMA 50 crosses BELOW SMA 200
+                elif sma50_prev >= sma200_prev and sma50_current < sma200_current:
+                    marker_time = format_indicator_time(sma50_series.index[i])
+                    markers.append({
+                        'time': marker_time,
+                        'position': 'aboveBar',
+                        'color': '#ff4757',  # Red
+                        'shape': 'arrowDown',
+                        'text': 'Death Cross',
+                        'size': 2
+                    })
 
         response_data = {
             'ohlc': ohlc_data,
