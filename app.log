@@ -1,0 +1,26 @@
+Warning: MASSIVE_API_KEY not found. Some features may fail.
+ * Serving Flask app 'app'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 969-355-207
+127.0.0.1 - - [04/Dec/2025 21:22:18] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:18] "GET /static/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:18] "GET /static/js/charts.js HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:18] "GET /static/js/ui.js HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:18] "GET /static/js/api.js HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:18] "GET /static/js/utils.js HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:18] "GET /static/js/features.js HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:18] "GET /static/js/main.js HTTP/1.1" 200 -
+/app/app.py:341: FutureWarning: YF.download() has changed argument auto_adjust default to True
+  data = yf.download(tickers, period="6mo", interval="1d", progress=False, group_by='ticker', threads=True)
+/app/app.py:106: FutureWarning: YF.download() has changed argument auto_adjust default to True
+  data = yf.download(tickers, period="2d", group_by='ticker', progress=False, threads=True)
+127.0.0.1 - - [04/Dec/2025 21:22:19] "GET /api/market/whale HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:19] "[35m[1mGET /api/market/sentiment_analysis HTTP/1.1[0m" 503 -
+127.0.0.1 - - [04/Dec/2025 21:22:19] "GET /api/market/news HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:19] "GET /api/market/status HTTP/1.1" 200 -
+127.0.0.1 - - [04/Dec/2025 21:22:22] "GET /api/market/screener_tech HTTP/1.1" 200 -

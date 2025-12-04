@@ -30,14 +30,14 @@
         </div>
         <div class="offcanvas-body p-3">
              <div class="d-flex flex-column gap-2 h-100 overflow-auto">
-                <button class="btn btn-outline-secondary btn-sm active text-start w-100 nav-btn" data-view="dashboard" data-bs-dismiss="offcanvas"><i class="fa-solid fa-table-columns me-2"></i>Dash</button>
+                <button class="btn btn-outline-secondary btn-sm active text-start w-100 nav-btn" data-view="market" data-bs-dismiss="offcanvas"><i class="fa-solid fa-layer-group me-2"></i>Market</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="watchlist" data-bs-dismiss="offcanvas"><i class="fa-solid fa-list me-2"></i>Watch</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chart" data-bs-dismiss="offcanvas"><i class="fa-solid fa-microscope me-2"></i>Deep Analysis</button>
-                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="options" data-bs-dismiss="offcanvas"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chain" data-bs-dismiss="offcanvas"><i class="fa-solid fa-link me-2"></i>Chain</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="comparison" data-bs-dismiss="offcanvas"><i class="fa-solid fa-code-compare me-2"></i>Compare</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="correlation" data-bs-dismiss="offcanvas"><i class="fa-solid fa-project-diagram me-2"></i>Correl</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="monteCarlo" data-bs-dismiss="offcanvas"><i class="fa-solid fa-dice me-2"></i>Sims</button>
-                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="screener" data-bs-dismiss="offcanvas"><i class="fa-solid fa-filter me-2"></i>Scan</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="optionsDashboard" data-bs-dismiss="offcanvas"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="customIndicators" data-bs-dismiss="offcanvas"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Indicators</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="patterns" data-bs-dismiss="offcanvas"><i class="fa-solid fa-brain me-2"></i>Patterns</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="heatmap" data-bs-dismiss="offcanvas"><i class="fa-solid fa-border-all me-2"></i>Map</button>
@@ -86,9 +86,9 @@
 
     <!-- Mobile Bottom Navigation -->
     <div class="mobile-bottom-nav d-lg-none">
-        <a href="#" class="mobile-nav-item active" data-view="dashboard" onclick="event.preventDefault(); document.querySelector('[data-view=dashboard]').click();">
-            <i class="fa-solid fa-table-columns"></i>
-            <span>Dash</span>
+        <a href="#" class="mobile-nav-item active" data-view="market" onclick="event.preventDefault(); document.querySelector('[data-view=market]').click();">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>Market</span>
         </a>
         <a href="#" class="mobile-nav-item" data-view="watchlist" onclick="event.preventDefault(); document.querySelector('[data-view=watchlist]').click();">
             <i class="fa-solid fa-list"></i>
@@ -98,9 +98,9 @@
             <i class="fa-solid fa-chart-line"></i>
             <span>Chart</span>
         </a>
-        <a href="#" class="mobile-nav-item" data-view="screener" onclick="event.preventDefault(); document.querySelector('[data-view=screener]').click();">
-            <i class="fa-solid fa-filter"></i>
-            <span>Scan</span>
+        <a href="#" class="mobile-nav-item" data-view="optionsDashboard" onclick="event.preventDefault(); document.querySelector('[data-view=optionsDashboard]').click();">
+            <i class="fa-solid fa-chart-gantt"></i>
+            <span>Options</span>
         </a>
         <a href="#" class="mobile-nav-item" data-view="alerts" onclick="event.preventDefault(); document.querySelector('[data-view=alerts]').click();">
             <i class="fa-solid fa-bell"></i>
@@ -128,14 +128,14 @@
             <!-- LEFT COLUMN: Navigation / Tools -->
             <div class="col-lg-1 d-none d-lg-block">
                 <div class="d-flex flex-column gap-2 h-100 overflow-auto" style="max-height: 90vh;">
-                    <button class="btn btn-outline-secondary btn-sm active text-start w-100 nav-btn" data-view="dashboard"><i class="fa-solid fa-table-columns me-2"></i>Dash</button>
+                    <button class="btn btn-outline-secondary btn-sm active text-start w-100 nav-btn" data-view="market"><i class="fa-solid fa-layer-group me-2"></i>Market</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="watchlist"><i class="fa-solid fa-list me-2"></i>Watch</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chart"><i class="fa-solid fa-microscope me-2"></i>Deep Analysis</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="options"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chain"><i class="fa-solid fa-link me-2"></i>Chain</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="comparison"><i class="fa-solid fa-code-compare me-2"></i>Compare</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="correlation"><i class="fa-solid fa-project-diagram me-2"></i>Correl</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="monteCarlo"><i class="fa-solid fa-dice me-2"></i>Sims</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="screener"><i class="fa-solid fa-filter me-2"></i>Scan</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="optionsDashboard"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="customIndicators"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Indicators</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="patterns"><i class="fa-solid fa-brain me-2"></i>Patterns</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="heatmap"><i class="fa-solid fa-border-all me-2"></i>Map</button>
@@ -150,9 +150,9 @@
             <!-- CENTER: Main Content Area -->
             <div class="col-lg-11">
                 
-                <!-- VIEW: MARKET DASHBOARD (Default) -->
-                <div id="viewDashboard" class="view-section">
-                    <div class="row g-2">
+                <!-- VIEW: MARKET (Was Screener + Sentiment + News) -->
+                <div id="viewMarket" class="view-section">
+                     <div class="row g-2">
                         <!-- AI Sentiment Block -->
                         <div class="col-12">
                             <div class="card bg-darker border-secondary mb-2">
@@ -165,52 +165,79 @@
                             </div>
                         </div>
 
-                        <!-- Whale Alert Widget (Full Width) -->
-                        <div class="col-12">
-                            <div class="card h-100">
-                                <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center">
-                                    <div class="font-monospace small text-uppercase fw-bold text-primary">
-                                        <i class="fa-solid fa-water me-2"></i> Unusual Options Activity
-                                    </div>
-                                    <span class="badge bg-secondary opacity-50 small">LIVE</span>
-                                </div>
-                                <div class="card-body p-0 overflow-auto" style="min-height: 500px; max-height: 80vh;">
-                                    <table class="table table-dark table-hover mb-0 small font-monospace text-nowrap w-100">
-                                        <thead class="sticky-top bg-darker">
-                                            <tr>
-                                                <th>Ticker</th>
-                                                <th>Contract</th>
-                                                <th>Type</th>
-                                                <th class="col-dte">DTE</th>
-                                                <th class="text-end col-strike">Strike</th>
-                                                <th class="text-end">Stock</th>
-                                                <th class="text-end col-otm">OTM%</th>
-                                                <th class="text-end">Price</th>
-                                                <th class="text-end">Change%</th>
-                                                <th class="text-end">Vol</th>
-                                                <th class="text-end col-oi">OI</th>
-                                                <th class="text-end">Prem</th>
-                                                <th class="text-end">IV%</th>
-                                                <th class="text-center">Sent</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="whaleTableBody">
-                                            <tr><td colspan="14" class="text-center text-muted py-4">Loading market data...</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Market News (Full Width below) -->
-                        <div class="col-12">
-                            <div class="card mt-2">
+                        <!-- Market News -->
+                        <div class="col-lg-12">
+                            <div class="card mb-2">
                                 <div class="card-header py-2 px-3 font-monospace small text-uppercase fw-bold text-muted">
                                     <i class="fa-solid fa-rss me-1"></i> Market Wire
                                 </div>
                                 <div class="card-body p-2">
                                     <div id="marketNewsGrid" class="row g-2"></div>
                                 </div>
+                            </div>
+                        </div>
+
+                         <!-- Technical Screener -->
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header py-2 px-3 font-monospace small fw-bold text-primary">
+                                    <i class="fa-solid fa-filter me-1"></i> TECH SCREENER (S&P 100 SIGNALS)
+                                </div>
+                                <div class="card-body p-0 overflow-auto" style="max-height: 80vh;">
+                                    <table class="table table-dark table-sm table-hover mb-0 font-monospace">
+                                        <thead class="sticky-top bg-darker">
+                                            <tr>
+                                                <th>TICKER</th>
+                                                <th class="text-end">PRICE</th>
+                                                <th class="text-end">CHG %</th>
+                                                <th class="text-end">RSI</th>
+                                                <th class="text-end">REL VOL</th>
+                                                <th>SIGNALS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="screenerTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: OPTIONS DASHBOARD (Was Dashboard / Whales) -->
+                <div id="viewOptionsDashboard" class="view-section d-none">
+                     <!-- Whale Alert Widget (Full Width) -->
+                     <div class="col-12">
+                        <div class="card h-100">
+                            <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center">
+                                <div class="font-monospace small text-uppercase fw-bold text-primary">
+                                    <i class="fa-solid fa-water me-2"></i> Unusual Options Activity
+                                </div>
+                                <span class="badge bg-secondary opacity-50 small">LIVE</span>
+                            </div>
+                            <div class="card-body p-0 overflow-auto" style="min-height: 500px; max-height: 80vh;">
+                                <table class="table table-dark table-hover mb-0 small font-monospace text-nowrap w-100">
+                                    <thead class="sticky-top bg-darker">
+                                        <tr>
+                                            <th>Ticker</th>
+                                            <th>Contract</th>
+                                            <th>Type</th>
+                                            <th class="col-dte">DTE</th>
+                                            <th class="text-end col-strike">Strike</th>
+                                            <th class="text-end">Stock</th>
+                                            <th class="text-end col-otm">OTM%</th>
+                                            <th class="text-end">Price</th>
+                                            <th class="text-end">Change%</th>
+                                            <th class="text-end">Vol</th>
+                                            <th class="text-end col-oi">OI</th>
+                                            <th class="text-end">Prem</th>
+                                            <th class="text-end">IV%</th>
+                                            <th class="text-center">Sent</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="whaleTableBody">
+                                        <tr><td colspan="14" class="text-center text-muted py-4">Loading market data...</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -372,30 +399,6 @@
                         </div>
                         <div class="card-body p-0 position-relative">
                             <div id="mcChartContainer" style="width: 100%; height: 500px;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- VIEW: SCREENER (TECH) -->
-                <div id="viewScreener" class="view-section d-none">
-                    <div class="card">
-                        <div class="card-header py-2 px-3 font-monospace small fw-bold text-primary">
-                            <i class="fa-solid fa-filter me-1"></i> TECH SCREENER (S&P 100 SIGNALS)
-                        </div>
-                        <div class="card-body p-0 overflow-auto" style="max-height: 80vh;">
-                            <table class="table table-dark table-sm table-hover mb-0 font-monospace">
-                                <thead class="sticky-top bg-darker">
-                                    <tr>
-                                        <th>TICKER</th>
-                                        <th class="text-end">PRICE</th>
-                                        <th class="text-end">CHG %</th>
-                                        <th class="text-end">RSI</th>
-                                        <th class="text-end">REL VOL</th>
-                                        <th>SIGNALS</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="screenerTableBody"></tbody>
-                            </table>
                         </div>
                     </div>
                 </div>
@@ -575,11 +578,11 @@
                     </div>
                 </div>
 
-                <!-- VIEW: OPTIONS CHAIN -->
-                <div id="viewOptions" class="view-section d-none">
+                <!-- VIEW: OPTIONS CHAIN (Was Options) -->
+                <div id="viewChain" class="view-section d-none">
                     <div class="card">
                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-success d-flex justify-content-between align-items-center">
-                            <span><i class="fa-solid fa-chart-gantt me-1"></i> OPTIONS CHAIN</span>
+                            <span><i class="fa-solid fa-link me-1"></i> OPTIONS CHAIN</span>
                             <div class="d-flex gap-2">
                                 <input type="text" id="optionsTicker" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ticker" style="width: 100px;">
                                 <button class="btn btn-sm btn-outline-success" onclick="Options.load()">Load Chain</button>

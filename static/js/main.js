@@ -48,10 +48,13 @@ const App = {
 
         // Load Initial Data
         try {
-        App.loadMarketStatus();
-        App.loadWhaleActivity();
-        App.loadMarketNews();
-        App.loadSentiment();
+            App.loadMarketStatus();
+            // Load "Market" page components by default
+            App.loadTechScreener();
+            App.loadMarketNews();
+            App.loadSentiment();
+            // Preload Options Dashboard data in background if needed, or wait for tab click
+            App.loadWhaleActivity();
             console.log('✅ Initial data loading started');
         } catch (e) {
             console.error('❌ Data loading failed:', e);
@@ -148,7 +151,13 @@ const App = {
 
     // View Switching Logic
     loadViewData: (viewName) => {
-        if (viewName === 'screener') App.loadTechScreener();
+        if (viewName === 'market') {
+             App.loadTechScreener();
+             // Refresh sentiment/news if needed, or rely on init/polling
+             App.loadSentiment();
+             App.loadMarketNews();
+        }
+        if (viewName === 'optionsDashboard') App.loadWhaleActivity();
         if (viewName === 'heatmap') App.loadHeatmap();
         if (viewName === 'calendar') App.loadCalendar();
         if (viewName === 'earnings') App.loadEarnings();
@@ -168,7 +177,7 @@ const App = {
                  DeepDive.load();
              }
         }
-        // Monte Carlo, Options, Comparison, Patterns handle their own triggers
+        // Monte Carlo, Chain, Comparison, Patterns handle their own triggers
     },
 
     // --- 2.0 Feature Logic ---
