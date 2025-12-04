@@ -20,8 +20,10 @@ const UI = {
                     target.classList.remove('d-none');
                     App.loadViewData(viewName);
                 } else {
+                    // Fallback logic
                     if(viewName === 'chart') document.getElementById('viewStock').classList.remove('d-none');
-                    else document.getElementById('viewDashboard').classList.remove('d-none');
+                    else if (viewName === 'market') document.getElementById('viewMarket').classList.remove('d-none'); // Explicit default
+                    else document.getElementById('viewOptionsDashboard').classList.remove('d-none');
                 }
             });
         });
