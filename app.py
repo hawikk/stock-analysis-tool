@@ -964,6 +964,179 @@ def get_ai_summary():
         return jsonify({'summary': completion.choices[0].message.content})
     except Exception as e: return api_error(str(e))
 
+@app.route('/api/stock/deep_dive', methods=['GET'])
+@cache.cached(query_string=True, timeout=3600)
+def get_deep_dive_analysis():
+    """Fetches last 5 earnings, price reaction, and AI analysis"""
+    ticker = request.args.get('ticker')
+    if not ticker: return api_error("Ticker required", 400)
+
+    try:
+        stock = yf.Ticker(ticker)
+
+        # 1. Fetch Earnings Dates
+        earnings_dates = stock.earnings_dates
+        if earnings_dates is None or earnings_dates.empty:
+             return api_error("No earnings data available", 404)
+
+        # Fetch Financials for Revenue
+        try:
+            financials = stock.quarterly_income_stmt
+            # Ensure index is datetime
+            if financials is not None and not financials.empty:
+                financials.columns = pd.to_datetime(financials.columns)
+        except:
+            financials = None
+
+        # Filter for PAST earnings only
+        now = pd.Timestamp.now().tz_localize(earnings_dates.index.dtype.tz) if earnings_dates.index.tz else pd.Timestamp.now()
+        past_earnings = earnings_dates[earnings_dates.index < now].head(5)
+
+        # 2. Fetch Price History (1y buffer to cover lookbacks)
+        # We need enough history to find dates around these earnings
+        hist = stock.history(period="2y") # Safer 2y
+
+        earnings_data = []
+
+        for date_idx, row in past_earnings.iterrows():
+            # Convert index to date object for comparison
+            e_date = date_idx.date()
+
+            # Match Revenue (Find closest quarter end BEFORE earnings date)
+            rev_actual = 0
+            if financials is not None:
+                try:
+                    # Filter columns before e_date
+                    valid_dates = [d for d in financials.columns if d.date() < e_date]
+                    if valid_dates:
+                        # Get max date (closest to e_date)
+                        closest = max(valid_dates)
+                        # Check if within reasonable window (e.g. 90 days)
+                        if (e_date - closest.date()).days < 100:
+                            rev = financials.loc['Total Revenue', closest]
+                            rev_actual = float(rev)
+                except Exception as rev_e:
+                    print(f"Revenue match error: {rev_e}")
+
+            # Find nearest trading day in history
+            # If e_date in history, great. If not (weekend/after hours), take next.
+
+            # Logic: Reaction is usually measured from "Day Before Close" to "Day After Close"
+            # or "Day Of Close" (if AM) vs "Day After".
+            # Simplified: Change from T-1 Close to T+1 Close (2 day move).
+
+            # Find T-1 (Pre-Earnings)
+            # Find T+1 (Post-Earnings)
+
+            try:
+                # Localize e_date to match hist index if needed, but usually just date comparison works if we strip time
+                # History index is DatetimeIndex.
+
+                # Get the integer location of the earnings date in history
+                # We use 'asof' logic or similar
+                # Let's find the closest date in history <= e_date
+
+                # Ensure hist index is naive or we handle TZ
+                hist_dates = hist.index.date
+
+                # Find index of e_date or nearest previous
+                idx_loc = -1
+                for i, d in enumerate(hist_dates):
+                    if d == e_date:
+                        idx_loc = i
+                        break
+                    if d > e_date: # We went past it, so previous was it (or it was weekend)
+                        idx_loc = i - 1
+                        break
+
+                if idx_loc == -1: idx_loc = len(hist) - 1 # Should not happen if within 2y
+
+                # Now calculate move
+                # We want 1 day before earnings vs 1 day after earnings
+                # Check bounds
+                if idx_loc > 0 and idx_loc < len(hist) - 1:
+                    pre_price = hist['Close'].iloc[idx_loc - 1]
+                    post_price = hist['Close'].iloc[idx_loc + 1]
+
+                    move_pct = ((post_price - pre_price) / pre_price) * 100
+                else:
+                    move_pct = 0.0
+
+                # Actual / Estimate
+                est = row['EPS Estimate'] if 'EPS Estimate' in row else None
+                act = row['Reported EPS'] if 'Reported EPS' in row else None
+
+                surprise = 0
+                if est and act and not pd.isna(est) and not pd.isna(act):
+                     surprise = ((act - est) / abs(est)) * 100 if est != 0 else 0
+
+                earnings_data.append({
+                    'date': e_date.strftime('%Y-%m-%d'),
+                    'estimate': round(est, 2) if est and not pd.isna(est) else None,
+                    'actual': round(act, 2) if act and not pd.isna(act) else None,
+                    'revenue': rev_actual,
+                    'surprise': round(surprise, 2) if surprise else 0,
+                    'price_reaction': round(move_pct, 2)
+                })
+
+            except Exception as inner_e:
+                print(f"Error processing earnings date {e_date}: {inner_e}")
+                continue
+
+        # 3. AI Analysis
+        ai_analysis = {}
+        if client:
+            # Construct prompt
+            earnings_summary = "\n".join([f"Date: {e['date']}, Actual: {e['actual']}, Est: {e['estimate']}, Reaction: {e['price_reaction']}%" for e in earnings_data])
+
+            prompt = f"""
+            Analyze {ticker} based on its last 5 earnings results:
+            {earnings_summary}
+
+            Also consider general market knowledge about {ticker}.
+
+            Provide a response in JSON format with these keys:
+            - bull_case: (String) Top 3 bull arguments.
+            - bear_case: (String) Top 3 bear arguments.
+            - risks: (String) Key risks.
+            - opportunities: (String) Key opportunities.
+
+            Keep it concise and professional.
+            """
+
+            try:
+                completion = client.chat.completions.create(
+                    model=OPENAI_MODEL,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"}
+                )
+                import json
+                ai_analysis = json.loads(completion.choices[0].message.content)
+            except Exception as ai_e:
+                print(f"AI Error: {ai_e}")
+                ai_analysis = {
+                    'bull_case': "AI Analysis Unavailable",
+                    'bear_case': "AI Analysis Unavailable",
+                    'risks': "AI Analysis Unavailable",
+                    'opportunities': "AI Analysis Unavailable"
+                }
+        else:
+             ai_analysis = {
+                'bull_case': "AI Configuration Missing",
+                'bear_case': "AI Configuration Missing",
+                'risks': "AI Configuration Missing",
+                'opportunities': "AI Configuration Missing"
+            }
+
+        return jsonify({
+            'ticker': ticker,
+            'earnings': earnings_data,
+            'ai_analysis': ai_analysis
+        })
+
+    except Exception as e:
+        return api_error(str(e))
+
 # --- OPTIONS CHAIN ---
 @app.route('/api/options/chain', methods=['GET'])
 @cache.cached(query_string=True, timeout=1800)
