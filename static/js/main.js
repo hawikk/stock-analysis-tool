@@ -161,6 +161,13 @@ const App = {
             CustomIndicators.renderConditions();
             CustomIndicators.loadSaved();
         }
+        if (viewName === 'deepDive' && typeof DeepDive !== 'undefined') {
+             // If a ticker is already selected globally, auto-load it
+             if (App.state.currentTicker) {
+                 document.getElementById('deepDiveTicker').value = App.state.currentTicker;
+                 DeepDive.load();
+             }
+        }
         // Monte Carlo, Options, Comparison, Patterns handle their own triggers
     },
 

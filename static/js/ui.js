@@ -21,6 +21,10 @@ const UI = {
                     App.loadViewData(viewName);
                 } else {
                     if(viewName === 'chart') document.getElementById('viewStock').classList.remove('d-none');
+                    else if(viewName === 'deepDive') {
+                         document.getElementById('viewDeepDive').classList.remove('d-none');
+                         App.loadViewData('deepDive');
+                    }
                     else document.getElementById('viewDashboard').classList.remove('d-none');
                 }
             });

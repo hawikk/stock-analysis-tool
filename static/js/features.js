@@ -840,5 +840,111 @@ window.Comparison = Comparison;
 window.CustomIndicators = CustomIndicators;
 window.Patterns = Patterns;
 
+// ========================================
+// DEEP DIVE ANALYSIS
+// ========================================
+const DeepDive = {
+    load: () => {
+        const tickerInput = document.getElementById('deepDiveTicker');
+        const ticker = tickerInput.value.toUpperCase().trim();
+
+        if (!ticker) {
+            Utils.showToast('Enter a ticker', 'error');
+            return;
+        }
+
+        const earningsBody = document.getElementById('deepDiveEarningsBody');
+        const aiContent = document.getElementById('deepDiveAIContent');
+
+        // Reset UI to Loading State
+        earningsBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm"></div> Loading data...</td></tr>';
+        aiContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Analyzing market data...</p></div>';
+
+        API.fetch(`/api/stock/deep_dive?ticker=${ticker}`)
+            .then(data => {
+                DeepDive.renderEarnings(data.earnings);
+                DeepDive.renderAI(data.ai_analysis, data.ticker);
+            })
+            .catch(err => {
+                earningsBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+                aiContent.innerHTML = `<div class="alert alert-danger">Analysis Failed: ${err.message}</div>`;
+            });
+    },
+
+    renderEarnings: (earnings) => {
+        const tbody = document.getElementById('deepDiveEarningsBody');
+        tbody.innerHTML = '';
+
+        if (!earnings || earnings.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No earnings data available</td></tr>';
+            return;
+        }
+
+        earnings.forEach(e => {
+            const tr = document.createElement('tr');
+
+            // Format Reaction Color
+            const reactionColor = e.price_reaction > 0 ? 'text-success' : (e.price_reaction < 0 ? 'text-danger' : 'text-white');
+            const surpriseColor = e.surprise > 0 ? 'text-success' : (e.surprise < 0 ? 'text-danger' : 'text-muted');
+
+            tr.innerHTML = `
+                <td class="text-white">${e.date}</td>
+                <td class="text-end text-muted">${e.estimate}</td>
+                <td class="text-end text-white fw-bold">${e.actual}</td>
+                <td class="text-end ${surpriseColor}">${e.surprise}%</td>
+                <td class="text-end fw-bold ${reactionColor}">${e.price_reaction > 0 ? '+' : ''}${e.price_reaction}%</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    renderAI: (ai, ticker) => {
+        const container = document.getElementById('deepDiveAIContent');
+
+        if (!ai || ai.bull_case === 'AI Configuration Missing') {
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading"><i class="fa-solid fa-triangle-exclamation"></i> AI Analysis Unavailable</h6>
+                    <p class="mb-0 small">The AI service is not configured correctly (Missing API Key). However, earnings data has been loaded.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Format Markdown-like lists to HTML if needed, or just display raw text
+        // Assuming the backend returns plain strings or basic text.
+        // We will create cards/sections.
+
+        container.innerHTML = `
+            <div class="mb-3">
+                <h6 class="text-success fw-bold font-monospace"><i class="fa-solid fa-arrow-trend-up me-2"></i>BULL CASE</h6>
+                <div class="small text-white-50 ms-3 border-start border-success ps-3">${marked.parse(ai.bull_case || 'No data')}</div>
+            </div>
+
+            <div class="mb-3">
+                <h6 class="text-danger fw-bold font-monospace"><i class="fa-solid fa-arrow-trend-down me-2"></i>BEAR CASE</h6>
+                <div class="small text-white-50 ms-3 border-start border-danger ps-3">${marked.parse(ai.bear_case || 'No data')}</div>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="p-2 bg-dark rounded border border-secondary h-100">
+                        <div class="fw-bold text-warning small mb-1"><i class="fa-solid fa-circle-exclamation me-1"></i> RISKS</div>
+                        <div class="x-small text-muted">${marked.parse(ai.risks || 'No data')}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2 bg-dark rounded border border-secondary h-100">
+                        <div class="fw-bold text-info small mb-1"><i class="fa-solid fa-lightbulb me-1"></i> OPPORTUNITIES</div>
+                        <div class="x-small text-muted">${marked.parse(ai.opportunities || 'No data')}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+};
+
+window.DeepDive = DeepDive;
+
 console.log('✅ features.js loaded successfully!');
 
