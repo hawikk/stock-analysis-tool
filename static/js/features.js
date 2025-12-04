@@ -857,7 +857,13 @@ const DeepDive = {
 
         // Reset UI to Loading State
         earningsBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm"></div> Loading data...</td></tr>';
-        aiContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Analyzing market data...</p></div>';
+
+        // Use new Skeleton logic
+        aiContent.innerHTML = `
+            <div class="skeleton w-100 mb-2" style="height: 100px;"></div>
+            <div class="skeleton w-100 mb-2" style="height: 100px;"></div>
+            <div class="skeleton w-100" style="height: 80px;"></div>
+        `;
 
         API.fetch(`/api/stock/deep_dive?ticker=${ticker}`)
             .then(data => {
@@ -903,13 +909,13 @@ const DeepDive = {
                 {
                     label: 'Actual',
                     data: data.map(d => d.actual || 0),
-                    backgroundColor: '#00b894',
+                    backgroundColor: '#10b981', // Emerald
                     borderRadius: 2
                 },
                 {
                     label: 'Estimate',
                     data: data.map(d => d.estimate || 0),
-                    backgroundColor: '#636e72',
+                    backgroundColor: '#475569', // Slate 600
                     borderRadius: 2
                 }
             ];
@@ -919,7 +925,7 @@ const DeepDive = {
                 {
                     label: 'Actual Revenue',
                     data: data.map(d => (d.revenue || 0) / 1e9), // Convert to Billions
-                    backgroundColor: '#0984e3',
+                    backgroundColor: '#6366f1', // Indigo
                     borderRadius: 2
                 }
             ];
@@ -936,23 +942,28 @@ const DeepDive = {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        labels: { color: '#b2bec3', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 10 }
+                        labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 10 }
                     },
                     tooltip: {
                         mode: 'index',
-                        intersect: false
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#e2e8f0',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { color: '#2d3436' },
-                        ticks: { color: '#b2bec3', font: { family: 'JetBrains Mono', size: 10 } },
-                        title: { display: true, text: yLabel, color: '#636e72', font: { size: 9 } }
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
+                        title: { display: true, text: yLabel, color: '#64748b', font: { size: 9 } }
                     },
                     x: {
                         grid: { display: false },
-                        ticks: { color: '#b2bec3', font: { family: 'JetBrains Mono', size: 9 } }
+                        ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 9 } }
                     }
                 }
             }
@@ -972,14 +983,13 @@ const DeepDive = {
             const tr = document.createElement('tr');
 
             // Format Reaction Color
-            const reactionColor = e.price_reaction > 0 ? 'text-success' : (e.price_reaction < 0 ? 'text-danger' : 'text-white');
+            const reactionColor = e.price_reaction > 0 ? 'text-bull' : (e.price_reaction < 0 ? 'text-bear' : 'text-main');
             const revDisplay = e.revenue ? (e.revenue / 1e9).toFixed(2) + 'B' : '-';
 
             tr.innerHTML = `
-                <td class="text-white">${e.date}</td>
+                <td class="text-main">${e.date}</td>
                 <td class="text-end text-muted">${e.estimate !== null ? e.estimate : '-'}</td>
-                <td class="text-end text-white fw-bold">${e.actual !== null ? e.actual : '-'}</td>
-                <td class="text-end text-info">${revDisplay}</td>
+                <td class="text-end text-main fw-bold">${e.actual !== null ? e.actual : '-'}</td>
                 <td class="text-end fw-bold ${reactionColor}">${e.price_reaction > 0 ? '+' : ''}${e.price_reaction}%</td>
             `;
             tbody.appendChild(tr);
@@ -999,34 +1009,21 @@ const DeepDive = {
             return;
         }
 
-        // Format Markdown-like lists to HTML if needed, or just display raw text
-        // Assuming the backend returns plain strings or basic text.
-        // We will create cards/sections.
-
+        // New Insight Card Layout
         container.innerHTML = `
-            <div class="mb-3">
-                <h6 class="text-success fw-bold font-monospace"><i class="fa-solid fa-arrow-trend-up me-2"></i>BULL CASE</h6>
-                <div class="small text-white-50 ms-3 border-start border-success ps-3">${marked.parse(ai.bull_case || 'No data')}</div>
+            <div class="insight-card insight-bull">
+                <h6 class="text-bull fw-bold font-monospace small mb-2"><i class="fa-solid fa-arrow-trend-up me-2"></i>BULL CASE</h6>
+                <div class="small text-muted">${marked.parse(ai.bull_case || 'No data')}</div>
             </div>
 
-            <div class="mb-3">
-                <h6 class="text-danger fw-bold font-monospace"><i class="fa-solid fa-arrow-trend-down me-2"></i>BEAR CASE</h6>
-                <div class="small text-white-50 ms-3 border-start border-danger ps-3">${marked.parse(ai.bear_case || 'No data')}</div>
+            <div class="insight-card insight-bear">
+                <h6 class="text-bear fw-bold font-monospace small mb-2"><i class="fa-solid fa-arrow-trend-down me-2"></i>BEAR CASE</h6>
+                <div class="small text-muted">${marked.parse(ai.bear_case || 'No data')}</div>
             </div>
 
-            <div class="row g-2">
-                <div class="col-md-6">
-                    <div class="p-2 bg-dark rounded border border-secondary h-100">
-                        <div class="fw-bold text-warning small mb-1"><i class="fa-solid fa-circle-exclamation me-1"></i> RISKS</div>
-                        <div class="x-small text-muted">${marked.parse(ai.risks || 'No data')}</div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="p-2 bg-dark rounded border border-secondary h-100">
-                        <div class="fw-bold text-info small mb-1"><i class="fa-solid fa-lightbulb me-1"></i> OPPORTUNITIES</div>
-                        <div class="x-small text-muted">${marked.parse(ai.opportunities || 'No data')}</div>
-                    </div>
-                </div>
+            <div class="insight-card insight-warn">
+                 <h6 class="text-neutral fw-bold font-monospace small mb-2"><i class="fa-solid fa-triangle-exclamation me-2"></i>RISKS & CAUTION</h6>
+                 <div class="small text-muted">${marked.parse(ai.risks || 'No data')}</div>
             </div>
         `;
     }
@@ -1035,4 +1032,3 @@ const DeepDive = {
 window.DeepDive = DeepDive;
 
 console.log('✅ features.js loaded successfully!');
-

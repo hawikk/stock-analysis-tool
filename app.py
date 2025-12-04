@@ -142,6 +142,30 @@ def get_market_movers():
     except Exception as e:
         return api_error(str(e))
 
+@app.route('/api/news', methods=['GET'])
+@cache.cached(query_string=True, timeout=600)
+def get_stock_news():
+    """Returns specific stock news"""
+    ticker = request.args.get('ticker')
+    if not ticker: return api_error("Ticker required", 400)
+
+    try:
+        t = yf.Ticker(ticker)
+        news = t.news
+        articles = []
+        for n in news:
+             c = n.get('content', n)
+             articles.append({
+                 'title': c.get('title'),
+                 'source': c.get('provider', {}).get('displayName') if isinstance(c.get('provider'), dict) else c.get('publisher'),
+                 'url': c.get('clickThroughUrl', {}).get('url') if isinstance(c.get('clickThroughUrl'), dict) else c.get('link'),
+                 'publishedAt': c.get('pubDate'),
+                 'image': c.get('thumbnail', {}).get('resolutions', [{}])[0].get('url') if isinstance(c.get('thumbnail'), dict) else None
+             })
+        return jsonify({'articles': articles})
+    except Exception as e:
+        return api_error(str(e))
+
 @app.route('/api/market/news', methods=['GET'])
 @cache.cached(timeout=600)
 def get_market_news():

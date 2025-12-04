@@ -77,7 +77,7 @@ const UI = {
 
         if(data.indices) {
             data.indices.forEach(idx => {
-                const color = idx.change_pct >= 0 ? 'text-success' : 'text-danger';
+                const color = idx.change_pct >= 0 ? 'text-bull' : 'text-bear';
                 const arrow = idx.change_pct >= 0 ? '▲' : '▼';
                 const div = document.createElement('div');
                 div.className = 'd-flex align-items-center gap-2 px-3 py-1 bg-darker border border-secondary rounded font-monospace small text-nowrap';
@@ -108,7 +108,7 @@ const UI = {
 
                 let typeClass = item.type === 'C' ? 'uw-call' : (item.type === 'EQ' ? 'bg-secondary text-white' : 'uw-put');
                 let typeLabel = item.type === 'C' ? 'CALL' : (item.type === 'EQ' ? 'STOCK' : 'PUT');
-                const chgColor = item.change_pct >= 0 ? 'text-success' : 'text-danger';
+                const chgColor = item.change_pct >= 0 ? 'text-bull' : 'text-bear';
 
                 const dteCell = `<td class="text-white col-dte ${isEquity ? 'd-none' : ''}">${item.dte === '-' ? '-' : item.dte + 'd'}</td>`;
                 const strikeCell = `<td class="text-end text-white col-strike ${isEquity ? 'd-none' : ''}">${item.strike > 0 ? item.strike.toFixed(2) : '-'}</td>`;
@@ -124,7 +124,7 @@ const UI = {
                     ${otmCell}
                     <td class="text-end text-white">${item.price.toFixed(2)}</td>
                     <td class="text-end ${chgColor}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(1)}%</td>
-                    <td class="text-end text-warning fw-bold">${Utils.formatNumber(item.vol)}</td>
+                    <td class="text-end text-neutral fw-bold">${Utils.formatNumber(item.vol)}</td>
                     ${oiCell}
                     <td class="text-end text-white">$${Utils.formatNumber(item.premium)}</td>
                     <td class="text-end text-muted">${item.iv > 0 ? item.iv + '%' : '-'}</td>
@@ -135,7 +135,7 @@ const UI = {
 
             if (isEquity) {
                 const notice = document.createElement('tr');
-                notice.innerHTML = '<td colspan="14" class="text-center text-warning small py-1 bg-darker">Options Restricted. Showing High-Volume Equity.</td>';
+                notice.innerHTML = '<td colspan="14" class="text-center text-neutral small py-1 bg-darker">Options Restricted. Showing High-Volume Equity.</td>';
                 tbody.insertBefore(notice, tbody.firstChild);
             }
         } else {
@@ -153,10 +153,10 @@ const UI = {
                 div.className = 'col-md-6 col-lg-4';
                 div.innerHTML = `
                     <a href="${a.url}" target="_blank" class="text-decoration-none">
-                        <div class="d-flex gap-3 align-items-start p-2 bg-darker border border-secondary hover-bg h-100 rounded">
-                            <div style="width: 4px; height: 100%; background: #2962ff; border-radius: 2px;"></div>
+                        <div class="d-flex gap-3 align-items-start p-3 bg-darker border border-secondary hover-bg h-100 rounded-3">
+                            <div style="width: 3px; height: 100%; background: var(--primary); border-radius: 2px;"></div>
                             <div class="overflow-hidden">
-                                <div class="text-white small fw-bold mb-1">${Utils.escapeHtml(a.title)}</div>
+                                <div class="text-white small fw-bold mb-2">${Utils.escapeHtml(a.title)}</div>
                                 <div class="text-muted x-small d-flex justify-content-between">
                                     <span>${Utils.escapeHtml(a.source)}</span>
                                     <span>${new Date(a.publishedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -182,8 +182,6 @@ const UI = {
                 parsed = JSON.parse(data);
             }
         } catch (e) {
-            // If parsing fails, display raw text if it's not [object Object]
-            // If it's an object but doesn't match expected structure, we might fail later.
             console.error("Sentiment Parse Error", e);
         }
 
@@ -198,26 +196,26 @@ const UI = {
         const verdict = parsed.verdict || "Neutral";
         const narrative = parsed.narrative || "No analysis available.";
 
-        let color = 'text-warning';
-        if (score >= 60) color = 'text-success';
-        if (score <= 40) color = 'text-danger';
+        let color = 'text-neutral';
+        if (score >= 60) color = 'text-bull';
+        if (score <= 40) color = 'text-bear';
 
-        let gaugeColor = '#fbc531';
-        if (score >= 60) gaugeColor = '#00b894';
-        if (score <= 40) gaugeColor = '#ff4757';
+        let gaugeColor = '#f59e0b';
+        if (score >= 60) gaugeColor = '#10b981';
+        if (score <= 40) gaugeColor = '#f43f5e';
 
         container.innerHTML = `
             <div class="row align-items-center">
                 <div class="col-md-3 text-center border-end border-secondary">
-                    <h1 class="display-4 fw-bold ${color} mb-0">${score}</h1>
-                    <div class="small text-muted text-uppercase font-monospace">Market Score</div>
-                    <div class="progress mt-2 bg-dark" style="height: 6px;">
+                    <h1 class="display-4 fw-bold ${color} mb-0 font-monospace">${score}</h1>
+                    <div class="small text-muted text-uppercase font-monospace mt-1">Market Score</div>
+                    <div class="progress mt-3 bg-dark" style="height: 4px;">
                         <div class="progress-bar" role="progressbar" style="width: ${score}%; background-color: ${gaugeColor}"></div>
                     </div>
                 </div>
                 <div class="col-md-9 ps-4">
-                        <h5 class="fw-bold text-white mb-2"><i class="fa-solid fa-robot me-2 text-info"></i>AI Market Verdict: ${verdict}</h5>
-                        <p class="text-muted small font-monospace mb-0">${narrative}</p>
+                        <h5 class="fw-bold text-white mb-2"><i class="fa-solid fa-robot me-2 text-primary"></i>AI Market Verdict: ${verdict}</h5>
+                        <p class="text-muted small font-monospace mb-0" style="line-height: 1.6;">${narrative}</p>
                 </div>
             </div>
         `;
