@@ -282,11 +282,16 @@ const App = {
 
     renderVerdict: (verdict) => {
         document.getElementById('verdictSignal').innerText = verdict.signal;
-        document.getElementById('verdictSignal').style.color = verdict.color;
+
+        let color = '#f59e0b'; // Default Amber
+        if (verdict.signal === 'BULLISH') color = '#10b981'; // Emerald
+        if (verdict.signal === 'BEARISH') color = '#f43f5e'; // Rose
+
+        document.getElementById('verdictSignal').style.color = color;
         const bar = document.getElementById('verdictBar');
         const pct = ((verdict.score + 5) / 10) * 100;
         bar.style.width = `${pct}%`;
-        bar.style.backgroundColor = verdict.color;
+        bar.style.backgroundColor = color;
         const ul = document.getElementById('verdictReasons');
         ul.innerHTML = '';
         verdict.reasons.forEach(r => {
@@ -370,8 +375,8 @@ const App = {
                     // Calculate background color intensity
                     let opacity = Math.min(0.8, Math.abs(sec.change_pct) / 3);
                     let bg = sec.change_pct > 0 
-                        ? `rgba(0, 184, 148, ${opacity})` 
-                        : `rgba(255, 71, 87, ${opacity})`;
+                        ? `rgba(16, 185, 129, ${opacity})` // Emerald
+                        : `rgba(244, 63, 94, ${opacity})`; // Rose
                     
                     div.innerHTML = `
                         <div class="p-3 text-center rounded border border-secondary h-100 d-flex flex-column justify-content-center" 
@@ -409,7 +414,7 @@ const App = {
             tbody.innerHTML = '';
             if(data.events) data.events.forEach(e => {
                 const tr = document.createElement('tr');
-                let impactColor = e.impact === 'High' ? 'text-danger fw-bold' : (e.impact === 'Medium' ? 'text-warning' : 'text-muted');
+                let impactColor = e.impact === 'High' ? 'text-bear fw-bold' : (e.impact === 'Medium' ? 'text-neutral' : 'text-muted');
                 tr.innerHTML = `<td class="text-white fw-bold">${new Date(e.date).toLocaleDateString()}</td><td class="text-muted">${e.time}</td><td class="text-white">${e.event}</td><td class="${impactColor}">${e.impact}</td><td class="text-muted">${e.previous}</td><td class="text-info">${e.forecast}</td>`;
                 tbody.appendChild(tr);
             });
