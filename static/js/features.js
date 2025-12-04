@@ -840,5 +840,199 @@ window.Comparison = Comparison;
 window.CustomIndicators = CustomIndicators;
 window.Patterns = Patterns;
 
+// ========================================
+// DEEP DIVE ANALYSIS
+// ========================================
+const DeepDive = {
+    chartInstance: null,
+    currentData: null,
+
+    load: (ticker) => {
+        if (!ticker) return;
+
+        const earningsBody = document.getElementById('deepDiveEarningsBody');
+        const aiContent = document.getElementById('deepDiveAIContent');
+
+        if (!earningsBody || !aiContent) return;
+
+        // Reset UI to Loading State
+        earningsBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm"></div> Loading data...</td></tr>';
+        aiContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Analyzing market data...</p></div>';
+
+        API.fetch(`/api/stock/deep_dive?ticker=${ticker}`)
+            .then(data => {
+                DeepDive.currentData = data.earnings;
+                DeepDive.renderEarnings(data.earnings);
+                DeepDive.renderChart('eps'); // Default view
+                DeepDive.renderAI(data.ai_analysis, data.ticker);
+            })
+            .catch(err => {
+                earningsBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+                aiContent.innerHTML = `<div class="alert alert-danger">Analysis Failed: ${err.message}</div>`;
+            });
+    },
+
+    toggleChart: (type, btn) => {
+        if (!DeepDive.currentData) return;
+
+        // Update active button state
+        const group = btn.parentElement;
+        group.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        DeepDive.renderChart(type);
+    },
+
+    renderChart: (type) => {
+        const ctx = document.getElementById('earningsChart');
+        if (!ctx) return;
+
+        if (DeepDive.chartInstance) {
+            DeepDive.chartInstance.destroy();
+        }
+
+        const data = DeepDive.currentData.slice().reverse(); // Show chronological left-to-right
+        const labels = data.map(d => d.date);
+
+        let datasets = [];
+        let yLabel = '';
+
+        if (type === 'eps') {
+            yLabel = 'EPS ($)';
+            datasets = [
+                {
+                    label: 'Actual',
+                    data: data.map(d => d.actual || 0),
+                    backgroundColor: '#00b894',
+                    borderRadius: 2
+                },
+                {
+                    label: 'Estimate',
+                    data: data.map(d => d.estimate || 0),
+                    backgroundColor: '#636e72',
+                    borderRadius: 2
+                }
+            ];
+        } else {
+            yLabel = 'Revenue ($B)';
+            datasets = [
+                {
+                    label: 'Actual Revenue',
+                    data: data.map(d => (d.revenue || 0) / 1e9), // Convert to Billions
+                    backgroundColor: '#0984e3',
+                    borderRadius: 2
+                }
+            ];
+        }
+
+        DeepDive.chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#b2bec3', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 10 }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#2d3436' },
+                        ticks: { color: '#b2bec3', font: { family: 'JetBrains Mono', size: 10 } },
+                        title: { display: true, text: yLabel, color: '#636e72', font: { size: 9 } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#b2bec3', font: { family: 'JetBrains Mono', size: 9 } }
+                    }
+                }
+            }
+        });
+    },
+
+    renderEarnings: (earnings) => {
+        const tbody = document.getElementById('deepDiveEarningsBody');
+        tbody.innerHTML = '';
+
+        if (!earnings || earnings.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No earnings data available</td></tr>';
+            return;
+        }
+
+        earnings.forEach(e => {
+            const tr = document.createElement('tr');
+
+            // Format Reaction Color
+            const reactionColor = e.price_reaction > 0 ? 'text-success' : (e.price_reaction < 0 ? 'text-danger' : 'text-white');
+            const revDisplay = e.revenue ? (e.revenue / 1e9).toFixed(2) + 'B' : '-';
+
+            tr.innerHTML = `
+                <td class="text-white">${e.date}</td>
+                <td class="text-end text-muted">${e.estimate !== null ? e.estimate : '-'}</td>
+                <td class="text-end text-white fw-bold">${e.actual !== null ? e.actual : '-'}</td>
+                <td class="text-end text-info">${revDisplay}</td>
+                <td class="text-end fw-bold ${reactionColor}">${e.price_reaction > 0 ? '+' : ''}${e.price_reaction}%</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    renderAI: (ai, ticker) => {
+        const container = document.getElementById('deepDiveAIContent');
+
+        if (!ai || ai.bull_case === 'AI Configuration Missing') {
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading"><i class="fa-solid fa-triangle-exclamation"></i> AI Analysis Unavailable</h6>
+                    <p class="mb-0 small">The AI service is not configured correctly (Missing API Key). However, earnings data has been loaded.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Format Markdown-like lists to HTML if needed, or just display raw text
+        // Assuming the backend returns plain strings or basic text.
+        // We will create cards/sections.
+
+        container.innerHTML = `
+            <div class="mb-3">
+                <h6 class="text-success fw-bold font-monospace"><i class="fa-solid fa-arrow-trend-up me-2"></i>BULL CASE</h6>
+                <div class="small text-white-50 ms-3 border-start border-success ps-3">${marked.parse(ai.bull_case || 'No data')}</div>
+            </div>
+
+            <div class="mb-3">
+                <h6 class="text-danger fw-bold font-monospace"><i class="fa-solid fa-arrow-trend-down me-2"></i>BEAR CASE</h6>
+                <div class="small text-white-50 ms-3 border-start border-danger ps-3">${marked.parse(ai.bear_case || 'No data')}</div>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="p-2 bg-dark rounded border border-secondary h-100">
+                        <div class="fw-bold text-warning small mb-1"><i class="fa-solid fa-circle-exclamation me-1"></i> RISKS</div>
+                        <div class="x-small text-muted">${marked.parse(ai.risks || 'No data')}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2 bg-dark rounded border border-secondary h-100">
+                        <div class="fw-bold text-info small mb-1"><i class="fa-solid fa-lightbulb me-1"></i> OPPORTUNITIES</div>
+                        <div class="x-small text-muted">${marked.parse(ai.opportunities || 'No data')}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+};
+
+window.DeepDive = DeepDive;
+
 console.log('✅ features.js loaded successfully!');
 

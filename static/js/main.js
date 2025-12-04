@@ -161,6 +161,13 @@ const App = {
             CustomIndicators.renderConditions();
             CustomIndicators.loadSaved();
         }
+        if (viewName === 'deepDive' && typeof DeepDive !== 'undefined') {
+             // If a ticker is already selected globally, auto-load it
+             if (App.state.currentTicker) {
+                 document.getElementById('deepDiveTicker').value = App.state.currentTicker;
+                 DeepDive.load();
+             }
+        }
         // Monte Carlo, Options, Comparison, Patterns handle their own triggers
     },
 
@@ -226,6 +233,11 @@ const App = {
         App.fetchHistory(ticker);
         App.fetchAI(ticker);
         App.fetchStockNews(ticker);
+
+        // Trigger Deep Dive Data
+        if (typeof DeepDive !== 'undefined') {
+            DeepDive.load(ticker);
+        }
     },
 
     fetchInfo: (ticker) => {
@@ -277,6 +289,8 @@ const App = {
 
     fetchAI: (ticker) => {
         const container = document.getElementById('aiContent');
+        if (!container) return; // Safely exit if element missing
+
         container.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Analyzing...';
         API.fetch(`/api/ai?ticker=${ticker}`).then(data => container.innerHTML = marked.parse(data.summary))
         .catch(() => container.innerHTML = '<span class="text-danger">AI Analysis failed.</span>');
@@ -285,6 +299,8 @@ const App = {
     fetchStockNews: (ticker) => {
         API.fetch(`/api/news?ticker=${ticker}`).then(data => {
             const list = document.getElementById('newsList');
+            if (!list) return; // Safely exit if element missing
+
             list.innerHTML = '';
             if(data.articles) {
                 data.articles.slice(0, 5).forEach(a => {
