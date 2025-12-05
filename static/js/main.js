@@ -282,7 +282,7 @@ const App = {
                  <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">MKT CAP</span> <span class="text-white font-monospace fw-bold">${Utils.formatNumber(info.marketCap)}</span></div>
                  <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">P/E</span> <span class="text-white font-monospace fw-bold">${safe(info.peRatio)}</span></div>
                  <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">DIV</span> <span class="text-white font-monospace fw-bold">${safe(info.dividendYield)}</span></div>
-                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">SECTOR</span> <span class="text-white text-truncate font-monospace fw-bold" style="max-width: 120px;">${safe(info.sector)}</span></div>
+                 <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">SECTOR</span> <span class="text-white text-end font-monospace fw-bold">${safe(info.sector)}</span></div>
                  <div class="d-flex justify-content-between border-bottom border-secondary py-2"><span class="text-muted">RSI (14)</span> <span class="text-info font-monospace fw-bold">${safe(data.technicals['RSI (14)'])}</span></div>
             `;
         });
