@@ -36,6 +36,13 @@ const UI = {
 
         if (!tickerInput || !suggestionsBox) return;
 
+        tickerInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && tickerInput.value.trim().length > 0) {
+                suggestionsBox.classList.add('d-none');
+                App.loadStock(tickerInput.value.trim().toUpperCase());
+            }
+        });
+
         tickerInput.addEventListener('input', function() {
             const query = this.value;
             clearTimeout(debounceTimer);

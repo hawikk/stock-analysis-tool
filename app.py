@@ -914,7 +914,10 @@ def get_info():
             
             # Get current price (fast)
             if hasattr(t, 'fast_info'):
-                price = t.fast_info.get('last_price', 'N/A')
+                try:
+                    price = t.fast_info['last_price']
+                except Exception:
+                    price = 'N/A'
             else:
                 hist = t.history(period="1d")
                 price = hist['Close'].iloc[-1] if not hist.empty else 'N/A'

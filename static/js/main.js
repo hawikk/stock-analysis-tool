@@ -235,6 +235,23 @@ const App = {
         document.getElementById('stockName').innerText = "Loading...";
         document.getElementById('currentPrice').innerText = "---";
 
+        // Reset Verdict to prevent stale data
+        const verdictSignal = document.getElementById('verdictSignal');
+        const verdictBar = document.getElementById('verdictBar');
+        const verdictReasons = document.getElementById('verdictReasons');
+
+        if(verdictSignal) {
+            verdictSignal.innerText = "ANALYZING...";
+            verdictSignal.style.color = '#6c757d'; // text-muted
+        }
+        if(verdictBar) {
+            verdictBar.style.width = '0%';
+            verdictBar.className = 'progress-bar bg-secondary';
+        }
+        if(verdictReasons) {
+            verdictReasons.innerHTML = '';
+        }
+
         // Update Chart Title or Comparison Input
         document.getElementById('compareInput').value = '';
 
@@ -277,28 +294,43 @@ const App = {
             Charts.renderStockChart('chartContainer', data, App.state.currentPeriod);
             App.renderVerdict(data.verdict);
         })
-        .catch(() => API.handleError('chartContainer', 'Chart Data Unavailable', () => App.fetchHistory(ticker)));
+        .catch((err) => {
+            console.error("Chart Render/Fetch Error:", err);
+            const msg = err.message || err.toString();
+            API.handleError('chartContainer', `Chart Error: ${msg}`, () => App.fetchHistory(ticker));
+        });
     },
 
     renderVerdict: (verdict) => {
-        document.getElementById('verdictSignal').innerText = verdict.signal;
+        const signalEl = document.getElementById('verdictSignal');
+        const barEl = document.getElementById('verdictBar');
+        const reasonsEl = document.getElementById('verdictReasons');
 
         let color = '#f59e0b'; // Default Amber
         if (verdict.signal === 'BULLISH') color = '#10b981'; // Emerald
         if (verdict.signal === 'BEARISH') color = '#f43f5e'; // Rose
 
-        document.getElementById('verdictSignal').style.color = color;
-        const bar = document.getElementById('verdictBar');
-        const pct = ((verdict.score + 5) / 10) * 100;
-        bar.style.width = `${pct}%`;
-        bar.style.backgroundColor = color;
-        const ul = document.getElementById('verdictReasons');
-        ul.innerHTML = '';
-        verdict.reasons.forEach(r => {
-            const li = document.createElement('li');
-            li.innerHTML = `> ${r}`;
-            ul.appendChild(li);
-        });
+        if (signalEl) {
+            signalEl.innerText = verdict.signal;
+            signalEl.style.color = color;
+        }
+
+        if (barEl) {
+            const pct = ((verdict.score + 5) / 10) * 100;
+            barEl.style.width = `${pct}%`;
+            barEl.style.backgroundColor = color;
+        }
+
+        if (reasonsEl) {
+            reasonsEl.innerHTML = '';
+            if (verdict.reasons) {
+                verdict.reasons.forEach(r => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `> ${r}`;
+                    reasonsEl.appendChild(li);
+                });
+            }
+        }
     },
 
     fetchAI: (ticker) => {

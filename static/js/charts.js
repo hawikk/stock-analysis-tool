@@ -7,92 +7,119 @@ const Charts = {
     renderStockChart: (containerId, data, currentPeriod) => {
         const container = document.getElementById(containerId);
         if (!container) return;
-        container.innerHTML = '';
-        chartSeries = {}; // Reset
 
-        const textColor = Utils.getCssVar('--text-main') || '#ecedee';
-        const gridColor = Utils.getCssVar('--border') || '#2a2e39';
-        const upColor = Utils.getCssVar('--bull') || '#00b894';
-        const downColor = Utils.getCssVar('--bear') || '#ff4757';
-        const accentColor = Utils.getCssVar('--accent') || '#fbc531';
-
-        chartInstance = LightweightCharts.createChart(container, {
-            layout: {
-                background: { type: 'solid', color: 'transparent' },
-                textColor: textColor,
-            },
-            grid: {
-                vertLines: { color: gridColor, style: 1 },
-                horzLines: { color: gridColor, style: 1 }
-            },
-            width: container.clientWidth,
-            height: container.clientHeight,
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            timeScale: { borderColor: gridColor, timeVisible: true, secondsVisible: false },
-            rightPriceScale: { borderColor: gridColor }
-        });
-
-        // 1. Candlestick Series (Main)
-        const candleSeries = chartInstance.addCandlestickSeries({
-            upColor: upColor, downColor: downColor, borderVisible: false, wickUpColor: upColor, wickDownColor: downColor
-        });
-
-        // Data Formatting Helper
-        const formatTime = (t) => {
-            if (typeof t === 'string' && t.includes(' ')) {
-                // Parse "YYYY-MM-DD HH:MM" to unix timestamp
-                // Using simplified parsing to avoid timezone hell, assuming server sends local or UTC consistent
-                return new Date(t).getTime() / 1000;
-            }
-            return t;
-        };
-
-        const processedOHLC = data.ohlc.map(d => ({...d, time: formatTime(d.time)}));
-        candleSeries.setData(processedOHLC);
-        chartSeries['price'] = candleSeries;
-
-        // 2. Indicators (if available)
-        if (data.indicators) {
-            // SMA 50
-            if (data.indicators.sma50 && data.indicators.sma50.length > 0) {
-                const sma50 = chartInstance.addLineSeries({ color: accentColor, lineWidth: 1, title: 'SMA 50' });
-                sma50.setData(data.indicators.sma50.map(d => ({...d, time: formatTime(d.time)})));
-                chartSeries['sma50'] = sma50;
-            }
-
-            // BB
-            if (data.indicators.bb_upper && data.indicators.bb_upper.length > 0) {
-                const bbUp = chartInstance.addLineSeries({ color: 'rgba(0, 150, 255, 0.3)', lineWidth: 1, title: 'BB' });
-                const bbLow = chartInstance.addLineSeries({ color: 'rgba(0, 150, 255, 0.3)', lineWidth: 1 });
-                bbUp.setData(data.indicators.bb_upper.map(d => ({...d, time: formatTime(d.time)})));
-                bbLow.setData(data.indicators.bb_lower.map(d => ({...d, time: formatTime(d.time)})));
-                chartSeries['bb'] = [bbUp, bbLow];
-            }
+        // Defensive check for LightweightCharts
+        if (typeof LightweightCharts === 'undefined') {
+            console.error('LightweightCharts library is not loaded.');
+            container.innerHTML = '<div class="alert alert-danger">Charting library failed to load.</div>';
+            return;
         }
 
-        // 3. Volume (Histogram)
-        const volSeries = chartInstance.addHistogramSeries({
-            priceFormat: { type: 'volume' },
-            priceScaleId: '', // Overlay on main chart but at bottom
-            scaleMargins: { top: 0.8, bottom: 0 },
-        });
-        const processedVol = data.volume.map(d => ({...d, time: formatTime(d.time)}));
-        volSeries.setData(processedVol);
-        chartSeries['volume'] = volSeries;
-
-
-        // Markers
-        if(data.markers) candleSeries.setMarkers(data.markers);
-
-        // Resize Observer
-        new ResizeObserver(() => {
-            if (container.clientWidth > 0 && container.clientHeight > 0) {
-                chartInstance.resize(container.clientWidth, container.clientHeight);
-                chartInstance.timeScale().fitContent();
+        try {
+            // Cleanup previous instance if exists to avoid memory leaks or conflicts
+            if (chartInstance) {
+                try {
+                    chartInstance.remove();
+                } catch(e) { console.warn("Chart removal warning:", e); }
+                chartInstance = null;
             }
-        }).observe(container);
 
-        setTimeout(() => chartInstance.timeScale().fitContent(), 100);
+            container.innerHTML = '';
+            chartSeries = {}; // Reset
+
+            const textColor = Utils.getCssVar('--text-main') || '#ecedee';
+            const gridColor = Utils.getCssVar('--border') || '#2a2e39';
+            const upColor = Utils.getCssVar('--bull') || '#00b894';
+            const downColor = Utils.getCssVar('--bear') || '#ff4757';
+            const accentColor = Utils.getCssVar('--accent') || '#fbc531';
+
+            chartInstance = LightweightCharts.createChart(container, {
+                layout: {
+                    background: { type: 'solid', color: 'transparent' },
+                    textColor: textColor,
+                },
+                grid: {
+                    vertLines: { color: gridColor, style: 1 },
+                    horzLines: { color: gridColor, style: 1 }
+                },
+                width: container.clientWidth,
+                height: container.clientHeight,
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                timeScale: { borderColor: gridColor, timeVisible: true, secondsVisible: false },
+                rightPriceScale: { borderColor: gridColor }
+            });
+
+            // 1. Candlestick Series (Main)
+            const candleSeries = chartInstance.addCandlestickSeries({
+                upColor: upColor, downColor: downColor, borderVisible: false, wickUpColor: upColor, wickDownColor: downColor
+            });
+
+            // Data Formatting Helper
+            const formatTime = (t) => {
+                if (typeof t === 'string' && t.includes(' ')) {
+                    // Parse "YYYY-MM-DD HH:MM" to unix timestamp
+                    return new Date(t).getTime() / 1000;
+                }
+                return t;
+            };
+
+            const processedOHLC = data.ohlc.map(d => ({...d, time: formatTime(d.time)}));
+
+            // Validate data before setting
+            if (processedOHLC.length === 0) throw new Error("No chart data points");
+
+            candleSeries.setData(processedOHLC);
+            chartSeries['price'] = candleSeries;
+
+            // 2. Indicators (if available)
+            if (data.indicators) {
+                // SMA 50
+                if (data.indicators.sma50 && data.indicators.sma50.length > 0) {
+                    const sma50 = chartInstance.addLineSeries({ color: accentColor, lineWidth: 1, title: 'SMA 50' });
+                    sma50.setData(data.indicators.sma50.map(d => ({...d, time: formatTime(d.time)})));
+                    chartSeries['sma50'] = sma50;
+                }
+
+                // BB
+                if (data.indicators.bb_upper && data.indicators.bb_upper.length > 0) {
+                    const bbUp = chartInstance.addLineSeries({ color: 'rgba(0, 150, 255, 0.3)', lineWidth: 1, title: 'BB' });
+                    const bbLow = chartInstance.addLineSeries({ color: 'rgba(0, 150, 255, 0.3)', lineWidth: 1 });
+                    bbUp.setData(data.indicators.bb_upper.map(d => ({...d, time: formatTime(d.time)})));
+                    bbLow.setData(data.indicators.bb_lower.map(d => ({...d, time: formatTime(d.time)})));
+                    chartSeries['bb'] = [bbUp, bbLow];
+                }
+            }
+
+            // 3. Volume (Histogram)
+            const volSeries = chartInstance.addHistogramSeries({
+                priceFormat: { type: 'volume' },
+                priceScaleId: '', // Overlay on main chart but at bottom
+                scaleMargins: { top: 0.8, bottom: 0 },
+            });
+            const processedVol = data.volume.map(d => ({...d, time: formatTime(d.time)}));
+            volSeries.setData(processedVol);
+            chartSeries['volume'] = volSeries;
+
+
+            // Markers
+            if(data.markers) candleSeries.setMarkers(data.markers);
+
+            // Resize Observer
+            new ResizeObserver(() => {
+                if (container.clientWidth > 0 && container.clientHeight > 0 && chartInstance) {
+                    chartInstance.resize(container.clientWidth, container.clientHeight);
+                    chartInstance.timeScale().fitContent();
+                }
+            }).observe(container);
+
+            setTimeout(() => {
+                if(chartInstance) chartInstance.timeScale().fitContent();
+            }, 100);
+
+        } catch (err) {
+            console.error("Critical Charting Error:", err);
+            throw err; // Re-throw to be caught by main.js
+        }
     },
 
     toggleSeries: (name, isVisible) => {

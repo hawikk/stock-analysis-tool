@@ -28,7 +28,7 @@ def test_correlation_error_handling(client):
     assert b"At least 2 tickers" in rv.data
 
 def test_history_missing_ticker(client):
-    rv = client.get('/api/history')
+    rv = client.get('/api/dashboard_data')
     assert rv.status_code == 400 # Or 500 depending on handler, app.py uses api_error which defaults to 500 but "Ticker missing" usually 400
     # Actually my api_error defaults to 500 if not specified, let's check app.py
     # "return api_error("Ticker missing", 400)" -> so 400.
