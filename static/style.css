@@ -140,7 +140,12 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; letter-spacing: -0.025em; color: #f8f
     /* Desktop Layout */
     .grid-hero { grid-column: span 8; grid-row: span 2; }   /* Main Chart: Left, Tall */
     .grid-stats { grid-column: span 4; }                    /* Top Right: Stats */
-    .grid-ai { grid-column: span 4; grid-row: span 2; }     /* Bottom Right: AI vertical */
+    .grid-ai {
+        grid-column: span 4;
+        grid-row: span 2;
+        overflow-y: auto;
+        max-height: 550px; /* Constrain height to prevent expanding grid */
+    }     /* Bottom Right: AI vertical */
     .grid-earn { grid-column: span 8; }                     /* Bottom Left: Earnings */
 }
 

@@ -372,18 +372,19 @@
                     </div>
                 </div>
 
-                <!-- VIEW: IMPLIED PDF (3D Surface) -->
+                <!-- VIEW: IMPLIED PDF (2D) -->
                 <div id="viewImpliedPdf" class="view-section d-none">
                     <div class="glass-card">
-                        <div class="card-header text-primary d-flex justify-content-between align-items-center">
-                            <span><i class="fa-solid fa-chart-area me-1"></i> OPTION-IMPLIED PROBABILITY DENSITY (3D)</span>
-                            <div class="d-flex gap-2">
-                                <input type="text" id="pdfTicker" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ticker (e.g. SPY)" value="SPY">
+                        <div class="card-header text-primary d-flex justify-content-between align-items-center flex-wrap">
+                            <span><i class="fa-solid fa-chart-area me-1"></i> OPTION-IMPLIED PROBABILITY DENSITY (2D)</span>
+                            <div class="d-flex gap-2 align-items-center">
+                                <select id="pdfExpirySelect" class="form-select form-select-sm bg-dark text-white border-secondary d-none" style="width: auto;"></select>
+                                <input type="text" id="pdfTicker" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ticker (e.g. SPY)" value="SPY" style="width: 80px;">
                                 <button class="btn btn-sm btn-outline-primary" onclick="App.loadImpliedPDF()">Generate</button>
                             </div>
                         </div>
                         <div class="card-body p-0 position-relative">
-                            <div id="pdfChartContainer" style="width: 100%; height: 600px;"></div>
+                            <div id="pdfChartContainer" style="width: 100%; height: 500px;"></div>
                         </div>
                     </div>
                 </div>

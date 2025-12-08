@@ -168,63 +168,49 @@ const Charts = {
         chart.timeScale().fitContent();
     },
 
-    renderSurfacePlot: (elementId, data) => {
-        // Prepare data for Plotly 3D Surface
-        // Data format: x (1D array), y (1D array), z (2D matrix)
+    renderImpliedPDF: (elementId, pdfData, expiryDate) => {
+        const container = document.getElementById(elementId);
+        if (!container) return;
 
-        // Extract unique strikes and days
-        const strikes = [...new Set(data.surface.map(d => d.x))].sort((a,b) => a-b);
-        const days = [...new Set(data.surface.map(d => d.y))].sort((a,b) => a-b);
+        // Filter data for the selected expiry
+        const dataset = pdfData.find(d => d.date === expiryDate);
 
-        // Build Z matrix
-        const z = [];
-        for (let i = 0; i < days.length; i++) {
-            const row = [];
-            for (let j = 0; j < strikes.length; j++) {
-                // Find point matching this day and strike
-                const point = data.surface.find(p => p.y === days[i] && Math.abs(p.x - strikes[j]) < 0.01);
-                row.push(point ? point.z : 0);
-            }
-            z.push(row);
+        if (!dataset) {
+            container.innerHTML = '<div class="alert alert-warning m-3">No data for selected expiration</div>';
+            return;
         }
 
         const plotData = [{
-            x: strikes,
-            y: days,
-            z: z,
-            type: 'surface',
-            colorscale: 'Viridis',
-            contours: {
-                z: {
-                    show: true,
-                    usecolormap: true,
-                    highlightcolor: "#42f462",
-                    project: { z: true }
-                }
-            }
+            x: dataset.strikes,
+            y: dataset.probs,
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tozeroy', // Create an area chart effect
+            line: { shape: 'spline', color: '#00b894', width: 2 },
+            fillcolor: 'rgba(0, 184, 148, 0.2)'
         }];
 
         const layout = {
             title: {
-                text: `${data.ticker} Risk-Neutral Density Surface`,
-                font: { color: '#e2e8f0', family: 'Inter' }
+                text: `Implied Probability Density (Exp: ${expiryDate})`,
+                font: { color: '#e2e8f0', family: 'Inter', size: 16 }
             },
             autosize: true,
-            width: undefined, // let it fill container
-            height: 600,
-            scene: {
-                xaxis: { title: 'Strike Price', color: '#94a3b8' },
-                yaxis: { title: 'Days to Expiration', color: '#94a3b8' },
-                zaxis: { title: 'Probability', color: '#94a3b8' },
-                camera: {
-                    eye: { x: 1.5, y: 1.5, z: 1.2 }
-                }
+            height: 500,
+            xaxis: {
+                title: 'Strike Price',
+                color: '#94a3b8',
+                gridcolor: '#2d3436'
+            },
+            yaxis: {
+                title: 'Probability Density',
+                color: '#94a3b8',
+                gridcolor: '#2d3436'
             },
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
-            margin: {
-                l: 0, r: 0, b: 0, t: 50
-            }
+            margin: { l: 50, r: 20, b: 50, t: 50 },
+            showlegend: false
         };
 
         const config = { responsive: true, displayModeBar: false };

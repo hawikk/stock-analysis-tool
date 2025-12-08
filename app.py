@@ -75,7 +75,7 @@ def api_error(message, status_code=500, details=None):
 @app.route('/api/options/pdf', methods=['GET'])
 @cache.cached(query_string=True, timeout=3600)
 def get_options_pdf():
-    """Calculates Risk-Neutral PDF from Options Data for 3D Plot"""
+    """Calculates Risk-Neutral PDF from Options Data for 2D Plot"""
     ticker = request.args.get('ticker', 'SPY')
 
     try:
@@ -95,7 +95,7 @@ def get_options_pdf():
 
         target_expirations = expirations[:6]
 
-        surface_data = [] # List of {x: strike, y: time_to_exp, z: prob}
+        pdf_data = [] # List of {date: str, days: int, strikes: [], probs: []}
 
         # Risk-free rate approx
         r = 0.045
@@ -112,28 +112,19 @@ def get_options_pdf():
                 chain = stock.option_chain(exp_date_str)
                 calls = chain.calls
 
-                # Filter Calls: reasonably close to money and liquid
-                # We need a range of strikes to build the PDF
-                # Filter where Volume > 0 or OI > 0 to ensure valid pricing
+                # Filter Calls
                 calls = calls[(calls['volume'] > 0) | (calls['openInterest'] > 0)]
-
                 if calls.empty: continue
 
                 # Sort by strike
                 calls = calls.sort_values('strike')
 
-                # Calculate PDF using Breeden-Litzenberger: PDF = e^(rT) * d2C/dK2
-                # Approx d2C/dK2 using finite differences (Butterfly)
-                # PDF(K) ~ e^(rT) * (C(K-d) - 2C(K) + C(K+d)) / d^2
-
-                # We need discrete strikes.
+                # Calculate PDF using Breeden-Litzenberger
                 strikes = calls['strike'].values
-                prices = calls['lastPrice'].values # Or use (bid+ask)/2 if available/reliable
+                prices = calls['lastPrice'].values
 
-                # Interpolate prices to a fixed grid of strikes for smoother PDF?
-                # Or just use the raw data if dense enough. SPY is dense.
-
-                probs = []
+                expiry_strikes = []
+                expiry_probs = []
 
                 for i in range(1, len(strikes) - 1):
                     k_minus = strikes[i-1]
@@ -143,10 +134,6 @@ def get_options_pdf():
                     c_minus = prices[i-1]
                     c = prices[i]
                     c_plus = prices[i+1]
-
-                    # Check if strikes are equidistant (butterfly requires equal spacing usually)
-                    # If not, use general finite difference for non-uniform grid
-                    # f''(x) approx 2 * [ (y3-y2)/(x3-x2) - (y2-y1)/(x2-x1) ] / (x3-x1)
 
                     term1 = (c_plus - c) / (k_plus - k)
                     term2 = (c - c_minus) / (k - k_minus)
@@ -159,18 +146,15 @@ def get_options_pdf():
                     # Filter noise
                     if pdf_val < 0: pdf_val = 0
 
-                    probs.append({
-                        'strike': float(k),
-                        'prob': float(pdf_val)
-                    })
+                    expiry_strikes.append(float(k))
+                    expiry_probs.append(float(pdf_val))
 
-                # Add to surface data
-                # y-axis is Time (days), x-axis is Strike, z-axis is Probability
-                for p in probs:
-                    surface_data.append({
-                        'x': p['strike'],
-                        'y': days_to_exp, # Time dimension
-                        'z': p['prob']
+                if expiry_strikes:
+                    pdf_data.append({
+                        'date': exp_date_str,
+                        'days': days_to_exp,
+                        'strikes': expiry_strikes,
+                        'probs': expiry_probs
                     })
 
             except Exception as loop_e:
@@ -180,7 +164,7 @@ def get_options_pdf():
         return jsonify({
             'ticker': ticker,
             'current_price': current_price,
-            'surface': surface_data
+            'data': pdf_data
         })
 
     except Exception as e:
@@ -425,7 +409,7 @@ def get_economic_calendar():
         datetime.date(2025, 7, 30),
         datetime.date(2025, 9, 17),
         datetime.date(2025, 11, 5),
-        datetime.date(2025, 12, 18), # User specified correction
+        datetime.date(2025, 12, 9), # User specified correction (Dec 9)
         # 2026 (Projected)
         datetime.date(2026, 1, 28),
         datetime.date(2026, 3, 18),
