@@ -73,9 +73,16 @@ const Charts = {
         // 3. Volume (Histogram)
         const volSeries = chartInstance.addHistogramSeries({
             priceFormat: { type: 'volume' },
-            priceScaleId: '', // Overlay on main chart but at bottom
-            scaleMargins: { top: 0.8, bottom: 0 },
+            priceScaleId: 'volume', // Separate scale to avoid overlap
         });
+
+        chartInstance.priceScale('volume').applyOptions({
+            scaleMargins: {
+                top: 0.8, // Volume takes bottom 20%
+                bottom: 0,
+            },
+        });
+
         const processedVol = data.volume.map(d => ({...d, time: formatTime(d.time)}));
         volSeries.setData(processedVol);
         chartSeries['volume'] = volSeries;
