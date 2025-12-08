@@ -168,6 +168,70 @@ const Charts = {
         chart.timeScale().fitContent();
     },
 
+    renderSurfacePlot: (elementId, data) => {
+        // Prepare data for Plotly 3D Surface
+        // Data format: x (1D array), y (1D array), z (2D matrix)
+
+        // Extract unique strikes and days
+        const strikes = [...new Set(data.surface.map(d => d.x))].sort((a,b) => a-b);
+        const days = [...new Set(data.surface.map(d => d.y))].sort((a,b) => a-b);
+
+        // Build Z matrix
+        const z = [];
+        for (let i = 0; i < days.length; i++) {
+            const row = [];
+            for (let j = 0; j < strikes.length; j++) {
+                // Find point matching this day and strike
+                const point = data.surface.find(p => p.y === days[i] && Math.abs(p.x - strikes[j]) < 0.01);
+                row.push(point ? point.z : 0);
+            }
+            z.push(row);
+        }
+
+        const plotData = [{
+            x: strikes,
+            y: days,
+            z: z,
+            type: 'surface',
+            colorscale: 'Viridis',
+            contours: {
+                z: {
+                    show: true,
+                    usecolormap: true,
+                    highlightcolor: "#42f462",
+                    project: { z: true }
+                }
+            }
+        }];
+
+        const layout = {
+            title: {
+                text: `${data.ticker} Risk-Neutral Density Surface`,
+                font: { color: '#e2e8f0', family: 'Inter' }
+            },
+            autosize: true,
+            width: undefined, // let it fill container
+            height: 600,
+            scene: {
+                xaxis: { title: 'Strike Price', color: '#94a3b8' },
+                yaxis: { title: 'Days to Expiration', color: '#94a3b8' },
+                zaxis: { title: 'Probability', color: '#94a3b8' },
+                camera: {
+                    eye: { x: 1.5, y: 1.5, z: 1.2 }
+                }
+            },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: {
+                l: 0, r: 0, b: 0, t: 50
+            }
+        };
+
+        const config = { responsive: true, displayModeBar: false };
+
+        Plotly.newPlot(elementId, plotData, layout, config);
+    },
+
     renderHeatmap: (containerId, data) => {
         const container = document.getElementById(containerId);
         if (!container) return;

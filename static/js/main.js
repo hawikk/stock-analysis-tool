@@ -177,6 +177,7 @@ const App = {
                  DeepDive.load();
              }
         }
+        if (viewName === 'impliedPdf') App.loadImpliedPDF();
         // Monte Carlo, Chain, Comparison, Patterns handle their own triggers
     },
 
@@ -221,6 +222,21 @@ const App = {
            })
            .catch(err => {
                container.innerHTML = `<div class="text-danger text-center pt-5">Simulation Failed: ${err.message}</div>`;
+           });
+    },
+
+    loadImpliedPDF: () => {
+        const ticker = document.getElementById('pdfTicker').value.toUpperCase() || 'SPY';
+        const container = document.getElementById('pdfChartContainer');
+        container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><div class="mt-2 text-muted">Calculating Risk-Neutral Density...</div></div>';
+
+        API.fetch(`/api/options/pdf?ticker=${ticker}`)
+           .then(data => {
+               container.innerHTML = '';
+               Charts.renderSurfacePlot('pdfChartContainer', data);
+           })
+           .catch(err => {
+               container.innerHTML = `<div class="alert alert-danger text-center">PDF Generation Failed: ${err.message}</div>`;
            });
     },
 

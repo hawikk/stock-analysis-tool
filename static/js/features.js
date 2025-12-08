@@ -856,24 +856,36 @@ const DeepDive = {
         if (!earningsBody || !aiContent) return;
 
         // Reset UI to Loading State
-        earningsBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm"></div> Loading data...</td></tr>';
+        earningsBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm"></div> Loading earnings data...</td></tr>';
 
-        // Use new Skeleton logic
+        // Use new Skeleton logic for AI
         aiContent.innerHTML = `
             <div class="skeleton w-100 mb-2" style="height: 100px;"></div>
             <div class="skeleton w-100 mb-2" style="height: 100px;"></div>
             <div class="skeleton w-100" style="height: 80px;"></div>
+            <div class="text-center text-muted small mt-2">Running AI Analyst...</div>
         `;
 
-        API.fetch(`/api/stock/deep_dive?ticker=${ticker}`)
+        // 1. Fetch Data First (Fast)
+        API.fetch(`/api/stock/deep_dive/data?ticker=${ticker}`)
             .then(data => {
                 DeepDive.currentData = data.earnings;
                 DeepDive.renderEarnings(data.earnings);
                 DeepDive.renderChart('eps'); // Default view
-                DeepDive.renderAI(data.ai_analysis, data.ticker);
+
+                // 2. Then Fetch AI Analysis (Slow)
+                return API.post('/api/stock/deep_dive/ai', {
+                    ticker: ticker,
+                    earnings: data.earnings
+                });
+            })
+            .then(aiData => {
+                DeepDive.renderAI(aiData.ai_analysis, ticker);
             })
             .catch(err => {
-                earningsBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+                if (!DeepDive.currentData) {
+                    earningsBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+                }
                 aiContent.innerHTML = `<div class="alert alert-danger">Analysis Failed: ${err.message}</div>`;
             });
     },

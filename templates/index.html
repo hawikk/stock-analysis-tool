@@ -17,6 +17,8 @@
     <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <!-- Marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -36,6 +38,7 @@
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chain" data-bs-dismiss="offcanvas"><i class="fa-solid fa-link me-2"></i>Chain</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="comparison" data-bs-dismiss="offcanvas"><i class="fa-solid fa-code-compare me-2"></i>Compare</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="correlation" data-bs-dismiss="offcanvas"><i class="fa-solid fa-project-diagram me-2"></i>Correl</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="impliedPdf" data-bs-dismiss="offcanvas"><i class="fa-solid fa-chart-area me-2"></i>Implied PDF</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="monteCarlo" data-bs-dismiss="offcanvas"><i class="fa-solid fa-dice me-2"></i>Sims</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="optionsDashboard" data-bs-dismiss="offcanvas"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="customIndicators" data-bs-dismiss="offcanvas"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Indicators</button>
@@ -130,6 +133,7 @@
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chain"><i class="fa-solid fa-link me-2"></i>Chain</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="comparison"><i class="fa-solid fa-code-compare me-2"></i>Compare</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="correlation"><i class="fa-solid fa-project-diagram me-2"></i>Correl</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="impliedPdf"><i class="fa-solid fa-chart-area me-2"></i>Implied PDF</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="monteCarlo"><i class="fa-solid fa-dice me-2"></i>Sims</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="optionsDashboard"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="customIndicators"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Indicators</button>
@@ -364,6 +368,22 @@
                         </div>
                         <div class="card-body p-4" id="correlationContainer">
                             <div class="text-center text-muted">Select tickers in your watchlist to see correlation.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: IMPLIED PDF (3D Surface) -->
+                <div id="viewImpliedPdf" class="view-section d-none">
+                    <div class="glass-card">
+                        <div class="card-header text-primary d-flex justify-content-between align-items-center">
+                            <span><i class="fa-solid fa-chart-area me-1"></i> OPTION-IMPLIED PROBABILITY DENSITY (3D)</span>
+                            <div class="d-flex gap-2">
+                                <input type="text" id="pdfTicker" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ticker (e.g. SPY)" value="SPY">
+                                <button class="btn btn-sm btn-outline-primary" onclick="App.loadImpliedPDF()">Generate</button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0 position-relative">
+                            <div id="pdfChartContainer" style="width: 100%; height: 600px;"></div>
                         </div>
                     </div>
                 </div>

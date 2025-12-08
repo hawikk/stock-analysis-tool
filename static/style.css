@@ -150,7 +150,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; letter-spacing: -0.025em; color: #f8f
 
 /* Navbar */
 .terminal-nav {
-    background: rgba(15, 23, 42, 0.85);
+    background: var(--bg-card);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border) !important;
 }

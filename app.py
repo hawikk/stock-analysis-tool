@@ -23,6 +23,7 @@ from ta.volatility import BollingerBands
 from sklearn.linear_model import LinearRegression
 import datetime
 from textblob import TextBlob
+from scipy.stats import norm
 
 # Import from helper
 from massive_data import massive_service
@@ -70,6 +71,120 @@ def api_error(message, status_code=500, details=None):
         'message': message,
         'details': details
     }), status_code
+
+@app.route('/api/options/pdf', methods=['GET'])
+@cache.cached(query_string=True, timeout=3600)
+def get_options_pdf():
+    """Calculates Risk-Neutral PDF from Options Data for 3D Plot"""
+    ticker = request.args.get('ticker', 'SPY')
+
+    try:
+        stock = yf.Ticker(ticker)
+
+        # Get current price
+        try:
+            current_price = stock.fast_info['last_price']
+        except:
+            hist = stock.history(period="1d")
+            if hist.empty: return api_error("No price data")
+            current_price = hist['Close'].iloc[-1]
+
+        # Get expirations (limit to next ~6 months to keep it fast)
+        expirations = stock.options
+        if not expirations: return api_error("No options found")
+
+        target_expirations = expirations[:6]
+
+        surface_data = [] # List of {x: strike, y: time_to_exp, z: prob}
+
+        # Risk-free rate approx
+        r = 0.045
+
+        for exp_date_str in target_expirations:
+            try:
+                # Calculate Time to Expiration (T)
+                exp_date = datetime.datetime.strptime(exp_date_str, '%Y-%m-%d').date()
+                days_to_exp = (exp_date - datetime.date.today()).days
+                if days_to_exp <= 0: continue
+                T = days_to_exp / 365.0
+
+                # Fetch Chain
+                chain = stock.option_chain(exp_date_str)
+                calls = chain.calls
+
+                # Filter Calls: reasonably close to money and liquid
+                # We need a range of strikes to build the PDF
+                # Filter where Volume > 0 or OI > 0 to ensure valid pricing
+                calls = calls[(calls['volume'] > 0) | (calls['openInterest'] > 0)]
+
+                if calls.empty: continue
+
+                # Sort by strike
+                calls = calls.sort_values('strike')
+
+                # Calculate PDF using Breeden-Litzenberger: PDF = e^(rT) * d2C/dK2
+                # Approx d2C/dK2 using finite differences (Butterfly)
+                # PDF(K) ~ e^(rT) * (C(K-d) - 2C(K) + C(K+d)) / d^2
+
+                # We need discrete strikes.
+                strikes = calls['strike'].values
+                prices = calls['lastPrice'].values # Or use (bid+ask)/2 if available/reliable
+
+                # Interpolate prices to a fixed grid of strikes for smoother PDF?
+                # Or just use the raw data if dense enough. SPY is dense.
+
+                probs = []
+
+                for i in range(1, len(strikes) - 1):
+                    k_minus = strikes[i-1]
+                    k = strikes[i]
+                    k_plus = strikes[i+1]
+
+                    c_minus = prices[i-1]
+                    c = prices[i]
+                    c_plus = prices[i+1]
+
+                    # Check if strikes are equidistant (butterfly requires equal spacing usually)
+                    # If not, use general finite difference for non-uniform grid
+                    # f''(x) approx 2 * [ (y3-y2)/(x3-x2) - (y2-y1)/(x2-x1) ] / (x3-x1)
+
+                    term1 = (c_plus - c) / (k_plus - k)
+                    term2 = (c - c_minus) / (k - k_minus)
+
+                    d2c_dk2 = 2 * (term1 - term2) / (k_plus - k_minus)
+
+                    # PDF = e^rT * d2c_dk2
+                    pdf_val = np.exp(r * T) * d2c_dk2
+
+                    # Filter noise
+                    if pdf_val < 0: pdf_val = 0
+
+                    probs.append({
+                        'strike': float(k),
+                        'prob': float(pdf_val)
+                    })
+
+                # Add to surface data
+                # y-axis is Time (days), x-axis is Strike, z-axis is Probability
+                for p in probs:
+                    surface_data.append({
+                        'x': p['strike'],
+                        'y': days_to_exp, # Time dimension
+                        'z': p['prob']
+                    })
+
+            except Exception as loop_e:
+                print(f"PDF Error for {exp_date_str}: {loop_e}")
+                continue
+
+        return jsonify({
+            'ticker': ticker,
+            'current_price': current_price,
+            'surface': surface_data
+        })
+
+    except Exception as e:
+        return api_error(str(e))
 
 @app.route('/')
 def index():
@@ -219,10 +334,11 @@ def get_whale_activity():
 @app.route('/api/market/calendar', methods=['GET'])
 @cache.cached(timeout=3600)
 def get_economic_calendar():
-    """Returns major economic events (Logic-Based Generation)"""
+    """Returns major economic events (Hardcoded Accurate Logic)"""
     today = datetime.date.today()
     events = []
 
+    # 1. Jobless Claims (Every Thursday)
     def next_weekday(d, weekday):
         days_ahead = weekday - d.weekday()
         if days_ahead <= 0: days_ahead += 7
@@ -238,16 +354,31 @@ def get_economic_calendar():
         "forecast": "215K"
     })
 
-    next_cpi_month = today.month + 1 if today.month < 12 else 1
-    next_cpi_year = today.year if today.month < 12 else today.year + 1
-    if today.day <= 12:
-        next_cpi_month = today.month
-        next_cpi_year = today.year
-    next_cpi = datetime.date(next_cpi_year, next_cpi_month, 12)
-    while next_cpi.weekday() > 4: next_cpi += datetime.timedelta(days=1)
+    # 2. CPI (Approx 12th-14th)
+    # Logic: usually released around the 13th of the month
+    def get_next_cpi(current_date):
+        # Check this month's CPI date
+        cpi_day = 13
+        this_month_cpi = datetime.date(current_date.year, current_date.month, cpi_day)
 
+        # Adjust for weekends
+        while this_month_cpi.weekday() > 4: # If Sat/Sun
+            this_month_cpi += datetime.timedelta(days=1) # Move to Monday? Or Friday? Usually business days.
+
+        if current_date <= this_month_cpi:
+            return this_month_cpi
+
+        # Next month
+        next_month = current_date.month + 1 if current_date.month < 12 else 1
+        next_year = current_date.year if current_date.month < 12 else current_date.year + 1
+        next_cpi = datetime.date(next_year, next_month, cpi_day)
+        while next_cpi.weekday() > 4:
+             next_cpi += datetime.timedelta(days=1)
+        return next_cpi
+
+    next_cpi_date = get_next_cpi(today)
     events.append({
-        "date": next_cpi.strftime('%Y-%m-%d'),
+        "date": next_cpi_date.strftime('%Y-%m-%d'),
         "time": "08:30 AM",
         "event": "CPI Inflation Data",
         "impact": "High",
@@ -255,16 +386,27 @@ def get_economic_calendar():
         "forecast": "3.0%"
     })
 
-    next_nfp_month = today.month + 1 if today.month < 12 else 1
-    next_nfp_year = today.year if today.month < 12 else today.year + 1
-    d = datetime.date(next_nfp_year, next_nfp_month, 1)
-    while d.weekday() != 4: d += datetime.timedelta(days=1)
-    this_month_nfp = datetime.date(today.year, today.month, 1)
-    while this_month_nfp.weekday() != 4: this_month_nfp += datetime.timedelta(days=1)
-    target_nfp = this_month_nfp if this_month_nfp >= today else d
+    # 3. Non-Farm Payrolls (First Friday of the month)
+    def get_next_nfp(current_date):
+        # Find first Friday of this month
+        first_day = datetime.date(current_date.year, current_date.month, 1)
+        # Weekday of first day (0=Mon, 4=Fri)
+        days_to_fri = (4 - first_day.weekday()) % 7
+        this_month_nfp = first_day + datetime.timedelta(days=days_to_fri)
 
+        if current_date <= this_month_nfp:
+            return this_month_nfp
+
+        # Next month
+        next_month = current_date.month + 1 if current_date.month < 12 else 1
+        next_year = current_date.year if current_date.month < 12 else current_date.year + 1
+        first_day_next = datetime.date(next_year, next_month, 1)
+        days_to_fri_next = (4 - first_day_next.weekday()) % 7
+        return first_day_next + datetime.timedelta(days=days_to_fri_next)
+
+    next_nfp_date = get_next_nfp(today)
     events.append({
-        "date": target_nfp.strftime('%Y-%m-%d'),
+        "date": next_nfp_date.strftime('%Y-%m-%d'),
         "time": "08:30 AM",
         "event": "Non-Farm Payrolls",
         "impact": "High",
@@ -272,14 +414,45 @@ def get_economic_calendar():
         "forecast": "170K"
     })
 
-    events.append({
-        "date": (today + datetime.timedelta(days=30)).strftime('%Y-%m-%d'),
-        "time": "02:00 PM",
-        "event": "FOMC Rate Decision",
-        "impact": "High",
-        "previous": "5.50%",
-        "forecast": "5.50%"
-    })
+    # 4. FOMC Meetings (Hardcoded for 2025/2026)
+    # Source: Approximate Schedule
+    fomc_dates = [
+        # 2025
+        datetime.date(2025, 1, 29),
+        datetime.date(2025, 3, 19),
+        datetime.date(2025, 5, 7),
+        datetime.date(2025, 6, 18),
+        datetime.date(2025, 7, 30),
+        datetime.date(2025, 9, 17),
+        datetime.date(2025, 11, 5),
+        datetime.date(2025, 12, 18), # User specified correction
+        # 2026 (Projected)
+        datetime.date(2026, 1, 28),
+        datetime.date(2026, 3, 18),
+        datetime.date(2026, 5, 6),
+        datetime.date(2026, 6, 17),
+        datetime.date(2026, 7, 29),
+        datetime.date(2026, 9, 16),
+        datetime.date(2026, 11, 4),
+        datetime.date(2026, 12, 16)
+    ]
+
+    # Find next FOMC
+    next_fomc = None
+    for d in fomc_dates:
+        if d >= today:
+            next_fomc = d
+            break
+
+    if next_fomc:
+        events.append({
+            "date": next_fomc.strftime('%Y-%m-%d'),
+            "time": "02:00 PM",
+            "event": "FOMC Rate Decision",
+            "impact": "High",
+            "previous": "5.50%",
+            "forecast": "5.50%"
+        })
 
     events.sort(key=lambda x: x['date'])
     return jsonify({'events': events})
@@ -991,10 +1164,10 @@ def get_ai_summary():
         return jsonify({'summary': completion.choices[0].message.content})
     except Exception as e: return api_error(str(e))
 
-@app.route('/api/stock/deep_dive', methods=['GET'])
+@app.route('/api/stock/deep_dive/data', methods=['GET'])
 @cache.cached(query_string=True, timeout=3600)
-def get_deep_dive_analysis():
-    """Fetches last 5 earnings, price reaction, and AI analysis"""
+def get_deep_dive_data():
+    """Fetches last 5 earnings and price reaction (Fast, No AI)"""
     ticker = request.args.get('ticker')
     if not ticker: return api_error("Ticker required", 400)
 
@@ -1019,9 +1192,8 @@ def get_deep_dive_analysis():
         now = pd.Timestamp.now().tz_localize(earnings_dates.index.dtype.tz) if earnings_dates.index.tz else pd.Timestamp.now()
         past_earnings = earnings_dates[earnings_dates.index < now].head(5)
 
-        # 2. Fetch Price History (1y buffer to cover lookbacks)
-        # We need enough history to find dates around these earnings
-        hist = stock.history(period="2y") # Safer 2y
+        # 2. Fetch Price History (2y buffer to cover lookbacks)
+        hist = stock.history(period="2y")
 
         earnings_data = []
 
@@ -1038,58 +1210,34 @@ def get_deep_dive_analysis():
                     if valid_dates:
                         # Get max date (closest to e_date)
                         closest = max(valid_dates)
-                        # Check if within reasonable window (e.g. 90 days)
+                        # Check if within reasonable window (e.g. 100 days)
                         if (e_date - closest.date()).days < 100:
                             rev = financials.loc['Total Revenue', closest]
                             rev_actual = float(rev)
                 except Exception as rev_e:
                     print(f"Revenue match error: {rev_e}")
 
-            # Find nearest trading day in history
-            # If e_date in history, great. If not (weekend/after hours), take next.
-
-            # Logic: Reaction is usually measured from "Day Before Close" to "Day After Close"
-            # or "Day Of Close" (if AM) vs "Day After".
-            # Simplified: Change from T-1 Close to T+1 Close (2 day move).
-
-            # Find T-1 (Pre-Earnings)
-            # Find T+1 (Post-Earnings)
-
+            # Find Price Reaction (T-1 to T+1)
             try:
-                # Localize e_date to match hist index if needed, but usually just date comparison works if we strip time
-                # History index is DatetimeIndex.
-
-                # Get the integer location of the earnings date in history
-                # We use 'asof' logic or similar
-                # Let's find the closest date in history <= e_date
-
-                # Ensure hist index is naive or we handle TZ
                 hist_dates = hist.index.date
-
-                # Find index of e_date or nearest previous
                 idx_loc = -1
                 for i, d in enumerate(hist_dates):
                     if d == e_date:
                         idx_loc = i
                         break
-                    if d > e_date: # We went past it, so previous was it (or it was weekend)
+                    if d > e_date:
                         idx_loc = i - 1
                         break
 
-                if idx_loc == -1: idx_loc = len(hist) - 1 # Should not happen if within 2y
+                if idx_loc == -1: idx_loc = len(hist) - 1
 
-                # Now calculate move
-                # We want 1 day before earnings vs 1 day after earnings
-                # Check bounds
                 if idx_loc > 0 and idx_loc < len(hist) - 1:
                     pre_price = hist['Close'].iloc[idx_loc - 1]
                     post_price = hist['Close'].iloc[idx_loc + 1]
-
                     move_pct = ((post_price - pre_price) / pre_price) * 100
                 else:
                     move_pct = 0.0
 
-                # Actual / Estimate
                 est = row['EPS Estimate'] if 'EPS Estimate' in row else None
                 act = row['Reported EPS'] if 'Reported EPS' in row else None
 
@@ -1110,59 +1258,72 @@ def get_deep_dive_analysis():
                 print(f"Error processing earnings date {e_date}: {inner_e}")
                 continue
 
-        # 3. AI Analysis
-        ai_analysis = {}
-        if client:
-            # Construct prompt
-            earnings_summary = "\n".join([f"Date: {e['date']}, Actual: {e['actual']}, Est: {e['estimate']}, Reaction: {e['price_reaction']}%" for e in earnings_data])
-
-            prompt = f"""
-            Analyze {ticker} based on its last 5 earnings results:
-            {earnings_summary}
-
-            Also consider general market knowledge about {ticker}.
-
-            Provide a response in JSON format with these keys:
-            - bull_case: (String) Top 3 bull arguments.
-            - bear_case: (String) Top 3 bear arguments.
-            - risks: (String) Key risks.
-            - opportunities: (String) Key opportunities.
-
-            Keep it concise and professional.
-            """
-
-            try:
-                completion = client.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    messages=[{"role": "user", "content": prompt}],
-                    response_format={"type": "json_object"}
-                )
-                import json
-                ai_analysis = json.loads(completion.choices[0].message.content)
-            except Exception as ai_e:
-                print(f"AI Error: {ai_e}")
-                ai_analysis = {
-                    'bull_case': "AI Analysis Unavailable",
-                    'bear_case': "AI Analysis Unavailable",
-                    'risks': "AI Analysis Unavailable",
-                    'opportunities': "AI Analysis Unavailable"
-                }
-        else:
-             ai_analysis = {
-                'bull_case': "AI Configuration Missing",
-                'bear_case': "AI Configuration Missing",
-                'risks': "AI Configuration Missing",
-                'opportunities': "AI Configuration Missing"
-            }
-
         return jsonify({
             'ticker': ticker,
-            'earnings': earnings_data,
-            'ai_analysis': ai_analysis
+            'earnings': earnings_data
         })
 
     except Exception as e:
         return api_error(str(e))
+
+@app.route('/api/stock/deep_dive/ai', methods=['POST'])
+@cache.cached(timeout=3600, make_cache_key=lambda: request.get_data().decode('utf-8'))
+def get_deep_dive_ai():
+    """Generates AI analysis based on provided earnings data"""
+    data = request.get_json()
+    ticker = data.get('ticker')
+    earnings_data = data.get('earnings', [])
+
+    if not ticker: return api_error("Ticker required", 400)
+
+    ai_analysis = {}
+    if client:
+        # Construct prompt
+        earnings_summary = "\n".join([f"Date: {e['date']}, Actual: {e['actual']}, Est: {e['estimate']}, Reaction: {e['price_reaction']}%" for e in earnings_data])
+
+        prompt = f"""
+        Analyze {ticker} based on its last 5 earnings results:
+        {earnings_summary}
+
+        Also consider general market knowledge about {ticker}.
+
+        Provide a response in JSON format with these keys:
+        - bull_case: (String) Top 3 bull arguments.
+        - bear_case: (String) Top 3 bear arguments.
+        - risks: (String) Key risks.
+        - opportunities: (String) Key opportunities.
+
+        Keep it concise and professional.
+        """
+
+        try:
+            completion = client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            import json
+            ai_analysis = json.loads(completion.choices[0].message.content)
+        except Exception as ai_e:
+            print(f"AI Error: {ai_e}")
+            ai_analysis = {
+                'bull_case': "AI Analysis Failed",
+                'bear_case': "AI Analysis Failed",
+                'risks': "AI Analysis Failed",
+                'opportunities': "AI Analysis Failed"
+            }
+    else:
+            ai_analysis = {
+            'bull_case': "AI Configuration Missing",
+            'bear_case': "AI Configuration Missing",
+            'risks': "AI Configuration Missing",
+            'opportunities': "AI Configuration Missing"
+        }
+
+    return jsonify({
+        'ticker': ticker,
+        'ai_analysis': ai_analysis
+    })
 
 # --- OPTIONS CHAIN ---
 @app.route('/api/options/chain', methods=['GET'])
