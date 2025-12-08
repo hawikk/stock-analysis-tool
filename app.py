@@ -75,7 +75,7 @@ def api_error(message, status_code=500, details=None):
 @app.route('/api/options/pdf', methods=['GET'])
 @cache.cached(query_string=True, timeout=3600)
 def get_options_pdf():
-    """Calculates Risk-Neutral PDF from Options Data for 2D Plot"""
+    """Calculates Risk-Neutral PDF from Options Data (For Heatmap & 2D)"""
     ticker = request.args.get('ticker', 'SPY')
 
     try:
@@ -89,13 +89,23 @@ def get_options_pdf():
             if hist.empty: return api_error("No price data")
             current_price = hist['Close'].iloc[-1]
 
-        # Get expirations (limit to next ~6 months to keep it fast)
+        # Get expirations
         expirations = stock.options
         if not expirations: return api_error("No options found")
 
-        target_expirations = expirations[:6]
+        # Get top 10 expirations for heatmap density
+        target_expirations = expirations[:12]
 
-        pdf_data = [] # List of {date: str, days: int, strikes: [], probs: []}
+        # Define Heatmap Grid (Y-Axis)
+        # 100 points from -40% to +40% of spot
+        grid_min = current_price * 0.6
+        grid_max = current_price * 1.4
+        price_grid = np.linspace(grid_min, grid_max, 50).tolist()
+
+        heatmap_z = [] # 2D array [expiration_index][price_index]
+        heatmap_x = [] # Dates
+
+        pdf_data = [] # Legacy format for 2D chart if needed
 
         # Risk-free rate approx
         r = 0.045
@@ -105,7 +115,7 @@ def get_options_pdf():
                 # Calculate Time to Expiration (T)
                 exp_date = datetime.datetime.strptime(exp_date_str, '%Y-%m-%d').date()
                 days_to_exp = (exp_date - datetime.date.today()).days
-                if days_to_exp <= 0: continue
+                if days_to_exp <= 5: continue # Skip very near term noise
                 T = days_to_exp / 365.0
 
                 # Fetch Chain
@@ -114,7 +124,7 @@ def get_options_pdf():
 
                 # Filter Calls
                 calls = calls[(calls['volume'] > 0) | (calls['openInterest'] > 0)]
-                if calls.empty: continue
+                if calls.empty or len(calls) < 5: continue
 
                 # Sort by strike
                 calls = calls.sort_values('strike')
@@ -150,6 +160,10 @@ def get_options_pdf():
                     expiry_probs.append(float(pdf_val))
 
                 if expiry_strikes:
+                    # Normalize PDF area to 1 (approx)
+                    # not strictly needed for heatmap color, but good practice
+
+                    # Add to legacy list
                     pdf_data.append({
                         'date': exp_date_str,
                         'days': days_to_exp,
@@ -157,14 +171,34 @@ def get_options_pdf():
                         'probs': expiry_probs
                     })
 
+                    # Interpolate to Grid for Heatmap
+                    # We have (expiry_strikes, expiry_probs). We want (price_grid, grid_probs)
+                    grid_probs = np.interp(price_grid, expiry_strikes, expiry_probs, left=0, right=0)
+                    heatmap_z.append(grid_probs.tolist())
+                    heatmap_x.append(exp_date_str)
+
             except Exception as loop_e:
                 print(f"PDF Error for {exp_date_str}: {loop_e}")
                 continue
 
+        # Transpose Z for Plotly Heatmap (usually Z is y-major? No, Z[y][x] or list of rows)
+        # Plotly JS: z is an array of arrays. The top-level array items are rows (y).
+        # Currently heatmap_z is [time][price].
+        # If we plot X=Date, Y=Price.
+        # We need Z[price_index][date_index].
+        # So we need to transpose heatmap_z.
+
+        heatmap_z_transposed = np.array(heatmap_z).T.tolist() if heatmap_z else []
+
         return jsonify({
             'ticker': ticker,
             'current_price': current_price,
-            'data': pdf_data
+            'data': pdf_data, # Legacy
+            'heatmap': {
+                'x': heatmap_x,     # Dates
+                'y': price_grid,    # Prices
+                'z': heatmap_z_transposed # Probabilities
+            }
         })
 
     except Exception as e:
@@ -409,7 +443,7 @@ def get_economic_calendar():
         datetime.date(2025, 7, 30),
         datetime.date(2025, 9, 17),
         datetime.date(2025, 11, 5),
-        datetime.date(2025, 12, 9), # User specified correction (Dec 9)
+        datetime.date(2025, 12, 18), # User specified correction (Dec 18)
         # 2026 (Projected)
         datetime.date(2026, 1, 28),
         datetime.date(2026, 3, 18),
@@ -1151,22 +1185,52 @@ def get_ai_summary():
 @app.route('/api/stock/deep_dive/data', methods=['GET'])
 @cache.cached(query_string=True, timeout=3600)
 def get_deep_dive_data():
-    """Fetches last 5 earnings and price reaction (Fast, No AI)"""
+    """Fetches last 5 earnings and price reaction (Fast, No AI) - Parallel Execution"""
     ticker = request.args.get('ticker')
     if not ticker: return api_error("Ticker required", 400)
 
     try:
         stock = yf.Ticker(ticker)
 
-        # 1. Fetch Earnings Dates
-        earnings_dates = stock.earnings_dates
+        # Parallel Execution for Speed
+        from concurrent.futures import ThreadPoolExecutor
+
+        earnings_dates = None
+        financials = None
+        hist = None
+
+        def fetch_earnings():
+            return stock.earnings_dates
+
+        def fetch_financials():
+            return stock.quarterly_income_stmt
+
+        def fetch_history():
+            return stock.history(period="2y")
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_earnings = executor.submit(fetch_earnings)
+            future_financials = executor.submit(fetch_financials)
+            future_hist = executor.submit(fetch_history)
+
+            try:
+                earnings_dates = future_earnings.result(timeout=10)
+            except: pass
+
+            try:
+                financials = future_financials.result(timeout=10)
+            except: pass
+
+            try:
+                hist = future_hist.result(timeout=10)
+            except: pass
+
+        # 1. Process Earnings Dates
         if earnings_dates is None or earnings_dates.empty:
              return api_error("No earnings data available", 404)
 
-        # Fetch Financials for Revenue
+        # Process Financials
         try:
-            financials = stock.quarterly_income_stmt
-            # Ensure index is datetime
             if financials is not None and not financials.empty:
                 financials.columns = pd.to_datetime(financials.columns)
         except:
@@ -1176,8 +1240,9 @@ def get_deep_dive_data():
         now = pd.Timestamp.now().tz_localize(earnings_dates.index.dtype.tz) if earnings_dates.index.tz else pd.Timestamp.now()
         past_earnings = earnings_dates[earnings_dates.index < now].head(5)
 
-        # 2. Fetch Price History (2y buffer to cover lookbacks)
-        hist = stock.history(period="2y")
+        # Check history
+        if hist is None:
+            hist = pd.DataFrame()
 
         earnings_data = []
 

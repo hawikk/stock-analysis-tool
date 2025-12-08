@@ -227,44 +227,7 @@ const App = {
 
     loadImpliedPDF: () => {
         const ticker = document.getElementById('pdfTicker').value.toUpperCase() || 'SPY';
-        const container = document.getElementById('pdfChartContainer');
-        const select = document.getElementById('pdfExpirySelect');
-
-        container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><div class="mt-2 text-muted">Calculating Risk-Neutral Density...</div></div>';
-        select.classList.add('d-none');
-
-        API.fetch(`/api/options/pdf?ticker=${ticker}`)
-           .then(resp => {
-               container.innerHTML = '';
-               if (!resp.data || resp.data.length === 0) {
-                   container.innerHTML = '<div class="alert alert-warning text-center">No options data available.</div>';
-                   return;
-               }
-
-               // Populate Dropdown
-               select.innerHTML = '';
-               resp.data.forEach((item, index) => {
-                   const opt = document.createElement('option');
-                   opt.value = item.date;
-                   opt.text = `${item.date} (${item.days}d)`;
-                   if (index === 0) opt.selected = true; // Default to nearest
-                   select.appendChild(opt);
-               });
-               select.classList.remove('d-none');
-
-               // Initial Render
-               Charts.renderImpliedPDF('pdfChartContainer', resp.data, select.value);
-
-               // Event Listener (Remove old one first to avoid duplicates if re-called)
-               const newSelect = select.cloneNode(true);
-               select.parentNode.replaceChild(newSelect, select);
-               newSelect.addEventListener('change', () => {
-                   Charts.renderImpliedPDF('pdfChartContainer', resp.data, newSelect.value);
-               });
-           })
-           .catch(err => {
-               container.innerHTML = `<div class="alert alert-danger text-center">PDF Generation Failed: ${err.message}</div>`;
-           });
+        HeatmapChart.render(ticker);
     },
 
     // --- Core Logic ---
