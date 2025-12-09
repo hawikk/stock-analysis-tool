@@ -859,20 +859,31 @@ const DeepDive = {
         const earningsBody = document.getElementById('deepDiveEarningsBody');
         const aiContent = document.getElementById('deepDiveAIContent');
 
-        // Load Earnings & AI (Existing Logic)
+        // Load Earnings & AI (Optimized Two-Step Logic)
         if (earningsBody && aiContent) {
             earningsBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm"></div> Loading data...</td></tr>';
             aiContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Analyzing market data...</p></div>';
 
-            API.fetch(`/api/stock/deep_dive?ticker=${ticker}`)
+            // Step 1: Fast Data
+            API.fetch(`/api/stock/deep_dive/data?ticker=${ticker}`)
                 .then(data => {
                     DeepDive.currentData = data.earnings;
                     DeepDive.renderEarnings(data.earnings);
                     DeepDive.renderChart('eps'); // Default view
-                    DeepDive.renderAI(data.ai_analysis, data.ticker);
+
+                    // Step 2: Slow AI (Chained)
+                    return API.post('/api/stock/deep_dive/ai', {
+                        ticker: ticker,
+                        earnings: data.earnings
+                    });
+                })
+                .then(aiData => {
+                    DeepDive.renderAI(aiData, ticker);
                 })
                 .catch(err => {
-                    earningsBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+                    if (!DeepDive.currentData) {
+                        earningsBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+                    }
                     aiContent.innerHTML = `<div class="alert alert-danger">Analysis Failed: ${err.message}</div>`;
                 });
         }
