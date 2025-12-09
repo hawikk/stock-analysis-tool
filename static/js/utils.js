@@ -3,7 +3,13 @@
 const Utils = {
     // Format large numbers (M, B, T)
     formatNumber: (num) => {
-        if (!num || num === 'N/A') return 'N/A';
+        if (num === undefined || num === null || num === 'N/A') return 'N/A';
+        // Handle strings that are actually numbers
+        if (typeof num === 'string') {
+            num = parseFloat(num.replace(/,/g, ''));
+        }
+        if (isNaN(num)) return 'N/A';
+
         if (num >= 1.0e+12) return (num / 1.0e+12).toFixed(2) + "T";
         if (num >= 1.0e+9) return (num / 1.0e+9).toFixed(2) + "B";
         if (num >= 1.0e+6) return (num / 1.0e+6).toFixed(2) + "M";

@@ -1004,9 +1004,9 @@ const DeepDive = {
             html += `
                 <tr>
                     <td class="text-white">${h.Holder || h[0] || 'N/A'}</td>
-                    <td class="text-end text-muted">${h.Shares || h[1] || '-'}</td>
-                    <td class="text-end text-info">${h.Value || h[4] || '-'}</td>
-                    <td class="text-end">${h['% Out'] || h[3] || '-'}</td>
+                    <td class="text-end text-muted">${Utils.formatNumber(h.Shares || h[1])}</td>
+                    <td class="text-end text-info">${Utils.formatNumber(h.Value || h[4])}</td>
+                    <td class="text-end text-white-50">${h['% Out'] || h[3] || '-'}</td>
                 </tr>
             `;
         });
@@ -1015,22 +1015,41 @@ const DeepDive = {
 
     renderDividends: (divs, shorts) => {
         if (divs) {
-            document.getElementById('divYield').innerText = divs.yield ? (divs.yield * 100).toFixed(2) + '%' : 'N/A';
-            document.getElementById('divRate').innerText = divs.rate || 'N/A';
-            document.getElementById('divPayout').innerText = divs.payoutRatio ? (divs.payoutRatio * 100).toFixed(2) + '%' : 'N/A';
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerText = val;
+                    el.className = "text-white fw-bold"; // Ensure high contrast
+                    // Ensure label sibling is muted
+                    if (el.previousElementSibling) el.previousElementSibling.className = "text-muted small";
+                }
+            };
+
+            setVal('divYield', divs.yield ? (divs.yield * 100).toFixed(2) + '%' : 'N/A');
+            setVal('divRate', divs.rate || 'N/A');
+            setVal('divPayout', divs.payoutRatio ? (divs.payoutRatio * 100).toFixed(2) + '%' : 'N/A');
 
             if (divs.exDividendDate) {
                  const date = new Date(divs.exDividendDate * 1000).toLocaleDateString();
-                 document.getElementById('divDate').innerText = date;
+                 setVal('divDate', date);
             } else {
-                 document.getElementById('divDate').innerText = 'N/A';
+                 setVal('divDate', 'N/A');
             }
         }
 
         if (shorts) {
-            document.getElementById('shortFloat').innerText = shorts.shortPercentFloat ? (shorts.shortPercentFloat * 100).toFixed(2) + '%' : 'N/A';
-            document.getElementById('shortRatio').innerText = shorts.shortRatio || 'N/A';
-            document.getElementById('shortShares').innerText = shorts.sharesShort ? Utils.formatNumber(shorts.sharesShort) : 'N/A';
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerText = val;
+                    el.className = "text-white fw-bold";
+                    if (el.previousElementSibling) el.previousElementSibling.className = "text-muted small";
+                }
+            };
+
+            setVal('shortFloat', shorts.shortPercentFloat ? (shorts.shortPercentFloat * 100).toFixed(2) + '%' : 'N/A');
+            setVal('shortRatio', shorts.shortRatio || 'N/A');
+            setVal('shortShares', shorts.sharesShort ? Utils.formatNumber(shorts.sharesShort) : 'N/A');
         }
     },
 
