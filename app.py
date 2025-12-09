@@ -457,8 +457,18 @@ def get_forex_data():
 @app.route('/api/market/macro', methods=['GET'])
 @cache.cached(timeout=300)
 def get_macro_data():
-    """Crypto & Macro"""
-    tickers = {'BTC-USD': 'Bitcoin', 'GC=F': 'Gold', 'CL=F': 'Crude Oil', '^TNX': '10Y Yield'}
+    """Crypto & Macro - Expanded with Bloomberg-style rates"""
+    tickers = {
+        'BTC-USD': 'Bitcoin',
+        'GC=F': 'Gold',
+        'CL=F': 'Crude Oil',
+        '^TNX': '10Y Yield',
+        '^FVX': '5Y Yield',
+        '^TYX': '30Y Yield',
+        'SI=F': 'Silver',
+        'NG=F': 'Nat Gas',
+        'HG=F': 'Copper'
+    }
     results = []
     try:
         data = yf.download(list(tickers.keys()), period="2d", group_by='ticker', progress=False)
@@ -466,12 +476,128 @@ def get_macro_data():
             try:
                 if symbol in data.columns.levels[0]:
                     df = data[symbol].dropna()
-                    if len(df) < 2: continue
-                    price = df['Close'].iloc[-1]
-                    change = ((price - df['Close'].iloc[-2]) / df['Close'].iloc[-2]) * 100
-                    results.append({'ticker': symbol, 'name': name, 'price': round(float(price), 2), 'change_pct': round(float(change), 2)})
-            except: pass
+                else:
+                    # Handle single ticker case if yfinance behaves differently
+                    if len(tickers) == 1: df = data
+                    else: continue
+
+                if df.empty or len(df) < 2: continue
+
+                # Handle MultiIndex column access safely
+                close_col = df['Close']
+                price = close_col.iloc[-1]
+                prev = close_col.iloc[-2]
+
+                change = ((price - prev) / prev) * 100
+                results.append({
+                    'ticker': symbol,
+                    'name': name,
+                    'price': round(float(price), 2),
+                    'change_pct': round(float(change), 2)
+                })
+            except Exception as inner_e:
+                print(f"Macro error {symbol}: {inner_e}")
+                pass
+
+        # Sort by specific order if needed, otherwise list order
         return jsonify({'data': results})
+    except Exception as e:
+        return api_error(str(e))
+
+@app.route('/api/stock/details', methods=['GET'])
+@cache.cached(query_string=True, timeout=3600)
+def get_stock_details():
+    """Fetches detailed company info: News, Management, Analysts, Holders, Divs, Shorts"""
+    ticker = request.args.get('ticker')
+    if not ticker: return api_error("Ticker required", 400)
+
+    try:
+        t = yf.Ticker(ticker)
+
+        # 1. News (CN)
+        news_data = []
+        try:
+            raw_news = t.news
+            for n in raw_news:
+                c = n.get('content', n)
+                news_data.append({
+                     'title': c.get('title'),
+                     'publisher': c.get('provider', {}).get('displayName') if isinstance(c.get('provider'), dict) else c.get('publisher'),
+                     'link': c.get('clickThroughUrl', {}).get('url') if isinstance(c.get('clickThroughUrl'), dict) else c.get('link'),
+                     'providerPublishTime': c.get('pubDate'),
+                     'thumbnail': c.get('thumbnail', {}).get('resolutions', [{}])[0].get('url') if isinstance(c.get('thumbnail'), dict) else None
+                })
+        except: pass
+
+        # 2. Management (MGMT)
+        management = []
+        try:
+            officers = t.info.get('companyOfficers', [])
+            for o in officers:
+                management.append({
+                    'name': o.get('name'),
+                    'title': o.get('title'),
+                    'age': o.get('age', 'N/A'),
+                    'pay': o.get('totalPay', 'N/A')
+                })
+        except: pass
+
+        # 3. Analysts (ANR)
+        analysts = {}
+        try:
+            info = t.info
+            analysts = {
+                'targetMean': info.get('targetMeanPrice'),
+                'targetHigh': info.get('targetHighPrice'),
+                'targetLow': info.get('targetLowPrice'),
+                'recommendationKey': info.get('recommendationKey'),
+                'numberOfAnalystOpinions': info.get('numberOfAnalystOpinions')
+            }
+        except: pass
+
+        # 4. Holders (PHDC)
+        holders = {'institutional': [], 'major': []}
+        try:
+            # Use dataframes
+            inst = t.institutional_holders
+            if inst is not None and not inst.empty:
+                # Standardize column names if possible, usually [Holder, Shares, Date Reported, % Out, Value]
+                # Convert to dict records
+                holders['institutional'] = inst.head(10).astype(str).to_dict(orient='records')
+
+            maj = t.major_holders
+            if maj is not None and not maj.empty:
+                 holders['major'] = maj.astype(str).to_dict(orient='records')
+        except: pass
+
+        # 5. Dividends & Shorts (DVD / SI)
+        dividends = {}
+        shorts = {}
+        try:
+            info = t.info
+            dividends = {
+                'yield': info.get('dividendYield'),
+                'rate': info.get('dividendRate'),
+                'exDividendDate': info.get('exDividendDate'),
+                'payoutRatio': info.get('payoutRatio')
+            }
+            shorts = {
+                'shortPercentFloat': info.get('shortPercentOfFloat'),
+                'shortRatio': info.get('shortRatio'),
+                'sharesShort': info.get('sharesShort')
+            }
+        except: pass
+
+        return jsonify({
+            'ticker': ticker,
+            'news': news_data,
+            'management': management,
+            'analysts': analysts,
+            'holders': holders,
+            'dividends': dividends,
+            'shorts': shorts
+        })
+
     except Exception as e:
         return api_error(str(e))
 

@@ -846,30 +846,192 @@ window.Patterns = Patterns;
 const DeepDive = {
     chartInstance: null,
     currentData: null,
+    currentTicker: null,
 
     load: (ticker) => {
         if (!ticker) return;
+        DeepDive.currentTicker = ticker;
+
+        // Reset Tabs to first one (Earnings)
+        const firstTab = new bootstrap.Tab(document.querySelector('#deepDiveTabs button[data-bs-target="#pane-earnings"]'));
+        firstTab.show();
 
         const earningsBody = document.getElementById('deepDiveEarningsBody');
         const aiContent = document.getElementById('deepDiveAIContent');
 
-        if (!earningsBody || !aiContent) return;
+        // Load Earnings & AI (Existing Logic)
+        if (earningsBody && aiContent) {
+            earningsBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm"></div> Loading data...</td></tr>';
+            aiContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Analyzing market data...</p></div>';
 
-        // Reset UI to Loading State
-        earningsBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-info spinner-border-sm"></div> Loading data...</td></tr>';
-        aiContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Analyzing market data...</p></div>';
+            API.fetch(`/api/stock/deep_dive?ticker=${ticker}`)
+                .then(data => {
+                    DeepDive.currentData = data.earnings;
+                    DeepDive.renderEarnings(data.earnings);
+                    DeepDive.renderChart('eps'); // Default view
+                    DeepDive.renderAI(data.ai_analysis, data.ticker);
+                })
+                .catch(err => {
+                    earningsBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+                    aiContent.innerHTML = `<div class="alert alert-danger">Analysis Failed: ${err.message}</div>`;
+                });
+        }
 
-        API.fetch(`/api/stock/deep_dive?ticker=${ticker}`)
-            .then(data => {
-                DeepDive.currentData = data.earnings;
-                DeepDive.renderEarnings(data.earnings);
-                DeepDive.renderChart('eps'); // Default view
-                DeepDive.renderAI(data.ai_analysis, data.ticker);
-            })
-            .catch(err => {
-                earningsBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
-                aiContent.innerHTML = `<div class="alert alert-danger">Analysis Failed: ${err.message}</div>`;
-            });
+        // Trigger details load (Other tabs)
+        DeepDive.loadDetails(ticker);
+    },
+
+    loadDetails: (ticker) => {
+        // Fetch Company Details (News, Mgmt, Analysts, Holders, Divs)
+        API.fetch(`/api/stock/details?ticker=${ticker}`)
+           .then(data => {
+               DeepDive.renderNews(data.news);
+               DeepDive.renderManagement(data.management);
+               DeepDive.renderAnalysts(data.analysts);
+               DeepDive.renderHolders(data.holders);
+               DeepDive.renderDividends(data.dividends, data.shorts);
+           })
+           .catch(err => {
+               console.error("Failed to load company details:", err);
+               // Can add error states to individual tabs if needed
+           });
+    },
+
+    renderNews: (news) => {
+        const container = document.getElementById('companyNewsContainer');
+        if (!container) return;
+
+        if (!news || news.length === 0) {
+            container.innerHTML = '<div class="col-12 text-center text-muted py-4">No recent company news found.</div>';
+            return;
+        }
+
+        let html = '';
+        news.slice(0, 8).forEach(item => { // Limit to 8
+             const date = new Date(item.providerPublishTime * 1000).toLocaleString();
+             html += `
+                <div class="col-md-6">
+                    <div class="card bg-darker h-100 border-0">
+                        <div class="card-body p-2 d-flex gap-3">
+                            ${item.thumbnail ? `<img src="${item.thumbnail}" class="rounded" style="width: 60px; height: 60px; object-fit: cover;">` : '<div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;"><i class="fa-regular fa-newspaper text-white-50"></i></div>'}
+                            <div class="overflow-hidden">
+                                <a href="${item.link}" target="_blank" class="text-white text-decoration-none small fw-bold d-block text-truncate mb-1" title="${item.title}">${item.title}</a>
+                                <div class="x-small text-muted">${item.publisher} • ${date}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+             `;
+        });
+        container.innerHTML = html;
+    },
+
+    renderManagement: (mgmt) => {
+        const tbody = document.getElementById('mgmtBody');
+        if (!tbody) return;
+
+        if (!mgmt || mgmt.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No management info available</td></tr>';
+            return;
+        }
+
+        let html = '';
+        mgmt.slice(0, 10).forEach(m => {
+            html += `
+                <tr>
+                    <td class="fw-bold text-white">${m.name || 'N/A'}</td>
+                    <td class="text-muted small">${m.title || 'N/A'}</td>
+                    <td class="text-end">${m.age || '-'}</td>
+                    <td class="text-end text-info">${m.pay ? Utils.formatNumber(m.pay) : '-'}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    },
+
+    renderAnalysts: (data) => {
+        if (!data) return;
+
+        const recEl = document.getElementById('anrRecommendation');
+        const countEl = document.getElementById('anrCount');
+        const lowEl = document.getElementById('anrLow');
+        const meanEl = document.getElementById('anrMean');
+        const highEl = document.getElementById('anrHigh');
+
+        if (recEl) {
+            const rec = data.recommendationKey || 'none';
+            recEl.innerText = rec.replace('_', ' ').toUpperCase();
+
+            // Color code
+            if (rec.includes('buy')) recEl.className = 'text-success fw-bold my-3';
+            else if (rec.includes('sell')) recEl.className = 'text-danger fw-bold my-3';
+            else recEl.className = 'text-warning fw-bold my-3';
+        }
+
+        if (countEl) countEl.innerText = `${data.numberOfAnalystOpinions || 0} Opinions`;
+
+        if (lowEl) lowEl.innerText = data.targetLow || '--';
+        if (meanEl) meanEl.innerText = data.targetMean || '--';
+        if (highEl) highEl.innerText = data.targetHigh || '--';
+
+        // Progress bars
+        if (data.targetLow && data.targetHigh && data.targetMean) {
+            const range = data.targetHigh - data.targetLow;
+            const meanPct = ((data.targetMean - data.targetLow) / range) * 100;
+
+            // This visualization is tricky without current price reference,
+            // but let's just show relative position of mean in the range
+            document.getElementById('anrLowBar').style.width = '20%'; // Fixed visual
+            document.getElementById('anrMeanBar').style.width = '60%'; // Fixed visual area
+            document.getElementById('anrHighBar').style.width = '20%'; // Fixed visual
+
+            // Better: Marker for current price? Not available in this context easily without passing it.
+        }
+    },
+
+    renderHolders: (holders) => {
+        const tbody = document.getElementById('holdersBody');
+        if (!tbody) return;
+
+        const inst = holders.institutional || [];
+        if (inst.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No holder info available</td></tr>';
+            return;
+        }
+
+        let html = '';
+        inst.forEach(h => {
+            html += `
+                <tr>
+                    <td class="text-white">${h.Holder || h[0] || 'N/A'}</td>
+                    <td class="text-end text-muted">${h.Shares || h[1] || '-'}</td>
+                    <td class="text-end text-info">${h.Value || h[4] || '-'}</td>
+                    <td class="text-end">${h['% Out'] || h[3] || '-'}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    },
+
+    renderDividends: (divs, shorts) => {
+        if (divs) {
+            document.getElementById('divYield').innerText = divs.yield ? (divs.yield * 100).toFixed(2) + '%' : 'N/A';
+            document.getElementById('divRate').innerText = divs.rate || 'N/A';
+            document.getElementById('divPayout').innerText = divs.payoutRatio ? (divs.payoutRatio * 100).toFixed(2) + '%' : 'N/A';
+
+            if (divs.exDividendDate) {
+                 const date = new Date(divs.exDividendDate * 1000).toLocaleDateString();
+                 document.getElementById('divDate').innerText = date;
+            } else {
+                 document.getElementById('divDate').innerText = 'N/A';
+            }
+        }
+
+        if (shorts) {
+            document.getElementById('shortFloat').innerText = shorts.shortPercentFloat ? (shorts.shortPercentFloat * 100).toFixed(2) + '%' : 'N/A';
+            document.getElementById('shortRatio').innerText = shorts.shortRatio || 'N/A';
+            document.getElementById('shortShares').innerText = shorts.sharesShort ? Utils.formatNumber(shorts.sharesShort) : 'N/A';
+        }
     },
 
     toggleChart: (type, btn) => {

@@ -341,6 +341,27 @@ td {
     color: white;
 }
 
+/* Tab Styles */
+.nav-tabs .nav-link {
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+.nav-tabs .nav-link:hover {
+    color: var(--text-main);
+    background: var(--bg-hover);
+    border: none;
+    border-bottom: 2px solid var(--border);
+}
+.nav-tabs .nav-link.active {
+    color: var(--primary) !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid var(--primary) !important;
+}
+
 /* Toast Notifications */
 .toast-container {
     position: fixed;
