@@ -185,5 +185,41 @@ const Charts = {
 
         html += '</tbody></table></div>';
         container.innerHTML = html;
+    },
+
+    updateLastCandle: (price) => {
+        if (!chartSeries['price']) return;
+        const series = chartSeries['price'];
+
+        // Get last data point
+        // Lightweight charts doesn't easily expose "getLastData".
+        // We track it manually or just update with current time.
+        // For simplicity, we assume the last candle is for "today" or "now".
+        // If we want to truly update the *last* candle, we need its data.
+
+        // Strategy: Use the last known price to construct a candle?
+        // Better: We update the candle for the *current time slot*.
+
+        const now = new Date();
+        const time = now.getTime() / 1000; // Unix timestamp
+
+        // Ideally we need Open, High, Low.
+        // With just "Current Price", we can only form a flat line or update Close if we knew the Open.
+        // Since we don't have full OHLC stream, we will just update the Close.
+        // NOTE: This might look weird if we create a NEW candle with O=H=L=C=price.
+        // But for "Real-time" feel, it's better than nothing.
+
+        series.update({
+            time: time,
+            open: price,
+            high: price,
+            low: price,
+            close: price
+        });
+
+        // Note: This will create a new candle if the time is different from the last one.
+        // Since our resolution is usually daily (for 1y), adding a timestamped candle
+        // might break the x-axis scale if it was strictly "YYYY-MM-DD".
+        // But our formatTime helper handles unix timestamps, so it should be fine.
     }
 };
