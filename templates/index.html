@@ -34,11 +34,8 @@
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="watchlist" data-bs-dismiss="offcanvas"><i class="fa-solid fa-list me-2"></i>Watch</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chart" data-bs-dismiss="offcanvas"><i class="fa-solid fa-microscope me-2"></i>Deep Analysis</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chain" data-bs-dismiss="offcanvas"><i class="fa-solid fa-link me-2"></i>Chain</button>
-                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="comparison" data-bs-dismiss="offcanvas"><i class="fa-solid fa-code-compare me-2"></i>Compare</button>
-                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="correlation" data-bs-dismiss="offcanvas"><i class="fa-solid fa-project-diagram me-2"></i>Correl</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="monteCarlo" data-bs-dismiss="offcanvas"><i class="fa-solid fa-dice me-2"></i>Sims</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="optionsDashboard" data-bs-dismiss="offcanvas"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
-                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="customIndicators" data-bs-dismiss="offcanvas"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Indicators</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="patterns" data-bs-dismiss="offcanvas"><i class="fa-solid fa-brain me-2"></i>Patterns</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="heatmap" data-bs-dismiss="offcanvas"><i class="fa-solid fa-border-all me-2"></i>Map</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="calendar" data-bs-dismiss="offcanvas"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
@@ -132,11 +129,8 @@
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="watchlist"><i class="fa-solid fa-list me-2"></i>Watch</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chart"><i class="fa-solid fa-microscope me-2"></i>Deep Analysis</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="chain"><i class="fa-solid fa-link me-2"></i>Chain</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="comparison"><i class="fa-solid fa-code-compare me-2"></i>Compare</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="correlation"><i class="fa-solid fa-project-diagram me-2"></i>Correl</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="monteCarlo"><i class="fa-solid fa-dice me-2"></i>Sims</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="optionsDashboard"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="customIndicators"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Indicators</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="patterns"><i class="fa-solid fa-brain me-2"></i>Patterns</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="heatmap"><i class="fa-solid fa-border-all me-2"></i>Map</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="calendar"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
@@ -319,70 +313,180 @@
                         </div>
                     </div>
 
-                    <!-- Merged Deep Dive Content -->
-                    <div class="row g-2 mt-2">
-                        <!-- Left: Earnings Chart/Table -->
-                        <div class="col-lg-5">
-                            <div class="card h-100">
-                                <div class="card-header py-2 px-3 font-monospace small fw-bold d-flex justify-content-between align-items-center">
-                                    <span>EARNINGS (Last 5)</span>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button type="button" class="btn btn-outline-secondary p-0 px-2 active" onclick="DeepDive.toggleChart('eps', this)">EPS</button>
-                                        <button type="button" class="btn btn-outline-secondary p-0 px-2" onclick="DeepDive.toggleChart('rev', this)">REV</button>
-                                    </div>
-                                </div>
-                                <div class="card-body p-2 position-relative">
-                                    <div style="height: 200px; width: 100%;">
-                                        <canvas id="earningsChart"></canvas>
-                                    </div>
-                                    <div class="table-responsive mt-2" style="max-height: 150px;">
-                                        <table class="table table-dark table-sm table-hover mb-0 font-monospace x-small">
-                                            <thead>
-                                                <tr>
-                                                    <th>Date</th>
-                                                    <th class="text-end">Est</th>
-                                                    <th class="text-end">Act</th>
-                                                    <th class="text-end">Rev</th>
-                                                    <th class="text-end">Move</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="deepDiveEarningsBody">
-                                                <tr><td colspan="5" class="text-center text-muted py-3">Load a stock to see earnings</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+                    <!-- Deep Dive Content (Tabs) -->
+                    <div class="card mt-2 border-secondary">
+                        <div class="card-header p-0 border-bottom border-secondary">
+                            <ul class="nav nav-tabs nav-fill font-monospace small border-0" id="deepDiveTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active rounded-0 py-2 text-uppercase" id="tab-earnings" data-bs-toggle="tab" data-bs-target="#pane-earnings" type="button">
+                                        <i class="fa-solid fa-sack-dollar me-1"></i> Earnings
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link rounded-0 py-2 text-uppercase" id="tab-news" data-bs-toggle="tab" data-bs-target="#pane-news" type="button">
+                                        <i class="fa-regular fa-newspaper me-1"></i> News
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link rounded-0 py-2 text-uppercase" id="tab-mgmt" data-bs-toggle="tab" data-bs-target="#pane-mgmt" type="button">
+                                        <i class="fa-solid fa-user-tie me-1"></i> Mgmt
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link rounded-0 py-2 text-uppercase" id="tab-analysts" data-bs-toggle="tab" data-bs-target="#pane-analysts" type="button">
+                                        <i class="fa-solid fa-bullhorn me-1"></i> Analysts
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link rounded-0 py-2 text-uppercase" id="tab-holders" data-bs-toggle="tab" data-bs-target="#pane-holders" type="button">
+                                        <i class="fa-solid fa-hand-holding-dollar me-1"></i> Holders
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link rounded-0 py-2 text-uppercase" id="tab-dividends" data-bs-toggle="tab" data-bs-target="#pane-dividends" type="button">
+                                        <i class="fa-solid fa-coins me-1"></i> Divs & Short
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
+                        <div class="card-body p-3">
+                            <div class="tab-content" id="deepDiveTabsContent">
 
-                        <!-- Right: AI Analysis -->
-                        <div class="col-lg-7">
-                            <div class="card h-100 border-secondary">
-                                <div class="card-header py-2 px-3 font-monospace small fw-bold d-flex justify-content-between">
-                                    <span>AI ANALYST OPINION</span>
-                                    <span class="badge bg-primary opacity-50">GPT-4o</span>
-                                </div>
-                                <div class="card-body p-3 font-monospace">
-                                    <div id="deepDiveAIContent">
-                                        <div class="text-center text-muted py-5">
-                                            Load a stock to generate AI analysis.
+                                <!-- EARNINGS PANE -->
+                                <div class="tab-pane fade show active" id="pane-earnings" role="tabpanel">
+                                    <div class="row g-2">
+                                        <!-- Left: Earnings Chart/Table -->
+                                        <div class="col-lg-5">
+                                            <div class="card h-100 border-0 bg-darker">
+                                                <div class="card-header py-1 px-3 bg-transparent border-0 font-monospace small fw-bold d-flex justify-content-between align-items-center">
+                                                    <span>Last 5 Earnings</span>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <button type="button" class="btn btn-outline-secondary p-0 px-2 active" onclick="DeepDive.toggleChart('eps', this)">EPS</button>
+                                                        <button type="button" class="btn btn-outline-secondary p-0 px-2" onclick="DeepDive.toggleChart('rev', this)">REV</button>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body p-2 position-relative">
+                                                    <div style="height: 200px; width: 100%;">
+                                                        <canvas id="earningsChart"></canvas>
+                                                    </div>
+                                                    <div class="table-responsive mt-2" style="max-height: 150px;">
+                                                        <table class="table table-dark table-sm table-hover mb-0 font-monospace x-small">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Date</th>
+                                                                    <th class="text-end">Est</th>
+                                                                    <th class="text-end">Act</th>
+                                                                    <th class="text-end">Rev</th>
+                                                                    <th class="text-end">Move</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="deepDiveEarningsBody">
+                                                                <tr><td colspan="5" class="text-center text-muted py-3">Load a stock to see earnings</td></tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Right: AI Analysis -->
+                                        <div class="col-lg-7">
+                                            <div class="card h-100 border-0 bg-darker">
+                                                <div class="card-header py-1 px-3 bg-transparent border-0 font-monospace small fw-bold d-flex justify-content-between">
+                                                    <span>AI Analyst Opinion</span>
+                                                    <span class="badge bg-primary opacity-50">GPT-4o</span>
+                                                </div>
+                                                <div class="card-body p-3 font-monospace">
+                                                    <div id="deepDiveAIContent">
+                                                        <div class="text-center text-muted py-5">
+                                                            Load a stock to generate AI analysis.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- VIEW: CORRELATION -->
-                <div id="viewCorrelation" class="view-section d-none">
-                    <div class="card">
-                        <div class="card-header py-2 px-3 font-monospace small fw-bold text-primary d-flex justify-content-between">
-                            <span><i class="fa-solid fa-project-diagram me-1"></i> PORTFOLIO CORRELATION MATRIX</span>
-                            <button class="btn btn-xs btn-primary" onclick="App.loadCorrelation()">Refresh</button>
-                        </div>
-                        <div class="card-body p-4" id="correlationContainer">
-                            <div class="text-center text-muted">Select tickers in your watchlist to see correlation.</div>
+                                <!-- NEWS PANE -->
+                                <div class="tab-pane fade" id="pane-news" role="tabpanel">
+                                    <div id="companyNewsContainer" class="row g-2 font-monospace"></div>
+                                </div>
+
+                                <!-- MGMT PANE -->
+                                <div class="tab-pane fade" id="pane-mgmt" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table table-dark table-sm table-hover mb-0 font-monospace small">
+                                            <thead><tr><th>Name</th><th>Title</th><th class="text-end">Age</th><th class="text-end">Pay</th></tr></thead>
+                                            <tbody id="mgmtBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- ANALYSTS PANE -->
+                                <div class="tab-pane fade" id="pane-analysts" role="tabpanel">
+                                    <div class="row g-2 font-monospace">
+                                        <div class="col-md-4">
+                                            <div class="card bg-darker h-100 p-3 text-center">
+                                                <h6 class="text-muted">Consensus</h6>
+                                                <h2 id="anrRecommendation" class="text-white fw-bold my-3">--</h2>
+                                                <div id="anrCount" class="small text-muted">0 Opinions</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="card bg-darker h-100 p-3">
+                                                <h6 class="text-muted mb-3">Price Targets</h6>
+                                                <div class="d-flex justify-content-between align-items-center mb-2 small text-muted">
+                                                    <span>Low</span>
+                                                    <span>Average</span>
+                                                    <span>High</span>
+                                                </div>
+                                                <div class="progress" style="height: 10px;">
+                                                    <div id="anrLowBar" class="progress-bar bg-danger" role="progressbar" style="width: 0%"></div>
+                                                    <div id="anrMeanBar" class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
+                                                    <div id="anrHighBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                                                </div>
+                                                <div class="d-flex justify-content-between mt-2 small text-white fw-bold">
+                                                    <span id="anrLow">--</span>
+                                                    <span id="anrMean">--</span>
+                                                    <span id="anrHigh">--</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- HOLDERS PANE -->
+                                <div class="tab-pane fade" id="pane-holders" role="tabpanel">
+                                    <h6 class="font-monospace text-primary mb-2 small">TOP INSTITUTIONAL HOLDERS</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-dark table-sm table-hover mb-0 font-monospace x-small">
+                                            <thead><tr><th>Holder</th><th class="text-end">Shares</th><th class="text-end">Value</th><th class="text-end">% Out</th></tr></thead>
+                                            <tbody id="holdersBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- DIVIDENDS PANE -->
+                                <div class="tab-pane fade" id="pane-dividends" role="tabpanel">
+                                    <div class="row g-3 font-monospace">
+                                        <div class="col-md-6">
+                                            <h6 class="text-success small mb-2 border-bottom border-secondary pb-1">DIVIDENDS</h6>
+                                            <div class="d-flex justify-content-between mb-1 small"><span>Yield:</span> <span id="divYield" class="text-white">--</span></div>
+                                            <div class="d-flex justify-content-between mb-1 small"><span>Rate:</span> <span id="divRate" class="text-white">--</span></div>
+                                            <div class="d-flex justify-content-between mb-1 small"><span>Payout Ratio:</span> <span id="divPayout" class="text-white">--</span></div>
+                                            <div class="d-flex justify-content-between mb-1 small"><span>Ex-Div Date:</span> <span id="divDate" class="text-white">--</span></div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="text-danger small mb-2 border-bottom border-secondary pb-1">SHORT INTEREST</h6>
+                                            <div class="d-flex justify-content-between mb-1 small"><span>Short % Float:</span> <span id="shortFloat" class="text-white">--</span></div>
+                                            <div class="d-flex justify-content-between mb-1 small"><span>Short Ratio:</span> <span id="shortRatio" class="text-white">--</span></div>
+                                            <div class="d-flex justify-content-between mb-1 small"><span>Shares Short:</span> <span id="shortShares" class="text-white">--</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -594,65 +698,6 @@
                     </div>
                 </div>
 
-                <!-- VIEW: STOCK COMPARISON -->
-                <div id="viewComparison" class="view-section d-none">
-                    <div class="card">
-                        <div class="card-header py-2 px-3 font-monospace small fw-bold text-info d-flex justify-content-between align-items-center">
-                            <span><i class="fa-solid fa-code-compare me-1"></i> STOCK COMPARISON</span>
-                            <div class="d-flex gap-2 flex-wrap">
-                                <input type="text" id="compare1" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ticker 1" style="width: 100px;">
-                                <input type="text" id="compare2" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ticker 2" style="width: 100px;">
-                                <input type="text" id="compare3" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ticker 3 (opt)" style="width: 100px;">
-                                <button class="btn btn-sm btn-outline-info" onclick="Comparison.load()">Compare</button>
-                            </div>
-                        </div>
-                        <div class="card-body p-3">
-                            <div id="comparisonContainer">
-                                <div class="text-center text-muted">Enter 2-3 tickers to compare</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- VIEW: CUSTOM INDICATORS -->
-                <div id="viewCustomIndicators" class="view-section d-none">
-                    <div class="row g-2">
-                        <div class="col-lg-8">
-                            <div class="card">
-                                <div class="card-header py-2 px-3 font-monospace small fw-bold text-warning">
-                                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> INDICATOR BUILDER
-                                </div>
-                                <div class="card-body p-3">
-                                    <div id="indicatorBuilder">
-                                        <div class="mb-3">
-                                            <label class="form-label small text-muted">Strategy Name</label>
-                                            <input type="text" id="strategyName" class="form-control bg-dark text-white border-secondary" placeholder="My Custom Strategy">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label small text-muted">Conditions (Add multiple)</label>
-                                            <div id="conditionsContainer"></div>
-                                            <button class="btn btn-sm btn-outline-secondary mt-2" onclick="CustomIndicators.addCondition()">
-                                                <i class="fa-solid fa-plus"></i> Add Condition
-                                            </button>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-primary" onclick="CustomIndicators.save()">Save Strategy</button>
-                                            <button class="btn btn-outline-info" onclick="CustomIndicators.backtest()">Backtest</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="card">
-                                <div class="card-header py-2 px-3 font-monospace small fw-bold">SAVED STRATEGIES</div>
-                                <div class="card-body p-2">
-                                    <div id="savedStrategies"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- VIEW: PATTERN RECOGNITION -->
                 <div id="viewPatterns" class="view-section d-none">

@@ -12,18 +12,23 @@ const UI = {
                     else b.classList.remove('active');
                 });
 
-                const viewId = 'view' + viewName.charAt(0).toUpperCase() + viewName.slice(1);
+                // Map view names to IDs explicitly
+                let targetId = 'view' + viewName.charAt(0).toUpperCase() + viewName.slice(1);
+
+                // Overrides for mismatched IDs
+                if (viewName === 'chart') targetId = 'viewStock';
+
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('d-none'));
 
-                const target = document.getElementById(viewId);
+                const target = document.getElementById(targetId);
                 if(target) {
                     target.classList.remove('d-none');
                     App.loadViewData(viewName);
                 } else {
-                    // Fallback logic
-                    if(viewName === 'chart') document.getElementById('viewStock').classList.remove('d-none');
-                    else if (viewName === 'market') document.getElementById('viewMarket').classList.remove('d-none'); // Explicit default
-                    else document.getElementById('viewOptionsDashboard').classList.remove('d-none');
+                    console.warn(`View target #${targetId} not found`);
+                    // Fallback for safety
+                    const market = document.getElementById('viewMarket');
+                    if(market) market.classList.remove('d-none');
                 }
             });
         });
