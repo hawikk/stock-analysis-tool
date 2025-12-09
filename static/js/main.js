@@ -243,10 +243,55 @@ const App = {
         App.fetchAI(ticker);
         App.fetchStockNews(ticker);
 
+        // Start Real-time Chart Polling
+        App.startChartPolling(ticker);
+
         // Trigger Deep Dive Data
         if (typeof DeepDive !== 'undefined') {
             DeepDive.load(ticker);
         }
+    },
+
+    startChartPolling: (ticker) => {
+        // Clear any existing chart interval
+        if (App.state.chartInterval) clearInterval(App.state.chartInterval);
+
+        // Only poll if view is chart/deep analysis
+        App.state.chartInterval = setInterval(() => {
+             const chartView = document.getElementById('viewStock');
+             if (chartView && !chartView.classList.contains('d-none') && App.state.currentTicker === ticker) {
+                 App.updateStockRealtime(ticker);
+             } else {
+                 clearInterval(App.state.chartInterval);
+             }
+        }, 30000); // 30s
+    },
+
+    updateStockRealtime: (ticker) => {
+        API.post('/api/realtime/prices', { tickers: [ticker] })
+           .then(data => {
+               if(data[ticker]) {
+                   const priceData = data[ticker];
+                   // Update Banner
+                   const currentEl = document.getElementById('currentPrice');
+                   if(currentEl) currentEl.innerText = `$${priceData.price}`;
+
+                   const changeEl = document.getElementById('priceChange');
+                   if(changeEl) {
+                        const chgAmt = priceData.change_amt || 0;
+                        const chgPct = priceData.change_pct || priceData.change || 0;
+
+                        const color = chgAmt >= 0 ? 'text-success' : 'text-danger';
+                        const sign = chgAmt >= 0 ? '+' : '';
+
+                        changeEl.innerHTML = `<span class="${color}">${sign}${chgAmt.toFixed(2)} (${sign}${chgPct.toFixed(2)}%)</span>`;
+                   }
+
+                   // Update Chart
+                   Charts.updateLastCandle(priceData.price);
+               }
+           })
+           .catch(console.error);
     },
 
     fetchInfo: (ticker) => {
@@ -258,6 +303,18 @@ const App = {
 
             document.getElementById('stockName').innerText = safe(info.name) === 'N/A' ? ticker : info.name;
             document.getElementById('currentPrice').innerText = safe(info.currentPrice) !== 'N/A' ? `$${info.currentPrice}` : '---';
+
+            // Render Change
+            const changeEl = document.getElementById('priceChange');
+            if (changeEl && safe(info.change) !== 'N/A') {
+                const chg = info.change;
+                const pct = info.changePercent;
+                const color = chg >= 0 ? 'text-success' : 'text-danger';
+                const sign = chg >= 0 ? '+' : '';
+                changeEl.innerHTML = `<span class="${color}">${sign}${chg} (${sign}${pct}%)</span>`;
+            } else {
+                if(changeEl) changeEl.innerText = '---';
+            }
 
             const grid = document.getElementById('fundamentalsGrid');
             // Improvement: add spacing and alignment for legibility

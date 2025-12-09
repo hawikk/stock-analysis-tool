@@ -1015,13 +1015,51 @@ def get_info():
             yf_info = t.info  # Get full info dict from yfinance
             
             # Get current price (fast)
+            change = 0.0
+            change_percent = 0.0
+
             if hasattr(t, 'fast_info'):
-                price = t.fast_info.get('last_price', 'N/A')
+                try:
+                    price = t.fast_info['lastPrice']
+                    prev = t.fast_info['previousClose']
+                    if price and prev:
+                         change = price - prev
+                         change_percent = (change / prev) * 100
+                    else:
+                         price = 'N/A'
+                except Exception as e:
+                    # Fallback for some yfinance versions that use snake_case keys or attribute access
+                    try:
+                        price = t.fast_info['last_price']
+                        prev = t.fast_info['previous_close']
+                        if price and prev:
+                             change = price - prev
+                             change_percent = (change / prev) * 100
+                        else:
+                             price = 'N/A'
+                    except:
+                        # Fallback to history if fast_info completely fails
+                        hist = t.history(period="1d")
+                        if not hist.empty:
+                            price = hist['Close'].iloc[-1]
+                            prev = hist['Open'].iloc[0]
+                            change = price - prev
+                            change_percent = (change / prev) * 100
+                        else:
+                            price = 'N/A'
             else:
                 hist = t.history(period="1d")
-                price = hist['Close'].iloc[-1] if not hist.empty else 'N/A'
+                if not hist.empty:
+                    price = hist['Close'].iloc[-1]
+                    prev = hist['Open'].iloc[0] # Fallback
+                    change = price - prev
+                    change_percent = (change / prev) * 100
+                else:
+                    price = 'N/A'
 
             info['currentPrice'] = round(price, 2) if isinstance(price, (int, float)) else price
+            info['change'] = round(change, 2)
+            info['changePercent'] = round(change_percent, 2)
 
             # Get P/E Ratio from yfinance (FREE!)
             if yf_info and isinstance(yf_info, dict):
@@ -1444,11 +1482,14 @@ def get_realtime_prices():
                     if len(close) > 0:
                         current = float(close.iloc[-1])
                         prev = float(close.iloc[0]) if len(close) > 1 else current
-                        change = ((current - prev) / prev) * 100
+                        change_amt = current - prev
+                        change_pct = (change_amt / prev) * 100
                         
                         results[ticker] = {
                             'price': round(current, 2),
-                            'change': round(change, 2),
+                            'change': round(change_pct, 2), # Keep for backward compatibility (Watchlist uses this)
+                            'change_amt': round(change_amt, 2),
+                            'change_pct': round(change_pct, 2),
                             'timestamp': datetime.datetime.now().isoformat()
                         }
             except:
