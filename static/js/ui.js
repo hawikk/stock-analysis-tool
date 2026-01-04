@@ -251,5 +251,50 @@ const UI = {
             `;
             tbody.appendChild(tr);
         });
+    },
+
+    renderEarningsCards: (earnings) => {
+        const grid = document.getElementById('earningsGrid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+
+        if (!earnings || earnings.length === 0) {
+            grid.innerHTML = '<div class="col-12 text-center text-muted py-4">No upcoming earnings found.</div>';
+            return;
+        }
+
+        earnings.forEach(e => {
+            const div = document.createElement('div');
+            div.className = 'col-md-6';
+
+            // Determine border color based on date proximity (optional)
+            let borderClass = 'border-secondary';
+
+            div.innerHTML = `
+                <div class="card bg-darker ${borderClass} h-100 earning-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="card-title fw-bold text-white mb-0" style="cursor: pointer;" onclick="App.loadStock('${e.ticker}')">
+                                ${e.ticker} <span class="text-muted x-small ms-1">${e.name}</span>
+                            </h5>
+                            <span class="badge bg-primary opacity-75">${new Date(e.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>
+                        </div>
+
+                        <div class="row g-2 font-monospace small">
+                            <div class="col-6">
+                                <div class="text-muted x-small text-uppercase">Est. EPS</div>
+                                <div class="fw-bold text-white">${e.eps_est !== 'N/A' ? '$' + e.eps_est : '-'}</div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <div class="text-muted x-small text-uppercase">Est. Rev</div>
+                                <div class="fw-bold text-white">${e.rev_est}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(div);
+        });
     }
 };

@@ -399,11 +399,27 @@ def get_earnings_calendar():
                         dates = sorted(dates)
                         for d in dates:
                             if d >= today:
+                                # Extract estimates
+                                eps_est = cal.get('Earnings Average', 'N/A')
+                                rev_est = cal.get('Revenue Average', 'N/A')
+
+                                # Format Revenue
+                                rev_formatted = "N/A"
+                                if isinstance(rev_est, (int, float)):
+                                    if rev_est >= 1e9:
+                                        rev_formatted = f"${rev_est / 1e9:.2f}B"
+                                    elif rev_est >= 1e6:
+                                        rev_formatted = f"${rev_est / 1e6:.2f}M"
+                                    else:
+                                        rev_formatted = f"${rev_est:.2f}"
+
                                 earnings_list.append({
                                     'ticker': sym,
                                     'name': sym,
                                     'date': d.strftime('%Y-%m-%d'),
-                                    'time': 'N/A'
+                                    'time': 'N/A',
+                                    'eps_est': round(eps_est, 2) if isinstance(eps_est, (int, float)) else 'N/A',
+                                    'rev_est': rev_formatted
                                 })
                                 break
             except: continue
