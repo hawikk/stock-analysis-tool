@@ -38,8 +38,7 @@
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="optionsDashboard" data-bs-dismiss="offcanvas"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="patterns" data-bs-dismiss="offcanvas"><i class="fa-solid fa-brain me-2"></i>Patterns</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="heatmap" data-bs-dismiss="offcanvas"><i class="fa-solid fa-border-all me-2"></i>Map</button>
-                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="calendar" data-bs-dismiss="offcanvas"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
-                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="earnings" data-bs-dismiss="offcanvas"><i class="fa-solid fa-sack-dollar me-2"></i>Earn</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="schedule" data-bs-dismiss="offcanvas"><i class="fa-regular fa-calendar-days me-2"></i>Schedule</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="forex" data-bs-dismiss="offcanvas"><i class="fa-solid fa-money-bill-transfer me-2"></i>Forex</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="macro_social" data-bs-dismiss="offcanvas"><i class="fa-solid fa-earth-americas me-2"></i>Macro & Soc</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="alerts" data-bs-dismiss="offcanvas"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
@@ -133,8 +132,7 @@
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="optionsDashboard"><i class="fa-solid fa-chart-gantt me-2"></i>Options</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="patterns"><i class="fa-solid fa-brain me-2"></i>Patterns</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="heatmap"><i class="fa-solid fa-border-all me-2"></i>Map</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="calendar"><i class="fa-regular fa-calendar me-2"></i>Econ</button>
-                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="earnings"><i class="fa-solid fa-sack-dollar me-2"></i>Earn</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="schedule"><i class="fa-regular fa-calendar-days me-2"></i>Schedule</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="forex"><i class="fa-solid fa-money-bill-transfer me-2"></i>Forex</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="macro_social"><i class="fa-solid fa-earth-americas me-2"></i>Macro & Soc</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="alerts"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
@@ -560,50 +558,38 @@
                     <div id="heatmapGrid" class="row g-2"></div>
                 </div>
 
-                <!-- VIEW: CALENDAR -->
-                <div id="viewCalendar" class="view-section d-none">
-                    <div class="card">
-                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-info">
-                            <i class="fa-regular fa-calendar me-1"></i> ECONOMIC CALENDAR
+                <!-- VIEW: SCHEDULE (Calendar + Earnings) -->
+                <div id="viewSchedule" class="view-section d-none">
+                     <div class="row g-4">
+                        <!-- Left: Economic Calendar -->
+                        <div class="col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-header py-2 px-3 font-monospace small fw-bold text-info">
+                                    <i class="fa-regular fa-calendar me-1"></i> ECONOMIC CALENDAR
+                                </div>
+                                <div class="card-body p-0 table-responsive">
+                                    <table class="table table-dark table-sm mb-0 font-monospace">
+                                        <thead>
+                                            <tr>
+                                                <th>DATE</th>
+                                                <th>TIME</th>
+                                                <th>EVENT</th>
+                                                <th>IMPACT</th>
+                                                <th>FCST</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="calendarBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body p-0">
-                            <table class="table table-dark table-sm mb-0 font-monospace">
-                                <thead>
-                                    <tr>
-                                        <th>DATE</th>
-                                        <th>TIME</th>
-                                        <th>EVENT</th>
-                                        <th>IMPACT</th>
-                                        <th>PREV</th>
-                                        <th>FCST</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="calendarBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- VIEW: EARNINGS -->
-                <div id="viewEarnings" class="view-section d-none">
-                    <div class="card">
-                         <div class="card-header py-2 px-3 font-monospace small fw-bold text-success">
-                            <i class="fa-solid fa-sack-dollar me-1"></i> UPCOMING EARNINGS
+                        <!-- Right: Upcoming Earnings -->
+                        <div class="col-lg-6">
+                            <h6 class="font-monospace text-success small mb-2"><i class="fa-solid fa-sack-dollar me-1"></i> UPCOMING EARNINGS</h6>
+                            <div id="earningsGrid" class="row g-2"></div>
                         </div>
-                        <div class="card-body p-0">
-                            <table class="table table-dark table-sm mb-0 font-monospace">
-                                <thead>
-                                    <tr>
-                                        <th>TICKER</th>
-                                        <th>NAME</th>
-                                        <th>DATE</th>
-                                        <th>TIME</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="earningsBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
+                     </div>
                 </div>
 
                 <!-- VIEW: FOREX -->

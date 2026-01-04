@@ -159,8 +159,7 @@ const App = {
         }
         if (viewName === 'optionsDashboard') App.loadWhaleActivity();
         if (viewName === 'heatmap') App.loadHeatmap();
-        if (viewName === 'calendar') App.loadCalendar();
-        if (viewName === 'earnings') App.loadEarnings();
+        if (viewName === 'schedule') App.loadSchedule();
         if (viewName === 'forex') App.loadForex();
         if (viewName === 'macro_social') { App.loadMacro(); App.loadSocial(); }
         if (viewName === 'correlation') App.loadCorrelation();
@@ -459,30 +458,43 @@ const App = {
         });
     },
 
+    loadSchedule: () => {
+        App.loadCalendar();
+        App.loadEarnings();
+    },
+
     loadCalendar: () => {
         const tbody = document.getElementById('calendarBody');
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading Calendar...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading Calendar...</td></tr>';
         API.fetch('/api/market/calendar').then(data => {
             tbody.innerHTML = '';
             if(data.events) data.events.forEach(e => {
                 const tr = document.createElement('tr');
                 let impactColor = e.impact === 'High' ? 'text-danger fw-bold' : (e.impact === 'Medium' ? 'text-warning' : 'text-muted');
-                tr.innerHTML = `<td class="text-white fw-bold">${new Date(e.date).toLocaleDateString()}</td><td class="text-muted">${e.time}</td><td class="text-white">${e.event}</td><td class="${impactColor}">${e.impact}</td><td class="text-muted">${e.previous}</td><td class="text-info">${e.forecast}</td>`;
+                tr.innerHTML = `<td class="text-white fw-bold">${new Date(e.date).toLocaleDateString()}</td><td class="text-muted">${e.time}</td><td class="text-white">${e.event}</td><td class="${impactColor}">${e.impact}</td><td class="text-info">${e.forecast}</td>`;
                 tbody.appendChild(tr);
             });
         });
     },
 
     loadEarnings: () => {
-         const tbody = document.getElementById('earningsBody');
-         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading Earnings...</td></tr>';
+         const grid = document.getElementById('earningsGrid');
+         grid.innerHTML = '<div class="col-12 text-center text-muted py-4">Loading Earnings Data...</div>';
          API.fetch('/api/market/earnings').then(data => {
-             tbody.innerHTML = '';
-             if(data.earnings) data.earnings.forEach(e => {
-                 const tr = document.createElement('tr');
-                 tr.innerHTML = `<td class="text-white fw-bold">${e.ticker}</td><td class="text-muted">${e.name}</td><td class="text-white">${e.date}</td><td class="text-warning">${e.time}</td>`;
-                 tbody.appendChild(tr);
-             });
+             grid.innerHTML = '';
+             if(data.earnings) {
+                if (typeof UI.renderEarningsCards === 'function') {
+                    UI.renderEarningsCards(data.earnings);
+                } else {
+                    // Fallback if UI not updated yet
+                    data.earnings.forEach(e => {
+                         const div = document.createElement('div');
+                         div.className = 'col-md-6';
+                         div.innerHTML = `<div class="card bg-darker border-secondary"><div class="card-body">${e.ticker} - ${e.date}</div></div>`;
+                         grid.appendChild(div);
+                    });
+                }
+             }
          });
     },
 
