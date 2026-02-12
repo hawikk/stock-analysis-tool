@@ -18,6 +18,14 @@ const UI = {
                 // Overrides for mismatched IDs
                 if (viewName === 'chart') targetId = 'viewStock';
 
+                // Truflation View Logic
+                if (viewName === 'truflation') {
+                    const iframe = document.getElementById('truflationFrame');
+                    if (iframe && !iframe.getAttribute('src')) {
+                        iframe.src = "https://truflation.com/dashboard/us";
+                    }
+                }
+
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('d-none'));
 
                 const target = document.getElementById(targetId);
