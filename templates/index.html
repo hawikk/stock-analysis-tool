@@ -43,6 +43,7 @@
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="forex" data-bs-dismiss="offcanvas"><i class="fa-solid fa-money-bill-transfer me-2"></i>Forex</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="macro_social" data-bs-dismiss="offcanvas"><i class="fa-solid fa-earth-americas me-2"></i>Macro & Soc</button>
                 <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="alerts" data-bs-dismiss="offcanvas"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
+                <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="truflation" data-bs-dismiss="offcanvas"><i class="fa-solid fa-percent me-2"></i>True CPI</button>
             </div>
         </div>
     </div>
@@ -103,6 +104,10 @@
             <i class="fa-solid fa-bell"></i>
             <span>Alerts</span>
         </a>
+        <a href="#" class="mobile-nav-item" data-view="truflation" onclick="event.preventDefault(); document.querySelector('[data-view=truflation]').click();">
+            <i class="fa-solid fa-percent"></i>
+            <span>True CPI</span>
+        </a>
     </div>
 
     <!-- Toast Container -->
@@ -138,6 +143,7 @@
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="forex"><i class="fa-solid fa-money-bill-transfer me-2"></i>Forex</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="macro_social"><i class="fa-solid fa-earth-americas me-2"></i>Macro & Soc</button>
                     <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="alerts"><i class="fa-solid fa-bell me-2"></i>Alerts</button>
+                    <button class="btn btn-outline-secondary btn-sm text-start w-100 nav-btn" data-view="truflation"><i class="fa-solid fa-percent me-2"></i>True CPI</button>
                 </div>
             </div>
 
@@ -719,6 +725,21 @@
                                     <div id="patternsList"></div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: TRUFLATION (TRUE CPI) -->
+                <div id="viewTruflation" class="view-section d-none">
+                    <div class="card h-100">
+                        <div class="card-header py-2 px-3 font-monospace small fw-bold text-white d-flex justify-content-between align-items-center bg-primary" style="--bs-bg-opacity: 0.1;">
+                            <span><i class="fa-solid fa-percent me-2"></i> TRUFLATION (REAL-TIME CPI)</span>
+                            <div class="d-flex gap-2">
+                                <a href="https://truflation.com/dashboard/us" target="_blank" class="btn btn-sm btn-outline-light"><i class="fa-solid fa-external-link-alt me-1"></i> Open</a>
+                            </div>
+                        </div>
+                        <div class="card-body p-0" style="background: #000;">
+                            <iframe id="truflationFrame" src="" style="width: 100%; height: 85vh; border: none;" allowfullscreen></iframe>
                         </div>
                     </div>
                 </div>
