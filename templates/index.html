@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Massive Market Terminal 2.0</title>
+    <title>Massive Terminal — Institutional-Grade Market Intelligence</title>
+    <meta name="description" content="A premium real-time market terminal with AI insights, options flow, pattern recognition, and institutional-grade tools.">
+    <meta name="theme-color" content="#0d1220">
     <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
@@ -55,8 +57,11 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
 
-            <a class="navbar-brand fw-bold font-monospace d-flex align-items-center gap-2 text-white" href="/">
-                <i class="fa-solid fa-layer-group text-primary"></i> MASSIVE TERMINAL <span class="badge bg-secondary ms-2 rounded-1" style="font-size: 0.5em; opacity: 0.7;">2.0</span>
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2 text-white" href="/">
+                <span class="brand-mark"><i class="fa-solid fa-bolt"></i></span>
+                <span class="d-none d-sm-inline" style="letter-spacing: 0.04em;">MASSIVE</span>
+                <span class="d-none d-md-inline text-muted fw-normal" style="letter-spacing: 0.06em; font-size: 0.85em;">TERMINAL</span>
+                <span class="badge ms-2">3.0</span>
             </a>
             
             <div class="d-flex align-items-center flex-grow-1 mx-lg-4 position-relative">
@@ -74,8 +79,10 @@
                     <i class="fa-solid fa-moon" id="themeIcon"></i>
                     <span class="d-none d-sm-inline small" id="themeLabel">Dark</span>
                 </button>
-                <span class="d-none d-lg-inline font-monospace small text-muted">
-                    <i class="fa-solid fa-clock me-1"></i> <span id="clock">--:--:--</span> UTC
+                <span class="clock-pill d-none d-lg-inline-flex align-items-center gap-2">
+                    <span class="live-dot" style="background: var(--bull); box-shadow: 0 0 8px var(--bull);"></span>
+                    <span id="clock">--:--:--</span>
+                    <span class="text-muted" style="font-size: 0.65rem; letter-spacing: 0.1em;">UTC</span>
                 </span>
             </div>
         </div>
@@ -556,7 +563,12 @@
 
                 <!-- VIEW: HEATMAP -->
                 <div id="viewHeatmap" class="view-section d-none">
-                    <h5 class="font-monospace mb-3">SECTOR HEATMAP</h5>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h5 class="mb-1 fw-bold"><i class="fa-solid fa-border-all me-2 text-primary"></i>Sector Heatmap</h5>
+                            <div class="text-muted small">Real-time performance across all 11 SPDR sectors</div>
+                        </div>
+                    </div>
                     <div id="heatmapGrid" class="row g-2"></div>
                 </div>
 
@@ -636,11 +648,17 @@
                 <div id="viewMacro_social" class="view-section d-none">
                     <div class="row g-4">
                         <div class="col-12">
-                             <h5 class="font-monospace mb-3 text-info"><i class="fa-solid fa-earth-americas me-2"></i>CRYPTO & MACRO</h5>
+                             <div class="mb-3">
+                                <h5 class="mb-1 fw-bold"><i class="fa-solid fa-earth-americas me-2 text-info"></i>Crypto &amp; Macro</h5>
+                                <div class="text-muted small">Bitcoin, gold, oil, treasury yields and global currencies</div>
+                             </div>
                              <div id="macroGrid" class="row g-2"></div>
                         </div>
-                        <div class="col-12">
-                             <h5 class="font-monospace mb-3 text-warning"><i class="fa-brands fa-reddit me-2"></i>SOCIAL SENTIMENT (HYPE/MEME)</h5>
+                        <div class="col-12 mt-4">
+                             <div class="mb-3">
+                                <h5 class="mb-1 fw-bold"><i class="fa-brands fa-reddit me-2 text-warning"></i>Social Sentiment</h5>
+                                <div class="text-muted small">Hype and meme-stock momentum from social channels</div>
+                             </div>
                              <div id="socialGrid" class="row g-2"></div>
                         </div>
                     </div>
@@ -728,10 +746,11 @@
     </div>
 
     <!-- Referral Banner -->
-    <div class="fixed-bottom bg-primary text-white text-center py-2 small font-monospace" style="opacity: 0.95; border-top: 1px solid rgba(255,255,255,0.1); z-index: 9999;">
-        <span>Start investing with MyInvestor using my referral link and get 30€! Use code <strong>GACEQ</strong> or </span>
-        <a href="https://newapp.myinvestor.es/do/signup?promotionalCode=GACEQ" target="_blank" class="text-white fw-bold text-decoration-underline">Sign up here</a>
-        <button type="button" class="btn-close btn-close-white float-end me-3 small" aria-label="Close" onclick="this.parentElement.style.display='none';" style="font-size: 0.7rem;"></button>
+    <div class="fixed-bottom bg-primary text-white text-center small d-flex align-items-center justify-content-center gap-3" style="z-index: 9999;">
+        <span class="d-none d-sm-inline" style="opacity: 0.85;">🎁</span>
+        <span>Start investing with <strong>MyInvestor</strong> &mdash; use code <strong style="background: rgba(255,255,255,0.18); padding: 2px 8px; border-radius: 4px; letter-spacing: 0.08em; font-family: var(--font-mono);">GACEQ</strong> and earn 30€</span>
+        <a href="https://newapp.myinvestor.es/do/signup?promotionalCode=GACEQ" target="_blank" class="text-white fw-semibold text-decoration-none px-3 py-1" style="background: rgba(255,255,255,0.18); border-radius: 999px; border: 1px solid rgba(255,255,255,0.25);">Claim &rarr;</a>
+        <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="this.parentElement.style.display='none';" style="font-size: 0.65rem; opacity: 0.7;"></button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
