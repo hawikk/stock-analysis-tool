@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp, Download, ListPlus, Pencil, Star, Trash2, Upload, X
 import type { ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 import type { Quote } from "@/lib/types";
-import { useApi, useMounted, usePriceFlash } from "@/lib/hooks";
+import { useApi, useMounted, useNow, usePriceFlash } from "@/lib/hooks";
 import { usePrefs, useTimeZone, type Watchlist } from "@/lib/store";
 import { cn, currencySymbol, displaySymbol, fmtCompact, fmtDate, fmtPct, fmtPrice } from "@/lib/format";
 import { SYMBOL_PATTERN } from "@/lib/symbols";
@@ -230,6 +230,7 @@ function WatchlistTable({ list, actions }: { list: Watchlist; actions: ReactNode
 
 function WatchRow({ symbol, q, tz, first, last, onUp, onDown, onRemove }: { symbol: string; q?: Quote; tz: string; first: boolean; last: boolean; onUp: () => void; onDown: () => void; onRemove: () => void }) {
   const flash = usePriceFlash(q?.price);
+  const now = useNow(60_000);
   const ext = q?.marketState === "PRE" || q?.marketState === "PREPRE" ? { label: "Pre", price: q.preMarketPrice, pct: q.preMarketChangePercent } : q?.postMarketPrice ? { label: "Post", price: q.postMarketPrice, pct: q.postMarketChangePercent } : null;
   const lo = q?.fiftyTwoWeekLow;
   const hi = q?.fiftyTwoWeekHigh;
@@ -287,7 +288,16 @@ function WatchRow({ symbol, q, tz, first, last, onUp, onDown, onRemove }: { symb
       </td>
       <td className="num px-2 text-right text-xs text-muted">{fmtCompact(q?.marketCap)}</td>
       <td className="num px-2 text-right text-xs">{q?.trailingPE ? q.trailingPE.toFixed(1) : "—"}</td>
-      <td className="px-2 text-right text-xs">{earnings && earnings.getTime() > 0 ? fmtDate(earnings.toISOString(), tz, { month: "short", day: "numeric" }) : <span className="text-muted">—</span>}</td>
+      <td className="px-2 text-right text-xs">
+        {earnings ? (
+          <span className={cn(earnings.getTime() < now && "text-muted")} title={earnings.getTime() < now ? "Last report" : "Next report"}>
+            {fmtDate(earnings.toISOString(), tz, { month: "short", day: "numeric" })}
+            {earnings.getTime() < now && <span className="ml-1 text-[10px]">(last)</span>}
+          </span>
+        ) : (
+          <span className="text-muted">—</span>
+        )}
+      </td>
       <td className="px-2 py-1">
         <Sparkline data={q?.sparkline} baseline={q?.previousClose} width={90} height={26} className="ml-auto" />
       </td>

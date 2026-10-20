@@ -70,9 +70,9 @@ export function NewsItems({ items, thumbnails = true }: { items: NewsItem[]; thu
     <ul className="divide-y divide-line/60">
       {items.map((n) => (
         <li key={n.id} className="flex gap-3 px-4 py-2.5 hover:bg-white/[0.03]">
-          {thumbnails && (
+          {thumbnails && n.thumbnail && (
             <a href={n.url} target="_blank" rel="noreferrer" tabIndex={-1} className="relative hidden size-14 shrink-0 overflow-hidden rounded-lg bg-white/5 sm:block">
-              {n.thumbnail && <Image src={n.thumbnail} alt="" fill sizes="56px" unoptimized className="object-cover" />}
+              <Image src={n.thumbnail} alt="" fill sizes="56px" unoptimized className="object-cover" />
             </a>
           )}
           <div className="min-w-0 flex-1">
