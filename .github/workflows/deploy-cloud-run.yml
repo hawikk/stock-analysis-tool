@@ -1,0 +1,53 @@
+# Optional: deploy the container to Google Cloud Run. Manual trigger only (Actions -> Deploy to Cloud Run -> Run workflow)
+# so pushes to master never create cloud resources by surprise. Reuses the repo's existing GCP_PROJECT_ID / GCP_SA_KEY secrets.
+name: Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        # US region on purpose: Yahoo can answer EU IPs with a GDPR consent wall, which breaks its cookie/crumb flow.
+        description: Cloud Run region
+        default: us-central1
+      service:
+        description: Cloud Run service name
+        default: stock-analysis-tool
+
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      REGION: ${{ inputs.region }}
+      SERVICE: ${{ inputs.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and deploy from source
+        run: |
+          PROJECT_ID=$(echo "${{ secrets.GCP_PROJECT_ID }}" | tr -d '[:space:]')
+          # Scale-to-zero with a 1-instance cap keeps this inside Cloud Run's free tier for personal use.
+          # Optional API keys: set once on the service (`gcloud run services update --update-env-vars` or the console);
+          # they persist across deploys.
+          gcloud run deploy "$SERVICE" \
+            --project "$PROJECT_ID" \
+            --source . \
+            --region "$REGION" \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 1Gi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 1 \
+            --timeout 120
