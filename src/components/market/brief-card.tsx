@@ -28,7 +28,7 @@ export function BriefCard() {
       )}
       {error && <ErrorState message={error.message} onRetry={() => refetch()} />}
       {b && (
-        <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto]">
+        <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-[1fr_auto]">
           <div className="min-w-0">
             <h3 className="text-lg font-semibold leading-snug tracking-tight">{b.headline}</h3>
             <p className="mt-1.5 text-sm text-muted">

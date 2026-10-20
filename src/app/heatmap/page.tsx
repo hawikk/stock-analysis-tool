@@ -12,7 +12,7 @@ export default function HeatmapPage() {
     <div className="space-y-4">
       <PageHeader title="Heatmap & sectors" description="Where money is moving today across US large caps, sectors and themes." />
       <SectorTreemap />
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <PerformanceBars group="sectors" title="Sector ETFs" icon={<BarChart3 className="size-4" />} />
         <PerformanceBars group="themes" title="Themes" icon={<Sparkles className="size-4" />} />
         <MoversPanel limit={12} />

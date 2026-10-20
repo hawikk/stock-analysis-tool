@@ -11,7 +11,7 @@ import { WorldGlobe } from "@/components/market/world-globe";
 
 export default function OverviewPage() {
   return (
-    <div className="grid gap-4 xl:grid-cols-12">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
       <div className="xl:col-span-8">
         <WorldGlobe />
       </div>

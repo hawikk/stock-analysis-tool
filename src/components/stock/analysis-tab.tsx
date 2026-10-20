@@ -53,7 +53,7 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
   return (
     <div className="space-y-4">
       <Panel>
-        <div className="grid gap-6 p-5 lg:grid-cols-[1fr_auto]">
+        <div className="grid grid-cols-1 gap-6 p-5 lg:grid-cols-[1fr_auto]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               <span className="flex items-center gap-1 rounded-md bg-white/5 px-2 py-0.5">
@@ -90,7 +90,7 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
         </div>
       </Panel>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Scorecard" icon={<Activity className="size-4" />} subtitle="0–100, higher is better">
           <ul className="space-y-3 p-4">
             {a.scorecard.map((s) => (
@@ -108,13 +108,13 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
           </ul>
         </Panel>
 
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <CaseList title="Bull case" icon={<ThumbsUp className="size-4 text-up" />} items={a.bullCase} tone="up" />
           <CaseList title="Bear case" icon={<ThumbsDown className="size-4 text-down" />} items={a.bearCase} tone="down" />
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Valuation" icon={<Scale className="size-4" />} subtitle={a.valuation.verdict}>
           <div className="space-y-4 p-4">
             <p className="text-sm leading-relaxed text-fg/90">
@@ -134,7 +134,7 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
         </Panel>
 
         <Panel title="Scenarios (12 months)" icon={<Waypoints className="size-4" />}>
-          <div className="grid gap-3 p-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
             {(["bear", "base", "bull"] as const).map((k) => {
               const s = a.scenarios[k];
               const chg = vsPrice(s.price);
@@ -159,7 +159,7 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
         </Panel>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Panel title="Technicals" icon={<Activity className="size-4" />} subtitle={a.technicals.trend}>
           <div className="space-y-3 p-4 text-sm">
             <p className="leading-relaxed text-fg/90">
@@ -191,7 +191,7 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
       </div>
 
       <Panel title="Key risks" icon={<ShieldAlert className="size-4" />}>
-        <ul className="grid gap-3 p-4 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2">
           {a.risks.map((r) => (
             <li key={r.title} className="rounded-xl border border-line bg-black/20 p-3">
               <div className="flex items-center justify-between gap-2">
@@ -345,7 +345,7 @@ function AnalysisLoading() {
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-11/12" />
         <Skeleton className="h-4 w-4/5" />
-        <div className="grid gap-3 pt-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-3">
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />

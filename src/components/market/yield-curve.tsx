@@ -55,7 +55,7 @@ export function YieldCurvePanel({ className }: { className?: string }) {
       {isLoading && <Skeleton className="m-4 h-72" />}
       {error && <ErrorState message={error.message} onRetry={() => refetch()} />}
       {d && (
-        <div className="grid gap-4 p-4 lg:grid-cols-[3fr_2fr]">
+        <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[3fr_2fr]">
           <div>
             <div className="mb-2 flex flex-wrap gap-4 text-xs">
               {(["3M", "2Y", "10Y", "30Y"] as const).map((t) => (

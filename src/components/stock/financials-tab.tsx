@@ -54,7 +54,7 @@ export function FinancialsTab({ symbol, currency }: { symbol: string; currency?:
     );
 
   return (
-    <div className="grid gap-4 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
       <Panel
         title="Revenue, earnings & cash flow"
         icon={<BarChart3 className="size-4" />}
@@ -129,7 +129,7 @@ export function EarningsTab({ p }: { p: StockProfile }) {
   const beats = e.history.filter((h) => (h.surprisePercent ?? 0) > 0).length;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
       <Panel title="Next report" icon={<CalendarClock className="size-4" />}>
         <div className="space-y-4 p-4">
           {e.nextDate && mounted ? (

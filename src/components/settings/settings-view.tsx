@@ -37,7 +37,7 @@ export function SettingsView() {
         <p className="mt-0.5 text-sm text-muted">Preferences are stored locally in this browser; API keys live in server environment variables.</p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Time zone" icon={<Clock className="size-4" />} subtitle="Used for calendars, market sessions and timestamps">
           <div className="space-y-3 p-4 text-sm">
             {mounted ? (

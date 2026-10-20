@@ -16,7 +16,7 @@ export default function MarketsPage() {
       <WorldGlobe height={540} />
       <MarketTimeline />
       <WorldIndicesPanel />
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <AssetGroupPanel group="fx" title="Currencies" icon={<DollarSign className="size-4" />} perf={["1W", "1M", "YTD", "1Y"]} />
         <AssetGroupPanel group="commodities" title="Commodities" icon={<Gem className="size-4" />} perf={["1W", "1M", "YTD", "1Y"]} />
       </div>

@@ -19,7 +19,7 @@ export function MacroIndicatorsPanel({ className }: { className?: string }) {
   return (
     <Panel title="Economic dashboard" icon={<Gauge className="size-4" />} subtitle="Latest prints from FRED · 3-year trend" meta={data?.meta} className={className}>
       {isLoading && (
-        <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, i) => (
             <Skeleton key={i} className="h-28" />
           ))}
@@ -27,7 +27,7 @@ export function MacroIndicatorsPanel({ className }: { className?: string }) {
       )}
       {error && <ErrorState message={error.message} onRetry={() => refetch()} />}
       {data && (
-        <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
           {data.data.map((m) => {
             const delta = m.value != null && m.previous != null ? m.value - m.previous : null;
             return (

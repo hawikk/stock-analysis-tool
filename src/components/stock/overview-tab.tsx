@@ -12,8 +12,8 @@ const GROUPS: StatItem["group"][] = ["Valuation", "Growth & Profitability", "Bal
 export function OverviewTab({ p }: { p: StockProfile }) {
   const cur = p.quote.currency;
   return (
-    <div className="grid gap-4 xl:grid-cols-3">
-      <Panel title="Key statistics" className="xl:col-span-2">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <Panel title="Key statistics" className={p.analyst.targetMean != null || p.analyst.trend.length > 0 ? "xl:col-span-2" : "xl:col-span-3"}>
         <div className="grid gap-x-6 gap-y-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
           {GROUPS.map((g) => {
             const items = p.stats.filter((s) => s.group === g && s.value != null);
@@ -34,7 +34,7 @@ export function OverviewTab({ p }: { p: StockProfile }) {
           })}
         </div>
       </Panel>
-      <AnalystPanel p={p} />
+      {(p.analyst.targetMean != null || p.analyst.trend.length > 0) && <AnalystPanel p={p} />}
       <AboutPanel p={p} />
     </div>
   );
@@ -130,7 +130,7 @@ function AboutPanel({ p }: { p: StockProfile }) {
   if (!pr.summary && !pr.sector) return null;
   return (
     <Panel title={`About ${p.name}`} icon={<Building2 className="size-4" />} className="xl:col-span-3">
-      <div className="grid gap-6 p-4 lg:grid-cols-[2fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-[2fr_1fr]">
         <div>
           {pr.summary && <p className={cn("text-sm leading-relaxed text-fg/90", !more && "line-clamp-5")}>{pr.summary}</p>}
           {pr.summary && pr.summary.length > 400 && (

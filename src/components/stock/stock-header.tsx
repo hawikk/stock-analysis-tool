@@ -20,6 +20,7 @@ const STATE_LABEL: Record<string, string> = {
 export function StockHeader({ symbol, quote, profile }: { symbol: string; quote?: Quote; profile?: StockProfile }) {
   const flash = usePriceFlash(quote?.price);
   const cur = quote?.currency;
+  const priceCurrency = quote?.quoteType === "CURRENCY" || quote?.quoteType === "INDEX" ? undefined : cur;
   const ext =
     quote?.marketState === "PRE" && quote.preMarketPrice
       ? { label: "Pre-market", price: quote.preMarketPrice, pct: quote.preMarketChangePercent }
@@ -49,7 +50,7 @@ export function StockHeader({ symbol, quote, profile }: { symbol: string; quote?
         <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight">{quote?.name ?? profile?.name ?? symbol}</h1>
         <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-2">
           <span className={cn("num rounded px-1 text-4xl font-semibold tracking-tight", flash === "up" && "animate-flash-up", flash === "down" && "animate-flash-down")}>
-            {fmtPrice(quote?.price, { currency: cur })}
+            {fmtPrice(quote?.price, { currency: priceCurrency })}
           </span>
           <span className="flex items-center gap-2 pb-1">
             <span className={cn("num text-lg", (quote?.change ?? 0) >= 0 ? "text-up" : "text-down")}>{fmtChange(quote?.change)}</span>
@@ -57,7 +58,7 @@ export function StockHeader({ symbol, quote, profile }: { symbol: string; quote?
           </span>
           {ext && (
             <span className="pb-1.5 text-sm text-muted">
-              {ext.label} <span className="num text-fg">{fmtPrice(ext.price, { currency: cur })}</span> <Change value={ext.pct} />
+              {ext.label} <span className="num text-fg">{fmtPrice(ext.price, { currency: priceCurrency })}</span> <Change value={ext.pct} />
             </span>
           )}
         </div>

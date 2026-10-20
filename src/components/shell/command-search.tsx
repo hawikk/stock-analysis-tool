@@ -54,8 +54,8 @@ export function CommandSearch() {
   return (
     <>
       <button onClick={() => setOpen(true)} className="btn-ghost h-8 w-full max-w-md justify-between px-3 text-xs text-muted sm:w-72">
-        <span className="flex items-center gap-2">
-          <Search className="size-3.5" /> Search stocks, ETFs, indices…
+        <span className="flex min-w-0 items-center gap-2">
+          <Search className="size-3.5 shrink-0" /> <span className="truncate">Search stocks, ETFs, indices…</span>
         </span>
         <kbd className="hidden rounded border border-line px-1.5 text-[10px] sm:inline">⌘K</kbd>
       </button>

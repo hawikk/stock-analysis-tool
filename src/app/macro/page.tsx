@@ -17,12 +17,12 @@ export default function MacroPage() {
       <PageHeader title="Macro" description="Rates, inflation, growth, credit and the cross-asset backdrop." />
       <YieldCurvePanel />
       <MacroIndicatorsPanel />
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <GlobalBondsPanel />
         <AssetGroupPanel group="rates" title="US rates & volatility" icon={<Landmark className="size-4" />} spark={false} showSymbol />
         <PerformanceBars group="commodities" title="Commodities" icon={<Gem className="size-4" />} defaultWindow="1M" />
       </div>
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <UpcomingEvents limit={12} />
         <NewsPanel url="/api/news?topic=macro" title="Macro headlines" limit={10} />
       </div>
