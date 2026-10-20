@@ -36,7 +36,9 @@ export async function GET() {
         assetRows(WORLD_INDICES.filter((i) => i.primary || i.symbol === "^IXIC" || i.symbol === "^STOXX50E").map((i) => ({ symbol: i.symbol, name: i.name }))),
         assetRows(SECTOR_ETFS),
         assetRows(MACRO),
-        economicCalendar(today, addDays(today, 1)).then((r) => r.events).catch(() => [] as EconomicEvent[]),
+        economicCalendar(today, addDays(today, 1))
+          .then((r) => r.events)
+          .catch(() => [] as EconomicEvent[]),
         yahooNews("stock market", 15).catch(() => [] as NewsItem[]),
       ]);
       const brief = await marketBrief({ indices: indices.data, sectors: sectors.data, macro: macro.data, events, headlines });

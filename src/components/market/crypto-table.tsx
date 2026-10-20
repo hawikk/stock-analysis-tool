@@ -36,7 +36,11 @@ export function CryptoPanel({ className, limit = 15 }: { className?: string; lim
                 <tr key={c.id} className="table-row">
                   <td className="px-4 py-1.5">
                     <Link href={`/stock/${encodeURIComponent(`${c.symbol.toUpperCase()}-USD`)}`} className="flex items-center gap-2 hover:text-accent">
-                      {c.image ? <Image src={c.image} alt="" width={18} height={18} unoptimized className="rounded-full" /> : <span className="size-[18px] rounded-full bg-white/10" />}
+                      {c.image ? (
+                        <Image src={c.image} alt="" width={18} height={18} unoptimized className="rounded-full" />
+                      ) : (
+                        <span className="size-[18px] rounded-full bg-white/10" />
+                      )}
                       <span className="font-medium">{c.name}</span>
                       <span className="text-[11px] uppercase text-muted">{c.symbol}</span>
                     </Link>

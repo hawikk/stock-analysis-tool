@@ -30,7 +30,12 @@ export function MarketClockList({ className, ids = COMPACT_IDS }: { className?: 
   const { now, rows } = useStatuses(ids);
   const openCount = rows.filter((r) => r.status.state === "open").length;
   return (
-    <Panel title="Market hours" icon={<Clock className="size-4" />} subtitle={mounted ? `${openCount} of ${rows.length} major venues open` : "Exchange sessions"} className={className}>
+    <Panel
+      title="Market hours"
+      icon={<Clock className="size-4" />}
+      subtitle={mounted ? `${openCount} of ${rows.length} major venues open` : "Exchange sessions"}
+      className={className}
+    >
       {!mounted ? (
         <SkeletonRows rows={8} />
       ) : (
@@ -149,10 +154,7 @@ function TimelineRow({
             <div
               key={s.raw.start}
               title={`${ex.name}: ${fmtTime(new Date(s.raw.start), tz)}–${fmtTime(new Date(s.raw.end), tz)}`}
-              className={cn(
-                "absolute inset-y-0 rounded",
-                active ? "bg-gradient-to-r from-up/50 to-up/80 ring-1 ring-up/60" : past ? "bg-slate-600/30" : "bg-accent/30",
-              )}
+              className={cn("absolute inset-y-0 rounded", active ? "bg-gradient-to-r from-up/50 to-up/80 ring-1 ring-up/60" : past ? "bg-slate-600/30" : "bg-accent/30")}
               style={{ left: `${pct(s.start)}%`, width: `${Math.max(0.6, pct(s.end) - pct(s.start))}%` }}
             />
           );

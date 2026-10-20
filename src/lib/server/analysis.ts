@@ -52,7 +52,8 @@ export function computeTechnicals(candles: Candle[], benchmark: Candle[]) {
 }
 
 const POS = /\b(beat|beats|surge|soar|jump|rall|record|upgrade|raises?|strong|growth|bullish|outperform|buy|wins?|expands?|launch|partnership|approval|boost|gain|tops?|exceeds?)/i;
-const NEG = /\b(miss|misses|plunge|slump|fall|drop|downgrade|cuts?|weak|lawsuit|probe|investigation|recall|bearish|underperform|sell|warns?|layoffs?|decline|loss|fraud|halt|delay|tariff|antitrust|fine)/i;
+const NEG =
+  /\b(miss|misses|plunge|slump|fall|drop|downgrade|cuts?|weak|lawsuit|probe|investigation|recall|bearish|underperform|sell|warns?|layoffs?|decline|loss|fraud|halt|delay|tariff|antitrust|fine)/i;
 
 function newsSentiment(news: NewsItem[]) {
   let score = 0;
@@ -127,11 +128,23 @@ function scorecard(p: StockProfile, t: Technicals, sentiment: number) {
   sent += clamp(sentiment * 3, -10, 10);
 
   const card = [
-    { label: "Value", score: Math.round(clamp(value)), note: `Fwd P/E ${fmtX(fpe)}, PEG ${peg?.toFixed(2) ?? "n/a"}, FCF yield ${fcfy !== null ? (fcfy * 100).toFixed(1) + "%" : "n/a"}` },
+    {
+      label: "Value",
+      score: Math.round(clamp(value)),
+      note: `Fwd P/E ${fmtX(fpe)}, PEG ${peg?.toFixed(2) ?? "n/a"}, FCF yield ${fcfy !== null ? (fcfy * 100).toFixed(1) + "%" : "n/a"}`,
+    },
     { label: "Growth", score: Math.round(clamp(growth)), note: `Revenue ${fmtPct(revG !== null ? revG * 100 : null)}, EPS ${fmtPct(epsG !== null ? epsG * 100 : null)} y/y` },
-    { label: "Quality", score: Math.round(clamp(quality)), note: `Op. margin ${opm !== null ? (opm * 100).toFixed(1) + "%" : "n/a"}, ROE ${roe !== null ? (roe * 100).toFixed(1) + "%" : "n/a"}` },
+    {
+      label: "Quality",
+      score: Math.round(clamp(quality)),
+      note: `Op. margin ${opm !== null ? (opm * 100).toFixed(1) + "%" : "n/a"}, ROE ${roe !== null ? (roe * 100).toFixed(1) + "%" : "n/a"}`,
+    },
     { label: "Momentum", score: Math.round(clamp(momentum)), note: `6M ${fmtPct(t.return6m)}, vs S&P (3M) ${fmtPct(t.relativeStrength3m)}` },
-    { label: "Balance sheet", score: Math.round(clamp(balance)), note: `Cash ${cash !== null && debt !== null ? (cash > debt ? "exceeds" : "below") : "vs"} debt, D/E ${de?.toFixed(2) ?? "n/a"}` },
+    {
+      label: "Balance sheet",
+      score: Math.round(clamp(balance)),
+      note: `Cash ${cash !== null && debt !== null ? (cash > debt ? "exceeds" : "below") : "vs"} debt, D/E ${de?.toFixed(2) ?? "n/a"}`,
+    },
     { label: "Sentiment", score: Math.round(clamp(sent)), note: `Analysts ${p.analyst.recommendationKey ?? "n/a"}, beat ${beats}/${total} recent quarters` },
   ];
   return { card, upside, fwdEpsG };
@@ -176,13 +189,7 @@ export function quantAnalysis(input: AnalysisInput): StockAnalysis {
     fv.base && price ? (price < fv.base * 0.9 ? "Undervalued" : price > fv.base * 1.1 ? "Overvalued" : "Fairly valued") : "Fairly valued";
 
   const trend: StockAnalysis["technicals"]["trend"] =
-    t.price && t.sma50 && t.sma200
-      ? t.price > t.sma50 && t.sma50 > t.sma200
-        ? "Uptrend"
-        : t.price < t.sma50 && t.sma50 < t.sma200
-          ? "Downtrend"
-          : "Sideways"
-      : "Sideways";
+    t.price && t.sma50 && t.sma200 ? (t.price > t.sma50 && t.sma50 > t.sma200 ? "Uptrend" : t.price < t.sma50 && t.sma50 < t.sma200 ? "Downtrend" : "Sideways") : "Sideways";
 
   const revG = statVal(p, "revenueGrowth");
   const opm = statVal(p, "operatingMargins");
@@ -195,26 +202,43 @@ export function quantAnalysis(input: AnalysisInput): StockAnalysis {
   const bear: string[] = [];
   if (revG !== null) (revG > 0.1 ? bull : revG < 0 ? bear : bull).push(`Revenue ${revG >= 0 ? "growing" : "shrinking"} ${fmtPct(revG * 100)} year over year`);
   if (opm !== null) (opm > 0.2 ? bull : opm < 0.05 ? bear : bull).push(`Operating margin of ${(opm * 100).toFixed(1)}%`);
-  if (upside !== null) (upside > 10 ? bull : upside < 0 ? bear : bull).push(`Analyst mean target ${fmtPx(p.analyst.targetMean)} implies ${fmtPct(upside)} from here (${p.analyst.analystCount ?? "?"} analysts)`);
-  if (fpe !== null) (fpe < 20 ? bull : fpe > 35 ? bear : bull).push(`Forward P/E of ${fmtX(fpe)}${fwdEpsG !== null ? ` against ${fmtPct(fwdEpsG)} expected EPS growth next year` : ""}`);
+  if (upside !== null)
+    (upside > 10 ? bull : upside < 0 ? bear : bull).push(
+      `Analyst mean target ${fmtPx(p.analyst.targetMean)} implies ${fmtPct(upside)} from here (${p.analyst.analystCount ?? "?"} analysts)`,
+    );
+  if (fpe !== null)
+    (fpe < 20 ? bull : fpe > 35 ? bear : bull).push(`Forward P/E of ${fmtX(fpe)}${fwdEpsG !== null ? ` against ${fmtPct(fwdEpsG)} expected EPS growth next year` : ""}`);
   if (trend === "Uptrend") bull.push(`Price above rising 50- and 200-day averages; 6M return ${fmtPct(t.return6m)}`);
   if (trend === "Downtrend") bear.push(`Price below falling 50- and 200-day averages; 6M return ${fmtPct(t.return6m)}`);
-  if (t.relativeStrength3m !== null) (t.relativeStrength3m > 0 ? bull : bear).push(`${t.relativeStrength3m > 0 ? "Outperforming" : "Lagging"} the S&P 500 by ${Math.abs(t.relativeStrength3m).toFixed(1)} pts over 3 months`);
+  if (t.relativeStrength3m !== null)
+    (t.relativeStrength3m > 0 ? bull : bear).push(
+      `${t.relativeStrength3m > 0 ? "Outperforming" : "Lagging"} the S&P 500 by ${Math.abs(t.relativeStrength3m).toFixed(1)} pts over 3 months`,
+    );
   const beats = p.earnings.history.filter((h) => (h.surprisePercent ?? 0) > 0).length;
   if (p.earnings.history.length) (beats >= p.earnings.history.length - 1 ? bull : bear).push(`Beat EPS estimates in ${beats} of the last ${p.earnings.history.length} quarters`);
 
   const risks: StockAnalysis["risks"] = [];
-  if (fpe !== null && fpe > 35) risks.push({ title: "Valuation risk", detail: `At ${fmtX(fpe)} forward earnings, the stock prices in sustained high growth; any guidance cut could compress the multiple.`, severity: fpe > 50 ? "high" : "medium" });
+  if (fpe !== null && fpe > 35)
+    risks.push({
+      title: "Valuation risk",
+      detail: `At ${fmtX(fpe)} forward earnings, the stock prices in sustained high growth; any guidance cut could compress the multiple.`,
+      severity: fpe > 50 ? "high" : "medium",
+    });
   if (beta !== null && beta > 1.3) risks.push({ title: "High beta", detail: `Beta of ${beta.toFixed(2)} means the stock tends to amplify market drawdowns.`, severity: "medium" });
-  if (t.vol30d !== null && t.vol30d > 45) risks.push({ title: "Elevated volatility", detail: `30-day realized volatility is ${t.vol30d.toFixed(0)}% annualized.`, severity: "medium" });
-  if (de !== null && de > 1.5) risks.push({ title: "Leverage", detail: `Debt/equity of ${de.toFixed(2)} limits flexibility if conditions tighten.`, severity: de > 3 ? "high" : "medium" });
-  if (shortF !== null && shortF > 0.1) risks.push({ title: "Crowded short", detail: `${(shortF * 100).toFixed(1)}% of float is sold short — expect sharp moves either way.`, severity: "medium" });
+  if (t.vol30d !== null && t.vol30d > 45)
+    risks.push({ title: "Elevated volatility", detail: `30-day realized volatility is ${t.vol30d.toFixed(0)}% annualized.`, severity: "medium" });
+  if (de !== null && de > 1.5)
+    risks.push({ title: "Leverage", detail: `Debt/equity of ${de.toFixed(2)} limits flexibility if conditions tighten.`, severity: de > 3 ? "high" : "medium" });
+  if (shortF !== null && shortF > 0.1)
+    risks.push({ title: "Crowded short", detail: `${(shortF * 100).toFixed(1)}% of float is sold short — expect sharp moves either way.`, severity: "medium" });
   if (p.earnings.nextDate) {
     const days = (new Date(p.earnings.nextDate).getTime() - Date.now()) / 86400000;
-    if (days >= 0 && days < 21) risks.push({ title: "Earnings event", detail: `Reports in ${Math.ceil(days)} days; options typically price a sizeable move around results.`, severity: "low" });
+    if (days >= 0 && days < 21)
+      risks.push({ title: "Earnings event", detail: `Reports in ${Math.ceil(days)} days; options typically price a sizeable move around results.`, severity: "low" });
   }
   if (sentiment.label === "Negative") risks.push({ title: "Negative news flow", detail: "Recent headlines skew negative; watch for follow-through.", severity: "medium" });
-  if (!risks.length) risks.push({ title: "Macro sensitivity", detail: "No stock-specific red flags in the data; the main risks are market-wide (rates, growth, risk appetite).", severity: "low" });
+  if (!risks.length)
+    risks.push({ title: "Macro sensitivity", detail: "No stock-specific red flags in the data; the main risks are market-wide (rates, growth, risk appetite).", severity: "low" });
 
   const strongest = [...card].sort((a, b) => b.score - a.score);
   const thesis = [
@@ -252,7 +276,12 @@ export function quantAnalysis(input: AnalysisInput): StockAnalysis {
       verdict,
       summary: `Blended fair value ${fmtPx(fv.base)} (range ${fmtPx(fv.low)}–${fmtPx(fv.high)}) vs price ${fmtPx(price)}.`,
       fairValue: fv,
-      keyMetrics: [`Fwd P/E ${fmtX(fpe)}`, `PEG ${statVal(p, "pegRatio")?.toFixed(2) ?? "n/a"}`, `EV/EBITDA ${fmtX(statVal(p, "evToEbitda"))}`, `FCF yield ${statVal(p, "fcfYield") !== null ? ((statVal(p, "fcfYield") as number) * 100).toFixed(1) + "%" : "n/a"}`],
+      keyMetrics: [
+        `Fwd P/E ${fmtX(fpe)}`,
+        `PEG ${statVal(p, "pegRatio")?.toFixed(2) ?? "n/a"}`,
+        `EV/EBITDA ${fmtX(statVal(p, "evToEbitda"))}`,
+        `FCF yield ${statVal(p, "fcfYield") !== null ? ((statVal(p, "fcfYield") as number) * 100).toFixed(1) + "%" : "n/a"}`,
+      ],
     },
     technicals: {
       trend,
@@ -274,7 +303,9 @@ export function quantAnalysis(input: AnalysisInput): StockAnalysis {
     },
     news: {
       sentiment: sentiment.label,
-      summary: news.length ? `Headline tone over the last ${news.length} stories is ${sentiment.label.toLowerCase()} (lexicon score ${sentiment.score >= 0 ? "+" : ""}${sentiment.score}).` : "No recent headlines.",
+      summary: news.length
+        ? `Headline tone over the last ${news.length} stories is ${sentiment.label.toLowerCase()} (lexicon score ${sentiment.score >= 0 ? "+" : ""}${sentiment.score}).`
+        : "No recent headlines.",
       catalysts: news.slice(0, 4).map((n) => n.title),
     },
     scenarios,

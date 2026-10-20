@@ -7,9 +7,7 @@ type CacheState = {
 
 const globalForCache = globalThis as unknown as { __marketCache?: CacheState };
 
-const state: CacheState =
-  globalForCache.__marketCache ??
-  (globalForCache.__marketCache = { store: new Map(), inflight: new Map() });
+const state: CacheState = globalForCache.__marketCache ?? (globalForCache.__marketCache = { store: new Map(), inflight: new Map() });
 
 const MAX_ENTRIES = 2000;
 

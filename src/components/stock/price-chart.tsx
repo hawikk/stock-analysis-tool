@@ -67,10 +67,7 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
   const candles = useMemo(() => data?.data.candles ?? [], [data]);
   /** lightweight-charts renders UTC; shift timestamps so the axis reads in the viewer's (intraday) or exchange's (daily) wall clock. */
   const shiftTz = intraday ? tz : (data?.data.exchangeTimezone ?? "UTC");
-  const shifted = useMemo(
-    () => candles.map((c) => ({ ...c, t: (c.time + tzOffsetMinutes(new Date(c.time * 1000), shiftTz) * 60) as UTCTimestamp })),
-    [candles, shiftTz],
-  );
+  const shifted = useMemo(() => candles.map((c) => ({ ...c, t: (c.time + tzOffsetMinutes(new Date(c.time * 1000), shiftTz) * 60) as UTCTimestamp })), [candles, shiftTz]);
 
   useEffect(() => {
     if (!box.current) return;
@@ -204,7 +201,10 @@ export function PriceChart({ symbol, currency }: { symbol: string; currency?: st
             <button
               key={o.id}
               onClick={() => toggle(o.id)}
-              className={cn("flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] transition", overlays.includes(o.id) ? "border-line bg-white/10 text-fg" : "border-transparent text-muted hover:text-fg")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] transition",
+                overlays.includes(o.id) ? "border-line bg-white/10 text-fg" : "border-transparent text-muted hover:text-fg",
+              )}
             >
               <span className="h-0.5 w-3 rounded" style={{ background: o.color }} />
               {o.label}

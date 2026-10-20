@@ -1,15 +1,4 @@
-export type DataSource =
-  | "yahoo"
-  | "nasdaq"
-  | "treasury"
-  | "cnbc"
-  | "coingecko"
-  | "finnhub"
-  | "fred"
-  | "forexfactory"
-  | "ai"
-  | "quant"
-  | "mock";
+export type DataSource = "yahoo" | "nasdaq" | "treasury" | "cnbc" | "coingecko" | "finnhub" | "fred" | "forexfactory" | "ai" | "quant" | "mock";
 
 export type Meta = {
   source: DataSource | DataSource[];

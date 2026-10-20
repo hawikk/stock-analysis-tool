@@ -31,10 +31,7 @@ type NasdaqEarningsRow = {
 };
 
 async function nasdaqEarningsForDate(date: string): Promise<EarningsEvent[]> {
-  const res = await httpJson<{ data: { rows: NasdaqEarningsRow[] | null } | null }>(
-    `https://api.nasdaq.com/api/calendar/earnings?date=${date}`,
-    { plain: true },
-  );
+  const res = await httpJson<{ data: { rows: NasdaqEarningsRow[] | null } | null }>(`https://api.nasdaq.com/api/calendar/earnings?date=${date}`, { plain: true });
   return (res.data?.rows ?? []).map((r) => {
     const timing = TIMING[r.time] ?? "unknown";
     return {
@@ -92,8 +89,43 @@ const CCY_COUNTRY: Record<string, string> = {
   All: "Global",
 };
 
-const HIGH = [/\bCPI\b/i, /consumer price/i, /non-?farm/i, /payrolls/i, /unemployment rate/i, /\bGDP\b/i, /rate decision/i, /interest rate/i, /\bFOMC\b/i, /\bPCE\b/i, /retail sales/i, /monetary policy/i, /press conference/i, /ISM (manufacturing|services|non-manufacturing)/i];
-const MEDIUM = [/\bPMI\b/i, /jobless claims/i, /industrial production/i, /trade balance/i, /\bPPI\b/i, /producer price/i, /housing starts/i, /building permits/i, /confidence/i, /durable goods/i, /\bZEW\b/i, /\bIfo\b/i, /sentiment/i, /employment change/i, /average earnings/i, /\bJOLTS\b/i, /home sales/i, /crude oil inventories/i, /speaks/i];
+const HIGH = [
+  /\bCPI\b/i,
+  /consumer price/i,
+  /non-?farm/i,
+  /payrolls/i,
+  /unemployment rate/i,
+  /\bGDP\b/i,
+  /rate decision/i,
+  /interest rate/i,
+  /\bFOMC\b/i,
+  /\bPCE\b/i,
+  /retail sales/i,
+  /monetary policy/i,
+  /press conference/i,
+  /ISM (manufacturing|services|non-manufacturing)/i,
+];
+const MEDIUM = [
+  /\bPMI\b/i,
+  /jobless claims/i,
+  /industrial production/i,
+  /trade balance/i,
+  /\bPPI\b/i,
+  /producer price/i,
+  /housing starts/i,
+  /building permits/i,
+  /confidence/i,
+  /durable goods/i,
+  /\bZEW\b/i,
+  /\bIfo\b/i,
+  /sentiment/i,
+  /employment change/i,
+  /average earnings/i,
+  /\bJOLTS\b/i,
+  /home sales/i,
+  /crude oil inventories/i,
+  /speaks/i,
+];
 
 const MAJOR_ECONOMIES = new Set(["United States", "Euro Zone", "Germany", "United Kingdom", "Japan", "China", "Canada", "Australia", "Switzerland"]);
 
@@ -133,10 +165,7 @@ function normalizeTitle(s: string) {
 type NasdaqEconRow = { gmt: string; country: string; eventName: string; actual: string; consensus: string; previous: string; description: string };
 
 async function nasdaqEconomicForDate(date: string): Promise<EconomicEvent[]> {
-  const res = await httpJson<{ data: { rows: NasdaqEconRow[] | null } | null }>(
-    `https://api.nasdaq.com/api/calendar/economicevents?date=${date}`,
-    { plain: true },
-  );
+  const res = await httpJson<{ data: { rows: NasdaqEconRow[] | null } | null }>(`https://api.nasdaq.com/api/calendar/economicevents?date=${date}`, { plain: true });
   return (res.data?.rows ?? []).map((r, i) => {
     // Despite the field name, Nasdaq's "gmt" column is US/Eastern wall-clock time.
     const hasTime = /^\d{1,2}:\d{2}$/.test(r.gmt.trim());
@@ -159,10 +188,7 @@ async function nasdaqEconomicForDate(date: string): Promise<EconomicEvent[]> {
 
 export async function economicCalendar(from: string, to: string): Promise<{ events: EconomicEvent[]; sources: ("nasdaq" | "forexfactory")[] }> {
   const days = dateRange(from, to, 21);
-  const [nasdaq, ff] = await Promise.all([
-    Promise.allSettled(days.map(nasdaqEconomicForDate)),
-    forexFactoryWeek().catch(() => [] as FfEvent[]),
-  ]);
+  const [nasdaq, ff] = await Promise.all([Promise.allSettled(days.map(nasdaqEconomicForDate)), forexFactoryWeek().catch(() => [] as FfEvent[])]);
   const nqOk = nasdaq.filter((r): r is PromiseFulfilledResult<EconomicEvent[]> => r.status === "fulfilled").flatMap((r) => r.value);
   const sources: ("nasdaq" | "forexfactory")[] = [];
   if (nqOk.length) sources.push("nasdaq");

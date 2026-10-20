@@ -105,11 +105,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 export async function yahooQuotes(symbols: string[]): Promise<Quote[]> {
   const unique = [...new Set(symbols.map((s) => s.trim()).filter(Boolean))];
-  const batches = await Promise.all(
-    chunk(unique, 50).map((batch) =>
-      yget<{ quoteResponse: { result: RawQuote[] } }>("/v7/finance/quote", { symbols: batch.join(",") }),
-    ),
-  );
+  const batches = await Promise.all(chunk(unique, 50).map((batch) => yget<{ quoteResponse: { result: RawQuote[] } }>("/v7/finance/quote", { symbols: batch.join(",") })));
   const bySymbol = new Map(batches.flatMap((b) => b.quoteResponse.result).map((q) => [q.symbol, mapQuote(q)]));
   return unique.map((s) => bySymbol.get(s)).filter((q): q is Quote => !!q);
 }
@@ -202,17 +198,16 @@ type RawChart = {
 
 export async function yahooChart(symbol: string, range: ChartRange, intervalOverride?: string): Promise<ChartData> {
   const interval = intervalOverride ?? RANGE_INTERVAL[range];
-  const raw = await yget<RawChart>(
-    `/v8/finance/chart/${encodeURIComponent(symbol)}`,
-    { range, interval, includePrePost: "false", events: "div,splits" },
-    false,
-  );
+  const raw = await yget<RawChart>(`/v8/finance/chart/${encodeURIComponent(symbol)}`, { range, interval, includePrePost: "false", events: "div,splits" }, false);
   const r = raw.chart.result?.[0];
   if (!r) throw new Error(raw.chart.error?.description ?? `No chart for ${symbol}`);
   const q = r.indicators.quote[0];
   const candles: Candle[] = [];
   (r.timestamp ?? []).forEach((t, i) => {
-    const o = q.open[i], h = q.high[i], l = q.low[i], c = q.close[i];
+    const o = q.open[i],
+      h = q.high[i],
+      l = q.low[i],
+      c = q.close[i];
     if (o == null || h == null || l == null || c == null) return;
     candles.push({ time: t, open: o, high: h, low: l, close: c, volume: q.volume[i] ?? 0 });
   });
@@ -229,7 +224,15 @@ export async function yahooChart(symbol: string, range: ChartRange, intervalOver
 
 type RawSearch = {
   quotes?: { symbol: string; shortname?: string; longname?: string; exchDisp?: string; typeDisp?: string; sector?: string; quoteType?: string }[];
-  news?: { uuid: string; title: string; publisher: string; link: string; providerPublishTime: number; thumbnail?: { resolutions?: { url: string; width: number }[] }; relatedTickers?: string[] }[];
+  news?: {
+    uuid: string;
+    title: string;
+    publisher: string;
+    link: string;
+    providerPublishTime: number;
+    thumbnail?: { resolutions?: { url: string; width: number }[] };
+    relatedTickers?: string[];
+  }[];
 };
 
 export async function yahooSearch(q: string): Promise<SearchResult[]> {
@@ -261,10 +264,10 @@ export async function yahooNews(q: string, count = 20): Promise<NewsItem[]> {
 export type QuoteSummary = Record<string, Record<string, unknown> | undefined>;
 
 export async function yahooQuoteSummary(symbol: string, modules: string[]): Promise<QuoteSummary> {
-  const raw = await yget<{ quoteSummary: { result?: QuoteSummary[]; error?: { description?: string } } }>(
-    `/v10/finance/quoteSummary/${encodeURIComponent(symbol)}`,
-    { modules: modules.join(","), formatted: "false" },
-  );
+  const raw = await yget<{ quoteSummary: { result?: QuoteSummary[]; error?: { description?: string } } }>(`/v10/finance/quoteSummary/${encodeURIComponent(symbol)}`, {
+    modules: modules.join(","),
+    formatted: "false",
+  });
   const r = raw.quoteSummary.result?.[0];
   if (!r) throw new Error(raw.quoteSummary.error?.description ?? `No summary for ${symbol}`);
   return r;
@@ -281,9 +284,7 @@ export async function yahooTimeseries(symbol: string, types: string[]): Promise<
   for (const r of raw.timeseries.result ?? []) {
     const type = r.meta.type[0];
     const rows = (r[type] as ({ asOfDate: string; reportedValue?: { raw: number } } | null)[] | undefined) ?? [];
-    out[type] = rows
-      .filter((x): x is { asOfDate: string; reportedValue: { raw: number } } => !!x?.reportedValue)
-      .map((x) => ({ date: x.asOfDate, value: x.reportedValue.raw }));
+    out[type] = rows.filter((x): x is { asOfDate: string; reportedValue: { raw: number } } => !!x?.reportedValue).map((x) => ({ date: x.asOfDate, value: x.reportedValue.raw }));
   }
   return out;
 }
@@ -295,8 +296,6 @@ export async function yahooScreener(scrId: "day_gainers" | "day_losers" | "most_
   });
   return (raw.finance.result?.[0]?.quotes ?? []).map(mapQuote);
 }
-
-
 
 export async function yahooOptions(symbol: string, date?: number): Promise<OptionChain> {
   const raw = await yget<{

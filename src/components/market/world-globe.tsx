@@ -40,10 +40,7 @@ export function WorldGlobe({ height = 460, className }: { height?: number; class
   const { data, isLoading, error, refetch } = useApi<WorldIndexRow[]>("/api/markets/world", { refetchInterval: 60_000 });
   const rows = useMemo(() => data?.data ?? [], [data]);
 
-  const open = useMemo(
-    () => (mounted ? EXCHANGES.filter((e) => exchangeStatus(e, now).state === "open").map((e) => ({ lat: e.lat, lng: e.lng, id: e.id })) : []),
-    [mounted, now],
-  );
+  const open = useMemo(() => (mounted ? EXCHANGES.filter((e) => exchangeStatus(e, now).state === "open").map((e) => ({ lat: e.lat, lng: e.lng, id: e.id })) : []), [mounted, now]);
 
   const ranked = useMemo(() => {
     const v = (r: WorldIndexRow) => (win === "1D" ? r.changePercent : r.perf?.[win]) ?? null;

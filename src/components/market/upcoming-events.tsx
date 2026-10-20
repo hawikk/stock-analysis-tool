@@ -40,7 +40,13 @@ export function UpcomingEvents({ className, limit = 10 }: { className?: string; 
         />
       }
     >
-      {!mounted ? <SkeletonRows rows={6} /> : tab === "earnings" ? <EarningsList from={from} to={to} tz={tz} limit={limit} now={now} /> : <EconList from={from} to={to} tz={tz} limit={limit} now={now} />}
+      {!mounted ? (
+        <SkeletonRows rows={6} />
+      ) : tab === "earnings" ? (
+        <EarningsList from={from} to={to} tz={tz} limit={limit} now={now} />
+      ) : (
+        <EconList from={from} to={to} tz={tz} limit={limit} now={now} />
+      )}
       <div className="border-t border-line px-4 py-2 text-right">
         <Link href="/calendar" className="text-xs text-accent hover:underline">
           Full calendar

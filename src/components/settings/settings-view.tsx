@@ -45,7 +45,8 @@ export function SettingsView() {
                 <div className="flex flex-wrap items-center gap-3">
                   <TimezonePicker />
                   <span className="text-muted">
-                    {pref === "auto" ? "Auto-detected from your browser" : "Manual override"} · now <span className="num text-fg">{fmtTime(new Date(), tz)}</span> {tzAbbreviation(tz)}
+                    {pref === "auto" ? "Auto-detected from your browser" : "Manual override"} · now <span className="num text-fg">{fmtTime(new Date(), tz)}</span>{" "}
+                    {tzAbbreviation(tz)}
                   </span>
                 </div>
                 {pref !== "auto" && (
@@ -71,15 +72,16 @@ export function SettingsView() {
               ) : (
                 <>
                   <p>
-                    No AI key is configured, so analyses use the built-in <span className="font-medium">quant engine</span> (rules-based scoring of valuation, growth, quality, momentum,
-                    balance sheet and sentiment).
+                    No AI key is configured, so analyses use the built-in <span className="font-medium">quant engine</span> (rules-based scoring of valuation, growth, quality,
+                    momentum, balance sheet and sentiment).
                   </p>
                   <p className="text-muted">
                     For written theses, set one of <code className="text-fg">GEMINI_API_KEY</code> (free tier at{" "}
                     <a className="text-accent hover:underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
                       Google AI Studio
                     </a>
-                    ), <code className="text-fg">GROQ_API_KEY</code>, <code className="text-fg">OPENROUTER_API_KEY</code> or <code className="text-fg">OPENAI_API_KEY</code> and restart the server.
+                    ), <code className="text-fg">GROQ_API_KEY</code>, <code className="text-fg">OPENROUTER_API_KEY</code> or <code className="text-fg">OPENAI_API_KEY</code> and
+                    restart the server.
                   </p>
                 </>
               ))}
@@ -120,9 +122,7 @@ export function SettingsView() {
 
       <Panel title="Watchlists" icon={<Star className="size-4" />}>
         <div className="flex flex-wrap items-center gap-3 p-4 text-sm">
-          <span className="text-muted">
-            {mounted ? `${lists.length} lists · ${lists.reduce((a, l) => a + l.symbols.length, 0)} symbols` : "—"}
-          </span>
+          <span className="text-muted">{mounted ? `${lists.length} lists · ${lists.reduce((a, l) => a + l.symbols.length, 0)} symbols` : "—"}</span>
           <Link href="/watchlist" className="btn-ghost text-xs">
             Manage, import & export
           </Link>
@@ -137,9 +137,7 @@ export function SettingsView() {
         </div>
       </Panel>
 
-      <p className="text-xs text-muted">
-        Market data may be delayed and is provided for information only. Nothing here is investment advice.
-      </p>
+      <p className="text-xs text-muted">Market data may be delayed and is provided for information only. Nothing here is investment advice.</p>
     </div>
   );
 }

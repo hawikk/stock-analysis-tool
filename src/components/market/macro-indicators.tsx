@@ -39,7 +39,9 @@ export function MacroIndicatorsPanel({ className }: { className?: string }) {
                       {m.region} · {m.unit}
                     </div>
                   </div>
-                  <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">{m.date ? fmtDate(m.date + "T12:00:00Z", "UTC", { month: "short", year: "2-digit" }) : "—"}</span>
+                  <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">
+                    {m.date ? fmtDate(m.date + "T12:00:00Z", "UTC", { month: "short", year: "2-digit" }) : "—"}
+                  </span>
                 </div>
                 <div className="mt-2 flex items-end justify-between gap-2">
                   <div>

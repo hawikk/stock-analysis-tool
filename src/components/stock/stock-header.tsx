@@ -89,9 +89,7 @@ export function StockHeader({ symbol, quote, profile }: { symbol: string; quote?
           </div>
         </div>
         {quote?.fiftyTwoWeekLow != null && quote.fiftyTwoWeekHigh != null && quote.price != null && (
-          <div className="text-[10px] text-muted">
-            {fmtPct(((quote.price - quote.fiftyTwoWeekHigh) / quote.fiftyTwoWeekHigh) * 100, 1)} from 52-week high
-          </div>
+          <div className="text-[10px] text-muted">{fmtPct(((quote.price - quote.fiftyTwoWeekHigh) / quote.fiftyTwoWeekHigh) * 100, 1)} from 52-week high</div>
         )}
       </div>
     </div>

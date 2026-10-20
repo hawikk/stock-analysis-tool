@@ -70,7 +70,11 @@ export function SymbolInput({ onPick, placeholder = "Add symbol…", className }
         className="input w-full pl-8 pr-8"
         aria-label="Symbol"
       />
-      <button onClick={() => pick(results[idx]?.symbol ?? q)} className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:bg-white/10 hover:text-fg" aria-label="Add">
+      <button
+        onClick={() => pick(results[idx]?.symbol ?? q)}
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:bg-white/10 hover:text-fg"
+        aria-label="Add"
+      >
         <Plus className="size-3.5" />
       </button>
       {open && results.length > 0 && (

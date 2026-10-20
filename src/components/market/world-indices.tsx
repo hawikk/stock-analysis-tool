@@ -34,13 +34,10 @@ export function WorldIndicesPanel({ className }: { className?: string }) {
       {error && <ErrorState message={error.message} onRetry={() => refetch()} />}
       {groups.map((g) => (
         <div key={g.region}>
-          <div className="sticky top-0 z-[1] border-y border-line bg-panel-2/95 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted backdrop-blur">{g.region}</div>
-          <AssetTable
-            rows={g.rows}
-            perf={["1W", "1M", "YTD", "1Y"]}
-            dense
-            prefix={(r) => <span className="w-5 text-base leading-none">{(r as WorldIndexRow).flag}</span>}
-          />
+          <div className="sticky top-0 z-[1] border-y border-line bg-panel-2/95 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted backdrop-blur">
+            {g.region}
+          </div>
+          <AssetTable rows={g.rows} perf={["1W", "1M", "YTD", "1Y"]} dense prefix={(r) => <span className="w-5 text-base leading-none">{(r as WorldIndexRow).flag}</span>} />
         </div>
       ))}
     </Panel>

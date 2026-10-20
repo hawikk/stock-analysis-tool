@@ -27,10 +27,9 @@ export async function finnhubQuotes(symbols: string[]): Promise<Quote[]> {
 export async function finnhubNews(symbol: string): Promise<NewsItem[]> {
   const to = new Date().toISOString().slice(0, 10);
   const from = new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10);
-  const rows = await httpJson<{ id: number; headline: string; source: string; url: string; datetime: number; image: string }[]>(
-    url("/company-news", { symbol, from, to }),
-    { plain: true },
-  );
+  const rows = await httpJson<{ id: number; headline: string; source: string; url: string; datetime: number; image: string }[]>(url("/company-news", { symbol, from, to }), {
+    plain: true,
+  });
   return rows.slice(0, 25).map((n) => ({
     id: String(n.id),
     title: n.headline,
@@ -42,10 +41,9 @@ export async function finnhubNews(symbol: string): Promise<NewsItem[]> {
 }
 
 export async function finnhubEarnings(from: string, to: string): Promise<EarningsEvent[]> {
-  const res = await httpJson<{ earningsCalendar: { symbol: string; date: string; hour: string; epsEstimate: number | null; revenueEstimate: number | null; quarter: number; year: number }[] }>(
-    url("/calendar/earnings", { from, to }),
-    { plain: true },
-  );
+  const res = await httpJson<{
+    earningsCalendar: { symbol: string; date: string; hour: string; epsEstimate: number | null; revenueEstimate: number | null; quarter: number; year: number }[];
+  }>(url("/calendar/earnings", { from, to }), { plain: true });
   const map: Record<string, EarningsTiming> = { bmo: "bmo", amc: "amc", dmh: "dmh" };
   return res.earningsCalendar.map((e) => {
     const timing = map[e.hour] ?? "unknown";

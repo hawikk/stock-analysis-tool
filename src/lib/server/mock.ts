@@ -1,16 +1,4 @@
-import type {
-  Candle,
-  ChartData,
-  ChartRange,
-  CryptoAsset,
-  EarningsEvent,
-  EconomicEvent,
-  GlobalBond,
-  NewsItem,
-  Quote,
-  StockProfile,
-  YieldCurveData,
-} from "@/lib/types";
+import type { Candle, ChartData, ChartRange, CryptoAsset, EarningsEvent, EconomicEvent, GlobalBond, NewsItem, Quote, StockProfile, YieldCurveData } from "@/lib/types";
 import { addDays, dateRange, weekdayOf, zonedTimeToUtc } from "@/lib/time";
 import { GLOBAL_BONDS } from "@/lib/universe";
 
@@ -108,8 +96,25 @@ export function mockProfile(symbol: string): StockProfile {
       { key: "forwardPE", label: "Forward P/E", value: 21.3, format: "ratio", group: "Valuation" },
       { key: "beta", label: "Beta", value: 1.1, format: "ratio", group: "Trading" },
     ],
-    analyst: { targetMean: (q.price ?? 0) * 1.12, targetHigh: (q.price ?? 0) * 1.4, targetLow: (q.price ?? 0) * 0.8, targetMedian: (q.price ?? 0) * 1.1, recommendationMean: 2.1, recommendationKey: "buy", analystCount: 25, trend: [] },
-    earnings: { history: [], nextDate: addDays(today(), 21), nextDateIsEstimate: true, nextEpsEstimate: 1.2, nextRevenueEstimate: null, currentYearEpsEstimate: 5, nextYearEpsEstimate: 5.6 },
+    analyst: {
+      targetMean: (q.price ?? 0) * 1.12,
+      targetHigh: (q.price ?? 0) * 1.4,
+      targetLow: (q.price ?? 0) * 0.8,
+      targetMedian: (q.price ?? 0) * 1.1,
+      recommendationMean: 2.1,
+      recommendationKey: "buy",
+      analystCount: 25,
+      trend: [],
+    },
+    earnings: {
+      history: [],
+      nextDate: addDays(today(), 21),
+      nextDateIsEstimate: true,
+      nextEpsEstimate: 1.2,
+      nextRevenueEstimate: null,
+      currentYearEpsEstimate: 5,
+      nextYearEpsEstimate: 5.6,
+    },
   };
 }
 
@@ -181,8 +186,19 @@ export function mockEconomic(from: string, to: string): EconomicEvent[] {
 
 export function mockYieldCurve(): YieldCurveData {
   const tenors: [string, number, number][] = [
-    ["1M", 1, 4.3], ["2M", 2, 4.3], ["3M", 3, 4.28], ["4M", 4, 4.25], ["6M", 6, 4.2], ["1Y", 12, 4.05],
-    ["2Y", 24, 3.9], ["3Y", 36, 3.85], ["5Y", 60, 3.9], ["7Y", 84, 4.0], ["10Y", 120, 4.15], ["20Y", 240, 4.5], ["30Y", 360, 4.55],
+    ["1M", 1, 4.3],
+    ["2M", 2, 4.3],
+    ["3M", 3, 4.28],
+    ["4M", 4, 4.25],
+    ["6M", 6, 4.2],
+    ["1Y", 12, 4.05],
+    ["2Y", 24, 3.9],
+    ["3Y", 36, 3.85],
+    ["5Y", 60, 3.9],
+    ["7Y", 84, 4.0],
+    ["10Y", 120, 4.15],
+    ["20Y", 240, 4.5],
+    ["30Y", 360, 4.55],
   ];
   const curve = tenors.map(([tenor, months, value]) => ({ tenor, months, value }));
   return {
@@ -203,6 +219,16 @@ export function mockBonds(): GlobalBond[] {
 export function mockCrypto(): CryptoAsset[] {
   return ["BTC", "ETH", "SOL", "XRP", "BNB", "DOGE"].map((s) => {
     const r = rng(s + today());
-    return { id: s.toLowerCase(), symbol: s, name: `${s} (demo)`, price: basePrice(s) * 10, change24h: (r() - 0.5) * 8, change7d: (r() - 0.5) * 15, marketCap: r() * 1e12, volume24h: r() * 1e10, sparkline: Array.from({ length: 42 }, (_, i) => 100 + Math.sin(i / 5 + r()) * 5) };
+    return {
+      id: s.toLowerCase(),
+      symbol: s,
+      name: `${s} (demo)`,
+      price: basePrice(s) * 10,
+      change24h: (r() - 0.5) * 8,
+      change7d: (r() - 0.5) * 15,
+      marketCap: r() * 1e12,
+      volume24h: r() * 1e10,
+      sparkline: Array.from({ length: 42 }, (_, i) => 100 + Math.sin(i / 5 + r()) * 5),
+    };
   });
 }

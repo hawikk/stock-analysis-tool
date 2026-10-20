@@ -33,8 +33,7 @@ export function exchangeStatus(ex: Exchange, now: number): ExchangeStatus {
   if (current) return { state: "open", nextChange: current.end, nextLabel: "closes" };
   const next = sessions.find((s) => s.start > now);
   const prev = [...sessions].reverse().find((s) => s.end <= now);
-  const isBreak =
-    !!next && !!prev && isoDateInTz(new Date(prev.start), ex.timeZone) === isoDateInTz(new Date(next.start), ex.timeZone);
+  const isBreak = !!next && !!prev && isoDateInTz(new Date(prev.start), ex.timeZone) === isoDateInTz(new Date(next.start), ex.timeZone);
   return {
     state: isBreak ? "break" : "closed",
     nextChange: next?.start ?? now + 86400000,

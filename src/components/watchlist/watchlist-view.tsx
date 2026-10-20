@@ -106,7 +106,10 @@ export function WatchlistView() {
               key={l.id}
               onClick={() => setActive(l.id)}
               onDoubleClick={() => setRenaming(l.id)}
-              className={cn("rounded-lg border px-3 py-1.5 text-sm transition", l.id === list?.id ? "border-accent/50 bg-accent/10 text-fg" : "border-line text-muted hover:text-fg")}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-sm transition",
+                l.id === list?.id ? "border-accent/50 bg-accent/10 text-fg" : "border-line text-muted hover:text-fg",
+              )}
             >
               {l.name} <span className="ml-1 text-xs text-muted">{l.symbols.length}</span>
             </button>
@@ -175,8 +178,8 @@ function WatchlistTable({ list, actions }: { list: Watchlist; actions: ReactNode
       subtitle={
         stats ? (
           <span>
-            Equal-weight {fmtPct(stats.avg)} · {stats.up}/{stats.total} up · best {displaySymbol(stats.best.symbol)} {fmtPct(stats.best.changePercent, 1)} · worst {displaySymbol(stats.worst.symbol)}{" "}
-            {fmtPct(stats.worst.changePercent, 1)}
+            Equal-weight {fmtPct(stats.avg)} · {stats.up}/{stats.total} up · best {displaySymbol(stats.best.symbol)} {fmtPct(stats.best.changePercent, 1)} · worst{" "}
+            {displaySymbol(stats.worst.symbol)} {fmtPct(stats.worst.changePercent, 1)}
           </span>
         ) : (
           `${list.symbols.length} symbols`
@@ -185,7 +188,9 @@ function WatchlistTable({ list, actions }: { list: Watchlist; actions: ReactNode
       meta={data?.meta}
       actions={actions}
     >
-      {list.symbols.length === 0 && <EmptyState title="This list is empty" hint="Search for a ticker above, or press ⌘K anywhere and open a stock to add it." icon={<Star className="size-6" />} />}
+      {list.symbols.length === 0 && (
+        <EmptyState title="This list is empty" hint="Search for a ticker above, or press ⌘K anywhere and open a stock to add it." icon={<Star className="size-6" />} />
+      )}
       {isLoading && <SkeletonRows rows={Math.min(8, list.symbols.length)} />}
       {error && <ErrorState message={error.message} onRetry={() => refetch()} />}
       {data && list.symbols.length > 0 && (
@@ -228,10 +233,33 @@ function WatchlistTable({ list, actions }: { list: Watchlist; actions: ReactNode
   );
 }
 
-function WatchRow({ symbol, q, tz, first, last, onUp, onDown, onRemove }: { symbol: string; q?: Quote; tz: string; first: boolean; last: boolean; onUp: () => void; onDown: () => void; onRemove: () => void }) {
+function WatchRow({
+  symbol,
+  q,
+  tz,
+  first,
+  last,
+  onUp,
+  onDown,
+  onRemove,
+}: {
+  symbol: string;
+  q?: Quote;
+  tz: string;
+  first: boolean;
+  last: boolean;
+  onUp: () => void;
+  onDown: () => void;
+  onRemove: () => void;
+}) {
   const flash = usePriceFlash(q?.price);
   const now = useNow(60_000);
-  const ext = q?.marketState === "PRE" || q?.marketState === "PREPRE" ? { label: "Pre", price: q.preMarketPrice, pct: q.preMarketChangePercent } : q?.postMarketPrice ? { label: "Post", price: q.postMarketPrice, pct: q.postMarketChangePercent } : null;
+  const ext =
+    q?.marketState === "PRE" || q?.marketState === "PREPRE"
+      ? { label: "Pre", price: q.preMarketPrice, pct: q.preMarketChangePercent }
+      : q?.postMarketPrice
+        ? { label: "Post", price: q.postMarketPrice, pct: q.postMarketChangePercent }
+        : null;
   const lo = q?.fiftyTwoWeekLow;
   const hi = q?.fiftyTwoWeekHigh;
   const pos = lo != null && hi != null && q?.price != null && hi > lo ? ((q.price - lo) / (hi - lo)) * 100 : null;
@@ -275,7 +303,10 @@ function WatchRow({ symbol, q, tz, first, last, onUp, onDown, onRemove }: { symb
         {pos != null ? (
           <div className="w-32">
             <div className="relative h-1.5 rounded-full bg-gradient-to-r from-down/50 via-slate-600/50 to-up/50">
-              <span className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-bg bg-fg" style={{ left: `${Math.min(100, Math.max(0, pos))}%` }} />
+              <span
+                className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-bg bg-fg"
+                style={{ left: `${Math.min(100, Math.max(0, pos))}%` }}
+              />
             </div>
             <div className="num mt-0.5 flex justify-between text-[10px] text-muted">
               <span>{fmtPrice(lo)}</span>
@@ -302,7 +333,11 @@ function WatchRow({ symbol, q, tz, first, last, onUp, onDown, onRemove }: { symb
         <Sparkline data={q?.sparkline} baseline={q?.previousClose} width={90} height={26} className="ml-auto" />
       </td>
       <td className="px-2">
-        <button onClick={onRemove} className="rounded p-1 text-muted opacity-0 transition hover:bg-white/10 hover:text-down group-hover:opacity-100" aria-label={`Remove ${symbol}`}>
+        <button
+          onClick={onRemove}
+          className="rounded p-1 text-muted opacity-0 transition hover:bg-white/10 hover:text-down group-hover:opacity-100"
+          aria-label={`Remove ${symbol}`}
+        >
           <X className="size-3.5" />
         </button>
       </td>

@@ -72,9 +72,7 @@ export async function treasuryCurve(): Promise<YieldCurveData> {
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
 
-  const history = [...rows]
-    .reverse()
-    .map((r) => ({ date: r.date, y2: r.values["2Y"], y10: r.values["10Y"], m3: r.values["3M"] }));
+  const history = [...rows].reverse().map((r) => ({ date: r.date, y2: r.values["2Y"], y10: r.values["10Y"], m3: r.values["3M"] }));
 
   return { date: latest.date, curve: toCurve(latest), comparisons, history };
 }
@@ -142,7 +140,6 @@ export async function cryptoMarkets(): Promise<CryptoAsset[]> {
   });
 }
 
-
 type FredSpec = { id: string; label: string; region: MacroIndicator["region"]; unit: string; transform?: "yoy" | "diff"; description: string };
 
 const FRED_SERIES: FredSpec[] = [
@@ -196,7 +193,7 @@ async function fredSeries(spec: FredSpec): Promise<MacroIndicator> {
         const d = new Date(`${p.date}T00:00:00Z`);
         d.setUTCFullYear(d.getUTCFullYear() - 1);
         const prev = byDate.get(d.toISOString().slice(0, 10));
-        return prev ? { date: p.date, value: Math.round(((p.value / prev - 1) * 100) * 100) / 100 } : null;
+        return prev ? { date: p.date, value: Math.round((p.value / prev - 1) * 100 * 100) / 100 } : null;
       })
       .filter((x): x is { date: string; value: number } => !!x);
   } else if (spec.transform === "diff") {

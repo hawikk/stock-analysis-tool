@@ -87,7 +87,13 @@ function AnalystPanel({ p }: { p: StockProfile }) {
             <div>
               <div className="relative h-2 rounded-full bg-gradient-to-r from-rose-500/40 via-slate-500/40 to-emerald-500/40">
                 {a.targetMean != null && <span className="absolute top-1/2 h-4 w-0.5 -translate-y-1/2 bg-fg" style={{ left: `${pos(a.targetMean)}%` }} title="Mean target" />}
-                {price != null && <span className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-bg bg-accent" style={{ left: `${pos(price)}%` }} title="Current price" />}
+                {price != null && (
+                  <span
+                    className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-bg bg-accent"
+                    style={{ left: `${pos(price)}%` }}
+                    title="Current price"
+                  />
+                )}
               </div>
               <div className="num mt-1.5 flex justify-between text-[11px] text-muted">
                 <span>Low {fmtPrice(a.targetLow)}</span>
@@ -126,11 +132,7 @@ function AboutPanel({ p }: { p: StockProfile }) {
     <Panel title={`About ${p.name}`} icon={<Building2 className="size-4" />} className="xl:col-span-3">
       <div className="grid gap-6 p-4 lg:grid-cols-[2fr_1fr]">
         <div>
-          {pr.summary && (
-            <p className={cn("text-sm leading-relaxed text-fg/90", !more && "line-clamp-5")}>
-              {pr.summary}
-            </p>
-          )}
+          {pr.summary && <p className={cn("text-sm leading-relaxed text-fg/90", !more && "line-clamp-5")}>{pr.summary}</p>}
           {pr.summary && pr.summary.length > 400 && (
             <button className="mt-1 text-xs text-accent hover:underline" onClick={() => setMore((m) => !m)}>
               {more ? "Show less" : "Read more"}

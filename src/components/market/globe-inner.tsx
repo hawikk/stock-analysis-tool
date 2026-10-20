@@ -13,9 +13,7 @@ import { changeColor, fmtPct, fmtPrice } from "@/lib/format";
 type CountryFeature = Feature<Geometry, { name: string }> & { id?: string };
 
 const topo = worldTopo as unknown as Topology<{ countries: GeometryCollection<{ name: string }> }>;
-const COUNTRIES = (feature(topo, topo.objects.countries) as unknown as { features: CountryFeature[] }).features.filter(
-  (f) => f.properties.name !== "Antarctica",
-);
+const COUNTRIES = (feature(topo, topo.objects.countries) as unknown as { features: CountryFeature[] }).features.filter((f) => f.properties.name !== "Antarctica");
 
 export const WINDOW_SCALE: Record<PerfWindow, number> = { "1D": 2, "1W": 4, "1M": 7, "3M": 12, YTD: 25, "1Y": 30 };
 
@@ -41,7 +39,7 @@ export default function GlobeInner({ width, height, rows, window, openExchanges,
 
   const points = useMemo(() => rows.filter((r) => r.primary), [rows]);
   const scale = WINDOW_SCALE[window];
-  const value = (r: WorldIndexRow | undefined) => (r ? (window === "1D" ? r.changePercent : r.perf?.[window]) ?? null : null);
+  const value = (r: WorldIndexRow | undefined) => (r ? ((window === "1D" ? r.changePercent : r.perf?.[window]) ?? null) : null);
 
   const material = useMemo(() => new MeshPhongMaterial({ color: "#0a1424", emissive: "#060c18", shininess: 12, transparent: true, opacity: 0.96 }), []);
 

@@ -35,9 +35,7 @@ export function CalendarView() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
-          <p className="mt-0.5 text-sm text-muted">
-            Earnings and economic releases converted to your timezone{mounted ? ` (${tzAbbreviation(tz)})` : ""}. Change it any time:
-          </p>
+          <p className="mt-0.5 text-sm text-muted">Earnings and economic releases converted to your timezone{mounted ? ` (${tzAbbreviation(tz)})` : ""}. Change it any time:</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TimezonePicker />
@@ -57,7 +55,11 @@ export function CalendarView() {
           <ChevronLeft className="size-4" />
         </button>
         <div className="min-w-48 text-center text-sm font-medium">
-          {monday ? `${fmtDate(`${monday}T12:00:00Z`, "UTC", { month: "short", day: "numeric" })} – ${fmtDate(`${sunday}T12:00:00Z`, "UTC", { month: "short", day: "numeric", year: "numeric" })}` : <Skeleton className="mx-auto h-4 w-40" />}
+          {monday ? (
+            `${fmtDate(`${monday}T12:00:00Z`, "UTC", { month: "short", day: "numeric" })} – ${fmtDate(`${sunday}T12:00:00Z`, "UTC", { month: "short", day: "numeric", year: "numeric" })}`
+          ) : (
+            <Skeleton className="mx-auto h-4 w-40" />
+          )}
         </div>
         <button className="btn-ghost" onClick={() => setWeek((w) => w + 1)} aria-label="Next week">
           <ChevronRight className="size-4" />
@@ -141,7 +143,11 @@ function EarningsCalendar({ from, to, tz, today }: { from: string; to: string; t
       {isLoading && <SkeletonRows rows={10} />}
       {error && <ErrorState message={error.message} onRetry={() => refetch()} />}
       {data && days.length === 0 && (
-        <EmptyState title={filter === "watchlist" ? "None of your watchlist reports this week" : "No reports match"} hint="Try another filter or week." icon={<CalendarDays className="size-6" />} />
+        <EmptyState
+          title={filter === "watchlist" ? "None of your watchlist reports this week" : "No reports match"}
+          hint="Try another filter or week."
+          icon={<CalendarDays className="size-6" />}
+        />
       )}
       <div className="grid gap-px bg-line/60 md:grid-cols-2 xl:grid-cols-3">
         {days.map(({ date, events }) => {
@@ -167,12 +173,15 @@ function EarningsCalendar({ from, to, tz, today }: { from: string; to: string; t
                           <span className="truncate text-xs text-muted">{e.name}</span>
                         </span>
                         <span className="mt-0.5 block text-[11px] text-muted">
-                          EPS est <span className="num text-fg">{e.epsEstimate?.toFixed(2) ?? "—"}</span> · last yr <span className="num">{e.lastYearEps?.toFixed(2) ?? "—"}</span> · {fmtCompact(e.marketCap, "$")}
+                          EPS est <span className="num text-fg">{e.epsEstimate?.toFixed(2) ?? "—"}</span> · last yr <span className="num">{e.lastYearEps?.toFixed(2) ?? "—"}</span>{" "}
+                          · {fmtCompact(e.marketCap, "$")}
                         </span>
                       </span>
                       <span className="text-right" title={timingLabel(e.timing)}>
                         <span className="num block text-sm">{earningsLocalTime(e.approxTime, e.timing, tz) ?? "—"}</span>
-                        <span className={cn("block text-[10px] font-medium", e.timing === "bmo" ? "text-amber-300" : e.timing === "amc" ? "text-violet-300" : "text-muted")}>{timingShort(e.timing)}</span>
+                        <span className={cn("block text-[10px] font-medium", e.timing === "bmo" ? "text-amber-300" : e.timing === "amc" ? "text-violet-300" : "text-muted")}>
+                          {timingShort(e.timing)}
+                        </span>
                       </span>
                     </Link>
                   </li>
@@ -231,7 +240,10 @@ function EconomicCalendar({ from, to, tz, today, now }: { from: string; to: stri
             <button
               key={i}
               onClick={() => setImpacts((x) => toggle(x, i))}
-              className={cn("flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px]", impacts.includes(i) ? "border-line bg-white/10 text-fg" : "border-transparent text-muted")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px]",
+                impacts.includes(i) ? "border-line bg-white/10 text-fg" : "border-transparent text-muted",
+              )}
             >
               <span className={cn("size-1.5 rounded-full", IMPACT_STYLE[i].dot)} />
               {IMPACT_STYLE[i].label}
@@ -242,7 +254,10 @@ function EconomicCalendar({ from, to, tz, today, now }: { from: string; to: stri
     >
       {available.length > 0 && (
         <div className="flex flex-wrap gap-1.5 border-b border-line px-4 py-2">
-          <button onClick={() => setCountries([])} className={cn("rounded-md px-2 py-0.5 text-[11px]", countries.length === 0 ? "bg-accent/15 text-accent" : "text-muted hover:text-fg")}>
+          <button
+            onClick={() => setCountries([])}
+            className={cn("rounded-md px-2 py-0.5 text-[11px]", countries.length === 0 ? "bg-accent/15 text-accent" : "text-muted hover:text-fg")}
+          >
             All countries
           </button>
           {available.map((c) => (
@@ -261,7 +276,12 @@ function EconomicCalendar({ from, to, tz, today, now }: { from: string; to: stri
       {data && days.length === 0 && <EmptyState title="No releases match these filters" icon={<CalendarDays className="size-6" />} />}
       {days.map(({ date, events }) => (
         <section key={date}>
-          <header className={cn("sticky top-0 z-[1] flex items-center justify-between border-y border-line px-4 py-1.5 text-xs backdrop-blur", date === today ? "bg-accent/10 text-accent" : "bg-panel-2/95 text-muted")}>
+          <header
+            className={cn(
+              "sticky top-0 z-[1] flex items-center justify-between border-y border-line px-4 py-1.5 text-xs backdrop-blur",
+              date === today ? "bg-accent/10 text-accent" : "bg-panel-2/95 text-muted",
+            )}
+          >
             <span className="font-semibold uppercase tracking-wide">{dayLabel(date)}</span>
             <span>{events.length} events</span>
           </header>
@@ -284,7 +304,9 @@ function EconomicCalendar({ from, to, tz, today, now }: { from: string; to: stri
                         <span className={cn(e.impact === "high" && "font-medium")}>{e.title}</span>
                         {e.id === nextId && <span className="ml-2 rounded bg-accent/20 px-1.5 py-px text-[10px] text-accent">Next</span>}
                       </td>
-                      <td className={cn("num w-20 px-2 text-right text-xs font-medium", beat === 1 ? "text-amber-300" : beat === -1 ? "text-sky-300" : "text-fg")}>{e.actual ?? "—"}</td>
+                      <td className={cn("num w-20 px-2 text-right text-xs font-medium", beat === 1 ? "text-amber-300" : beat === -1 ? "text-sky-300" : "text-fg")}>
+                        {e.actual ?? "—"}
+                      </td>
                       <td className="num w-20 px-2 text-right text-xs text-muted">{e.forecast ?? "—"}</td>
                       <td className="num w-20 px-4 text-right text-xs text-muted">{e.previous ?? "—"}</td>
                     </tr>

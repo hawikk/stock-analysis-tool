@@ -11,13 +11,7 @@ type Loaded<T> = { data: T; source: DataSource | DataSource[]; note?: string };
  * Serve `loader` through the shared cache; on failure fall back to `fallback` (mock data) so the UI
  * always renders, flagged via `meta.source = "mock"`.
  */
-export async function serve<T>(opts: {
-  key: string;
-  ttl: number;
-  load: () => Promise<Loaded<T>>;
-  fallback?: () => T;
-  maxAge?: number;
-}): Promise<Response> {
+export async function serve<T>(opts: { key: string; ttl: number; load: () => Promise<Loaded<T>>; fallback?: () => T; maxAge?: number }): Promise<Response> {
   const maxAge = opts.maxAge ?? Math.min(opts.ttl, 60);
   try {
     const { value, stale } = await cached(opts.key, opts.ttl, opts.load);
@@ -43,5 +37,12 @@ export const SYMBOL_RE = SYMBOL_PATTERN;
 
 export function parseSymbols(raw: string | null, max = 200): string[] {
   if (!raw) return [];
-  return [...new Set(raw.split(",").map((s) => s.trim().toUpperCase()).filter((s) => SYMBOL_RE.test(s)))].slice(0, max);
+  return [
+    ...new Set(
+      raw
+        .split(",")
+        .map((s) => s.trim().toUpperCase())
+        .filter((s) => SYMBOL_RE.test(s)),
+    ),
+  ].slice(0, max);
 }

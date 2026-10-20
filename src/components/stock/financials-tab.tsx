@@ -26,7 +26,12 @@ export function FinancialsTab({ symbol, currency }: { symbol: string; currency?:
   const sym = currencySymbol(currency);
 
   if (isLoading) return <Skeleton className="h-96" />;
-  if (error) return <Panel><ErrorState message={error.message} onRetry={() => refetch()} /></Panel>;
+  if (error)
+    return (
+      <Panel>
+        <ErrorState message={error.message} onRetry={() => refetch()} />
+      </Panel>
+    );
   if (!f) return null;
 
   const revenue = period === "quarterly" ? f.quarterlyRevenue : f.annualRevenue;
@@ -41,7 +46,12 @@ export function FinancialsTab({ symbol, currency }: { symbol: string; currency?:
   });
   const growth = revenue.length >= 2 ? ((revenue[revenue.length - 1].value - revenue[revenue.length - 2].value) / Math.abs(revenue[revenue.length - 2].value)) * 100 : null;
 
-  if (!merged.length) return <Panel><EmptyState title="No financial statements available" hint="ETFs, indices, FX and crypto don't report financials." /></Panel>;
+  if (!merged.length)
+    return (
+      <Panel>
+        <EmptyState title="No financial statements available" hint="ETFs, indices, FX and crypto don't report financials." />
+      </Panel>
+    );
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
@@ -125,9 +135,7 @@ export function EarningsTab({ p }: { p: StockProfile }) {
           {e.nextDate && mounted ? (
             <div>
               <div className="text-2xl font-semibold">{fmtDate(e.nextDate, tz, { weekday: "long", month: "long", day: "numeric" })}</div>
-              <div className="text-sm text-muted">
-                {e.nextDateIsEstimate ? "Estimated date" : <>~{fmtTime(e.nextDate, tz, true)} your time</>}
-              </div>
+              <div className="text-sm text-muted">{e.nextDateIsEstimate ? "Estimated date" : <>~{fmtTime(e.nextDate, tz, true)} your time</>}</div>
             </div>
           ) : (
             <div className="text-sm text-muted">{e.nextDate ? "—" : "No upcoming date announced"}</div>

@@ -33,21 +33,13 @@ export function quantBrief(input: BriefInput): MarketBrief {
   const laggards = sectors.slice(-2).map((s) => `${s.label} ${pct(s.changePercent)}`);
 
   const breadth = input.indices.filter((q) => (q.changePercent ?? 0) > 0).length / Math.max(1, input.indices.length);
-  const riskScore =
-    50 +
-    (spx?.changePercent ?? 0) * 12 +
-    (ndx?.changePercent ?? 0) * 6 -
-    (vix?.changePercent ?? 0) * 0.8 +
-    (breadth - 0.5) * 30 +
-    (btc?.changePercent ?? 0) * 1.5;
+  const riskScore = 50 + (spx?.changePercent ?? 0) * 12 + (ndx?.changePercent ?? 0) * 6 - (vix?.changePercent ?? 0) * 0.8 + (breadth - 0.5) * 30 + (btc?.changePercent ?? 0) * 1.5;
   const moodScore = Math.round(Math.max(0, Math.min(100, riskScore)));
   const mood: MarketBrief["mood"] = moodScore >= 60 ? "Risk-on" : moodScore <= 40 ? "Risk-off" : "Mixed";
 
   const now = Date.now();
   const highImpact = [
-    ...new Map(
-      input.events.filter((e) => e.impact === "high" && new Date(e.time).getTime() > now - 3600_000).map((e) => [`${e.country}:${e.title}`, e]),
-    ).values(),
+    ...new Map(input.events.filter((e) => e.impact === "high" && new Date(e.time).getTime() > now - 3600_000).map((e) => [`${e.country}:${e.title}`, e])).values(),
   ].slice(0, 4);
 
   const headline =
@@ -86,7 +78,8 @@ const BriefSchema = z.object({
 export async function marketBrief(input: BriefInput): Promise<MarketBrief> {
   const quant = quantBrief(input);
   if (!aiConfig()) return quant;
-  const compact = (qs: AssetRow[]) => qs.map((q) => ({ s: q.symbol, n: q.label, p: q.price, chg: q.changePercent !== null ? Math.round((q.changePercent ?? 0) * 100) / 100 : null }));
+  const compact = (qs: AssetRow[]) =>
+    qs.map((q) => ({ s: q.symbol, n: q.label, p: q.price, chg: q.changePercent !== null ? Math.round((q.changePercent ?? 0) * 100) / 100 : null }));
   const data = {
     now: new Date().toISOString(),
     indices: compact(input.indices),

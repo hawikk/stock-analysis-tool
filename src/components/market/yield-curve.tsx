@@ -76,7 +76,16 @@ export function YieldCurvePanel({ className }: { className?: string }) {
                   <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => (typeof v === "number" ? `${v.toFixed(2)}%` : String(v))} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   {d.comparisons.map((c, i) => (
-                    <Line key={c.label} type="monotone" dataKey={c.label} stroke={COMPARISON_COLORS[i % COMPARISON_COLORS.length]} strokeDasharray="4 3" dot={false} strokeWidth={1.5} connectNulls />
+                    <Line
+                      key={c.label}
+                      type="monotone"
+                      dataKey={c.label}
+                      stroke={COMPARISON_COLORS[i % COMPARISON_COLORS.length]}
+                      strokeDasharray="4 3"
+                      dot={false}
+                      strokeWidth={1.5}
+                      connectNulls
+                    />
                   ))}
                   <Line type="monotone" dataKey="Today" stroke="#38bdf8" strokeWidth={2.5} dot={{ r: 2.5, fill: "#38bdf8" }} connectNulls />
                 </LineChart>
@@ -98,7 +107,14 @@ export function YieldCurvePanel({ className }: { className?: string }) {
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke="#1b2330" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="date" tick={{ fill: "#7d8aa0", fontSize: 10 }} tickLine={false} axisLine={{ stroke: "#1b2330" }} minTickGap={40} tickFormatter={(v: string) => v.slice(0, 7)} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: "#7d8aa0", fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={{ stroke: "#1b2330" }}
+                    minTickGap={40}
+                    tickFormatter={(v: string) => v.slice(0, 7)}
+                  />
                   <YAxis tick={{ fill: "#7d8aa0", fontSize: 11 }} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => `${v} bp`} />
                   <ReferenceLine y={0} stroke="#f43f5e" strokeDasharray="4 3" />
@@ -117,9 +133,7 @@ function SpreadStat({ label, bp }: { label: string; bp: number | null }) {
   return (
     <div>
       <div className="text-muted">{label}</div>
-      <div className={cn("num text-base font-semibold", bp == null ? "" : bp < 0 ? "text-down" : "text-up")}>
-        {bp == null ? "—" : `${bp > 0 ? "+" : ""}${bp} bp`}
-      </div>
+      <div className={cn("num text-base font-semibold", bp == null ? "" : bp < 0 ? "text-down" : "text-up")}>{bp == null ? "—" : `${bp > 0 ? "+" : ""}${bp} bp`}</div>
     </div>
   );
 }

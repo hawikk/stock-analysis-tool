@@ -80,7 +80,11 @@ export function SectorTreemap({ height = 620, className, compact = false }: { he
           {error && <ErrorState message={error.message} onRetry={() => refetch()} />}
           {isLoading && <Skeleton className="h-full w-full" />}
           {leaves.sectors.map((n) => (
-            <div key={n.data.name} className="pointer-events-none absolute truncate px-1 text-[10px] font-semibold uppercase tracking-wide text-muted" style={{ left: n.x0, top: n.y0 + 2, width: n.x1 - n.x0 }}>
+            <div
+              key={n.data.name}
+              className="pointer-events-none absolute truncate px-1 text-[10px] font-semibold uppercase tracking-wide text-muted"
+              style={{ left: n.x0, top: n.y0 + 2, width: n.x1 - n.x0 }}
+            >
               {n.data.name}
             </div>
           ))}

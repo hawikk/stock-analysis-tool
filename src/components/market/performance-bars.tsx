@@ -45,14 +45,7 @@ export function PerformanceBars({
   const maxAbs = Math.max(0.5, ...rows.map((x) => Math.abs(x.v ?? 0)));
 
   return (
-    <Panel
-      title={title}
-      subtitle={subtitle}
-      icon={icon}
-      meta={data?.meta}
-      className={className}
-      actions={<Segmented value={win} onChange={setWin} options={WINDOWS} size="xs" />}
-    >
+    <Panel title={title} subtitle={subtitle} icon={icon} meta={data?.meta} className={className} actions={<Segmented value={win} onChange={setWin} options={WINDOWS} size="xs" />}>
       {isLoading && <SkeletonRows rows={8} />}
       {error && <ErrorState message={error.message} onRetry={() => refetch()} />}
       {!isLoading && !error && (

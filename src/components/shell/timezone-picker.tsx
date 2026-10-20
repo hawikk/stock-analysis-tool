@@ -7,7 +7,18 @@ import { useMounted, useNow } from "@/lib/hooks";
 import { cn } from "@/lib/format";
 import { tzAbbreviation } from "@/lib/time";
 
-const POPULAR = ["Europe/Madrid", "Europe/London", "America/New_York", "America/Chicago", "America/Los_Angeles", "Asia/Tokyo", "Asia/Hong_Kong", "Asia/Singapore", "Australia/Sydney", "UTC"];
+const POPULAR = [
+  "Europe/Madrid",
+  "Europe/London",
+  "America/New_York",
+  "America/Chicago",
+  "America/Los_Angeles",
+  "Asia/Tokyo",
+  "Asia/Hong_Kong",
+  "Asia/Singapore",
+  "Australia/Sydney",
+  "UTC",
+];
 
 function allZones(): string[] {
   try {
@@ -53,9 +64,7 @@ export function TimezonePicker() {
       </button>
       {open && (
         <div className="panel absolute right-0 z-50 mt-2 w-72 p-2 shadow-2xl">
-          <p className="px-2 pb-2 pt-1 text-[11px] text-muted">
-            All times (earnings, economic events, market hours) are shown in this zone.
-          </p>
+          <p className="px-2 pb-2 pt-1 text-[11px] text-muted">All times (earnings, economic events, market hours) are shown in this zone.</p>
           <div className="relative mb-2">
             <Search className="absolute left-2.5 top-2 size-3.5 text-muted" />
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search time zones…" className="input w-full pl-8 text-xs" />

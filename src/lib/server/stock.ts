@@ -2,17 +2,7 @@ import type { Financials, StatItem, StockProfile } from "@/lib/types";
 import { yahooQuoteSummary, yahooQuotes, yahooTimeseries, yNum, type QuoteSummary } from "./yahoo";
 import { NotFoundError } from "./respond";
 
-const MODULES = [
-  "price",
-  "summaryDetail",
-  "defaultKeyStatistics",
-  "financialData",
-  "assetProfile",
-  "calendarEvents",
-  "earningsHistory",
-  "earningsTrend",
-  "recommendationTrend",
-];
+const MODULES = ["price", "summaryDetail", "defaultKeyStatistics", "financialData", "assetProfile", "calendarEvents", "earningsHistory", "earningsTrend", "recommendationTrend"];
 
 type Obj = Record<string, unknown>;
 const get = (o: Obj | undefined, k: string) => yNum(o?.[k]);
@@ -22,10 +12,7 @@ function stat(key: string, label: string, value: number | string | null, format:
 }
 
 export async function stockProfile(symbol: string): Promise<StockProfile> {
-  const [quotes, summary] = await Promise.all([
-    yahooQuotes([symbol]),
-    yahooQuoteSummary(symbol, MODULES).catch(() => ({}) as QuoteSummary),
-  ]);
+  const [quotes, summary] = await Promise.all([yahooQuotes([symbol]), yahooQuoteSummary(symbol, MODULES).catch(() => ({}) as QuoteSummary)]);
   const quote = quotes[0];
   if (!quote || quote.price == null) throw new NotFoundError(`No market data found for ${symbol}`);
 
@@ -94,11 +81,11 @@ export async function stockProfile(symbol: string): Promise<StockProfile> {
 
   return {
     symbol,
-    name: (summary.price as Obj | undefined)?.longName as string | undefined ?? quote.name,
+    name: ((summary.price as Obj | undefined)?.longName as string | undefined) ?? quote.name,
     quote,
     profile: {
-      sector: ap?.sectorDisp as string | undefined ?? (ap?.sector as string | undefined),
-      industry: ap?.industryDisp as string | undefined ?? (ap?.industry as string | undefined),
+      sector: (ap?.sectorDisp as string | undefined) ?? (ap?.sector as string | undefined),
+      industry: (ap?.industryDisp as string | undefined) ?? (ap?.industry as string | undefined),
       country: ap?.country as string | undefined,
       city: ap?.city as string | undefined,
       website: ap?.website as string | undefined,

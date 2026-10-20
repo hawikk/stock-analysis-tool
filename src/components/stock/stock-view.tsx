@@ -50,7 +50,11 @@ export function StockView({ params }: { params: Promise<{ symbol: string }> }) {
   if (profileQ.error instanceof ApiError && profileQ.error.status === 404) {
     return (
       <Panel>
-        <EmptyState title={`No market data for “${symbol}”`} hint="Check the ticker; non-US listings need an exchange suffix (e.g. SAN.MC, ASML.AS, 7203.T)." icon={<SearchX className="size-6" />}>
+        <EmptyState
+          title={`No market data for “${symbol}”`}
+          hint="Check the ticker; non-US listings need an exchange suffix (e.g. SAN.MC, ASML.AS, 7203.T)."
+          icon={<SearchX className="size-6" />}
+        >
           <Link href="/" className="btn-ghost mt-2 text-xs">
             Back to overview
           </Link>

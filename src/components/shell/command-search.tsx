@@ -61,12 +61,7 @@ export function CommandSearch() {
       </button>
       {open && (
         <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={() => setOpen(false)}>
-          <Command
-            shouldFilter={false}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="panel w-full max-w-xl overflow-hidden shadow-2xl"
-            label="Search"
-          >
+          <Command shouldFilter={false} onMouseDown={(e) => e.stopPropagation()} className="panel w-full max-w-xl overflow-hidden shadow-2xl" label="Search">
             <div className="flex items-center gap-2 border-b border-line px-4">
               <Search className="size-4 text-muted" />
               <Command.Input
@@ -143,11 +138,7 @@ function GroupHeading({ children }: { children: React.ReactNode }) {
 
 function Item({ children, onSelect, value }: { children: React.ReactNode; onSelect: () => void; value: string }) {
   return (
-    <Command.Item
-      value={value}
-      onSelect={onSelect}
-      className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-white/[0.07]"
-    >
+    <Command.Item value={value} onSelect={onSelect} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-white/[0.07]">
       {children}
     </Command.Item>
   );

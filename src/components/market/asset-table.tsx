@@ -46,7 +46,21 @@ export function AssetTable({
   );
 }
 
-function Row({ r, perf, showSymbol, dense, spark, prefix }: { r: AssetRow; perf?: PerfWindow[]; showSymbol: boolean; dense: boolean; spark: boolean; prefix?: (r: AssetRow) => React.ReactNode }) {
+function Row({
+  r,
+  perf,
+  showSymbol,
+  dense,
+  spark,
+  prefix,
+}: {
+  r: AssetRow;
+  perf?: PerfWindow[];
+  showSymbol: boolean;
+  dense: boolean;
+  spark: boolean;
+  prefix?: (r: AssetRow) => React.ReactNode;
+}) {
   const flash = usePriceFlash(r.price);
   const href = `/stock/${encodeURIComponent(r.symbol)}`;
   return (

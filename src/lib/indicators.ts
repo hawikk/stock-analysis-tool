@@ -107,7 +107,10 @@ export function pctReturn(values: number[], lookback: number): number | null {
 
 export function realizedVol(values: number[], window = 30, periodsPerYear = 252): number | null {
   if (values.length < window + 1) return null;
-  const rets = values.slice(-window - 1).slice(1).map((v, i, arr) => Math.log(v / (i === 0 ? values[values.length - window - 1] : arr[i - 1])));
+  const rets = values
+    .slice(-window - 1)
+    .slice(1)
+    .map((v, i, arr) => Math.log(v / (i === 0 ? values[values.length - window - 1] : arr[i - 1])));
   const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
   const variance = rets.reduce((a, r) => a + (r - mean) ** 2, 0) / (rets.length - 1);
   return Math.sqrt(variance * periodsPerYear) * 100;
@@ -144,12 +147,16 @@ export function supportResistance(candles: Candle[], price: number, window = 5) 
     }
     return out;
   };
-  const support = cluster(lows.filter((l) => l < price)).sort((a, b) => b - a).slice(0, 3);
-  const resistance = cluster(highs.filter((h) => h > price)).sort((a, b) => a - b).slice(0, 3);
+  const support = cluster(lows.filter((l) => l < price))
+    .sort((a, b) => b - a)
+    .slice(0, 3);
+  const resistance = cluster(highs.filter((h) => h > price))
+    .sort((a, b) => a - b)
+    .slice(0, 3);
   return { support, resistance };
 }
 
-export const last = <T,>(arr: (T | null)[]): T | null => {
+export const last = <T>(arr: (T | null)[]): T | null => {
   for (let i = arr.length - 1; i >= 0; i--) if (arr[i] !== null) return arr[i];
   return null;
 };

@@ -10,7 +10,11 @@ export async function liveQuotes(symbols: string[], { spark = false, ttl = 15 }:
     const { value } = await cached(key, ttl, async () => {
       const [quotes, sparks] = await Promise.all([
         yahooQuotes(symbols),
-        spark ? cached(`spark:${[...symbols].sort().join(",")}`, 120, () => yahooSparks(symbols)).then((r) => r.value).catch(() => ({}) as Record<string, number[]>) : Promise.resolve({} as Record<string, number[]>),
+        spark
+          ? cached(`spark:${[...symbols].sort().join(",")}`, 120, () => yahooSparks(symbols))
+              .then((r) => r.value)
+              .catch(() => ({}) as Record<string, number[]>)
+          : Promise.resolve({} as Record<string, number[]>),
       ]);
       if (!quotes.length) throw new Error("Yahoo returned no quotes");
       return quotes.map((q) => ({ ...q, sparkline: sparks[q.symbol] }));
