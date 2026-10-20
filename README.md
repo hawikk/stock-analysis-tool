@@ -50,8 +50,8 @@ Next.js 16 (App Router, React 19, Tailwind v4, Cache Components)
 ```
 
 - **Resilience.** Every API route returns `{ data, meta: { source, asOf, stale, note } }`. The cache serves stale data while it revalidates. If an upstream source fails, routes with a fallback serve mock data with `source: "mock"`, and the UI shows a "Demo data" badge. Unknown tickers return 404 instead of fake data.
-- **Yahoo access.** Yahoo rate-limits (HTTP 429) generic HTTP clients from cloud IPs, which is likely why the old Cloud Run deploy broke. Requests go through [`impit`](https://github.com/apify/impit), a Rust HTTP client with a Chrome TLS fingerprint, plus Yahoo's cookie and crumb handshake. Finnhub is an optional backup for quotes, news and earnings.
-- **AI.** Any OpenAI-compatible chat API works (OpenAI, Gemini, Groq or OpenRouter). The model receives a compact data packet (profile, about 40 stats, analyst data, earnings history, computed technicals, the quant scorecard and headlines), must return JSON in a fixed schema, and is validated with zod. If no key is set or the call fails, the deterministic quant engine fills the same schema. Results are cached for 6 h (AI) or 15 min (quant), and manual refresh is rate-limited per symbol.
+- **Yahoo access.** Yahoo rate-limits (HTTP 429) generic HTTP clients from cloud IPs, which is likely why the old Cloud Run deploy broke. Requests go through [`impit`](https://github.com/apify/impit), a Rust HTTP client with a Chrome TLS fingerprint, plus Yahoo's cookie and crumb handshake. impit is loaded lazily. If its native binary cannot load, the app falls back to plain `fetch`, then Finnhub (an optional backup for quotes, news and earnings), then labelled demo data. impit has been verified in a real `vercel build` output running on the AWS Lambda Node 24 / Amazon Linux 2023 image.
+- **AI.** OpenRouter's free models are the default, and any OpenAI-compatible API (Gemini, Groq, OpenAI or a custom endpoint) can join the chain. The model receives a compact data packet (profile, about 40 stats, analyst data, earnings history, computed technicals, the quant scorecard and headlines), must return JSON in a fixed schema, and is validated with zod. Models are tried in order. A model that is rate-limited, retired or returns invalid JSON is paused for between 1 minute and 6 hours depending on the error. When OpenRouter's daily free cap is hit, every `:free` model pauses until the reset. When the whole chain is exhausted, the deterministic quant engine fills the same schema. AI results are cached for 6 h, quant fallbacks for only 15 min, and manual refresh is rate-limited per symbol. Settings shows the live chain and any paused models.
 - **Time zones.** All instants travel as UTC ISO strings and are formatted in the browser's zone or the user's override. Exchange sessions are computed from IANA zones, so DST is handled. BMO/AMC earnings are approximated as 08:00 and 16:05 ET. Stock pages show Yahoo's exact timestamp when one is available.
 
 ## Data sources
@@ -73,18 +73,34 @@ Data may be delayed and the unofficial endpoints can change without notice. The 
 
 Copy `.env.example` to `.env.local`. **All variables are optional.**
 
-| Variable                        | Purpose                                                                | Free tier                                                               |
-| ------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `GEMINI_API_KEY`                | AI analysis and brief with `gemini-2.5-flash` (recommended)            | [Google AI Studio](https://aistudio.google.com/apikey)                  |
-| `GROQ_API_KEY`                  | AI via Groq (`llama-3.3-70b-versatile`)                                | [Groq console](https://console.groq.com/keys)                           |
-| `OPENAI_API_KEY` / `AI_API_KEY` | AI via OpenAI (default `gpt-5-mini`) or any OpenAI-compatible endpoint | paid                                                                    |
-| `AI_BASE_URL`, `AI_MODEL`       | Override endpoint or model                                             |                                                                         |
-| `OPENROUTER_API_KEY`            | AI via OpenRouter                                                      | [openrouter.ai/keys](https://openrouter.ai/keys)                        |
-| `FINNHUB_API_KEY`               | Backup market data                                                     | [finnhub.io/register](https://finnhub.io/register)                      |
-| `FRED_API_KEY`                  | Higher FRED limits                                                     | [FRED API keys](https://fredaccount.stlouisfed.org/apikeys)             |
-| `COINGECKO_API_KEY`             | Higher CoinGecko limits                                                | [CoinGecko demo key](https://www.coingecko.com/en/developers/dashboard) |
+| Variable                     | Purpose                                                                                                  | Free tier                                                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `OPENROUTER_API_KEY`         | AI analysis and brief through OpenRouter's free models (default provider)                                | [openrouter.ai/keys](https://openrouter.ai/keys): 50 free requests/day, 1,000/day after a one-time $10 top-up |
+| `AI_MODEL`                   | Preferred model(s), comma-separated, tried first                                                         |                                                                                                               |
+| `AI_FALLBACK_MODELS`         | Replaces the built-in free fallback list                                                                 |                                                                                                               |
+| `AI_PROVIDER`                | Primary provider when several keys are set (`openrouter`, `gemini`, `groq`, `custom`, `openai`)          |                                                                                                               |
+| `GEMINI_API_KEY`             | Google Gemini (`gemini-flash-latest`)                                                                    | [Google AI Studio](https://aistudio.google.com/apikey)                                                        |
+| `GROQ_API_KEY`               | Groq (`openai/gpt-oss-120b`, `llama-3.3-70b-versatile`)                                                  | [Groq console](https://console.groq.com/keys)                                                                 |
+| `OPENAI_API_KEY`             | OpenAI (`gpt-5-mini`)                                                                                    | paid                                                                                                          |
+| `AI_API_KEY` + `AI_BASE_URL` | Any other OpenAI-compatible endpoint, with models from `AI_MODEL`                                        |                                                                                                               |
+| `FINNHUB_API_KEY`            | Backup market data                                                                                       | [finnhub.io/register](https://finnhub.io/register)                                                            |
+| `FRED_API_KEY`               | Higher FRED limits                                                                                       | [FRED API keys](https://fredaccount.stlouisfed.org/apikeys)                                                   |
+| `COINGECKO_API_KEY`          | Higher CoinGecko limits                                                                                  | [CoinGecko demo key](https://www.coingecko.com/en/developers/dashboard)                                       |
+| `SITE_URL`                   | Canonical URL for metadata, robots.txt and the www → apex redirect (default `https://stockanalyses.org`) |                                                                                                               |
+| `HTTP_CLIENT`                | `fetch` disables impit                                                                                   |                                                                                                               |
 
-The first AI key found wins, in this order: `AI_API_KEY`/`OPENAI_API_KEY`, then Gemini, Groq and OpenRouter. The Settings page shows which providers are active.
+**Default free model chain (OpenRouter, October 2026):**
+
+1. `minimax/minimax-m3.1-flash:free`
+2. `nvidia/nemotron-3.5-super-vl:free`
+3. `thinkingmachines/inkling:free`
+4. `google/gemma-4-31b-it:free`
+5. `nvidia/nemotron-3-super-120b-a12b:free`
+6. `openrouter/free` (OpenRouter's router across whatever free models exist)
+
+Every other configured provider is appended after these, and the quant engine comes last.
+
+**OpenCode Zen.** Zen's API is OpenAI-compatible, but its free models (such as `mimo-v2.6-flash-free`) answer only requests coming from the OpenCode app. Requests from other apps get `FreeTierError`. Its paid models work with `AI_API_KEY`, `AI_BASE_URL=https://opencode.ai/zen/v1` and `AI_MODEL=<model>`. On OpenRouter, Xiaomi MiMo is currently a paid model (`xiaomi/mimo-v2.6-flash`, about $0.14 per million input tokens).
 
 ## Run locally
 
@@ -100,13 +116,18 @@ Requires Node 20.9+. On Linux x64 and macOS, `impit` installs a prebuilt native 
 
 ## Deploy
 
-### Recommended: Vercel Hobby (free)
+### Recommended: Vercel Hobby (free) at stockanalyses.org
 
-1. Import the GitHub repo at [vercel.com/new](https://vercel.com/new). The framework is detected automatically.
-2. Optionally add `GEMINI_API_KEY` (and any other keys) under **Settings → Environment Variables**.
-3. Deploy. Every push to `master` redeploys, and every PR gets a preview URL.
+**Step-by-step guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).** It covers the Vercel import, environment variables, adding the domain, the Cloudflare DNS records, proxy and SSL settings, and verification.
 
-`vercel.json` pins functions to `iad1` (US East). Yahoo can answer EU IP addresses with a GDPR consent wall that breaks its cookie and crumb handshake, and most of the upstream APIs are in the US anyway. Hobby is free for personal, non-commercial use and needs no credit card.
+In short:
+
+1. Import the repo at [vercel.com/new](https://vercel.com/new).
+2. Add `OPENROUTER_API_KEY` and `SITE_URL=https://stockanalyses.org`, then deploy.
+3. Add `stockanalyses.org` in Vercel, with `www` redirecting to the apex.
+4. In Cloudflare, create the `A @` and `CNAME www` records Vercel shows, both set to **DNS only** (grey cloud), and set the SSL mode to **Full (strict)**.
+
+`vercel.json` pins functions to `iad1` (US East) and enables Fluid compute. Yahoo can answer EU IP addresses with a GDPR consent wall that breaks its cookie and crumb handshake, and most of the upstream APIs are in the US anyway. Hobby is free for personal, non-commercial use and needs no credit card.
 
 ### Alternative: Google Cloud Run (container)
 
