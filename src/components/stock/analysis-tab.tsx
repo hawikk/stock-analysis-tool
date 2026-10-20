@@ -8,6 +8,7 @@ import { fetchApi, useApi, useMounted } from "@/lib/hooks";
 import { useTimeZone } from "@/lib/store";
 import { cn, fmtDate, fmtPct, fmtPrice, fmtRelative, fmtTime } from "@/lib/format";
 import { Panel } from "@/components/ui/panel";
+import { RichText } from "@/components/ui/rich-text";
 import { ErrorState, Skeleton } from "@/components/ui/states";
 
 const RATING_STYLE: Record<Rating, string> = {
@@ -38,7 +39,12 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
   };
 
   if (isLoading) return <AnalysisLoading />;
-  if (error) return <Panel><ErrorState message={error.message} onRetry={() => refetch()} /></Panel>;
+  if (error)
+    return (
+      <Panel>
+        <ErrorState message={error.message} onRetry={() => refetch()} />
+      </Panel>
+    );
   if (!a) return null;
 
   const px = price;
@@ -62,7 +68,9 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
             <h2 className="mt-3 text-xl font-semibold leading-snug tracking-tight">{a.headline}</h2>
             <div className="prose-analysis mt-3 text-sm leading-relaxed text-fg/90">
               {a.thesis.split(/\n{2,}/).map((para, i) => (
-                <p key={i}>{para}</p>
+                <p key={i}>
+                  <RichText text={para} />
+                </p>
               ))}
             </div>
           </div>
@@ -73,7 +81,9 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
               <div className="text-center text-xs text-muted">
                 Base-case fair value
                 <div className="num text-lg text-fg">{fmtPrice(a.valuation.fairValue.base, { currency })}</div>
-                <span className={cn("num", (vsPrice(a.valuation.fairValue.base) ?? 0) >= 0 ? "text-up" : "text-down")}>{fmtPct(vsPrice(a.valuation.fairValue.base), 1)} vs price</span>
+                <span className={cn("num", (vsPrice(a.valuation.fairValue.base) ?? 0) >= 0 ? "text-up" : "text-down")}>
+                  {fmtPct(vsPrice(a.valuation.fairValue.base), 1)} vs price
+                </span>
               </div>
             )}
           </div>
@@ -107,7 +117,9 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Valuation" icon={<Scale className="size-4" />} subtitle={a.valuation.verdict}>
           <div className="space-y-4 p-4">
-            <p className="text-sm leading-relaxed text-fg/90">{a.valuation.summary}</p>
+            <p className="text-sm leading-relaxed text-fg/90">
+              <RichText text={a.valuation.summary} />
+            </p>
             <FairValueBar low={a.valuation.fairValue.low} base={a.valuation.fairValue.base} high={a.valuation.fairValue.high} price={px} />
             {a.valuation.keyMetrics.length > 0 && (
               <ul className="grid gap-1.5 sm:grid-cols-2">
@@ -127,11 +139,19 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
               const s = a.scenarios[k];
               const chg = vsPrice(s.price);
               return (
-                <div key={k} className={cn("rounded-xl border p-3", k === "bull" ? "border-up/30 bg-up/[0.04]" : k === "bear" ? "border-down/30 bg-down/[0.04]" : "border-line bg-white/[0.02]")}>
+                <div
+                  key={k}
+                  className={cn(
+                    "rounded-xl border p-3",
+                    k === "bull" ? "border-up/30 bg-up/[0.04]" : k === "bear" ? "border-down/30 bg-down/[0.04]" : "border-line bg-white/[0.02]",
+                  )}
+                >
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">{k}</div>
                   <div className="num mt-1 text-lg font-semibold">{fmtPrice(s.price, { currency })}</div>
                   <div className={cn("num text-xs", (chg ?? 0) >= 0 ? "text-up" : "text-down")}>{fmtPct(chg, 1)}</div>
-                  <p className="mt-2 text-xs leading-relaxed text-fg/80">{s.rationale}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-fg/80">
+                    <RichText text={s.rationale} />
+                  </p>
                 </div>
               );
             })}
@@ -142,7 +162,9 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Technicals" icon={<Activity className="size-4" />} subtitle={a.technicals.trend}>
           <div className="space-y-3 p-4 text-sm">
-            <p className="leading-relaxed text-fg/90">{a.technicals.summary}</p>
+            <p className="leading-relaxed text-fg/90">
+              <RichText text={a.technicals.summary} />
+            </p>
             <p className="text-xs text-muted">{a.technicals.momentum}</p>
             <Levels label="Resistance" values={a.technicals.resistance} cls="text-down" price={px} />
             <Levels label="Support" values={a.technicals.support} cls="text-up" price={px} />
@@ -151,13 +173,15 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
         <EarningsWatch e={a.earnings} />
         <Panel title="News flow" icon={<Newspaper className="size-4" />} subtitle={`Sentiment: ${a.news.sentiment}`}>
           <div className="space-y-3 p-4 text-sm">
-            <p className="leading-relaxed text-fg/90">{a.news.summary}</p>
+            <p className="leading-relaxed text-fg/90">
+              <RichText text={a.news.summary} />
+            </p>
             {a.news.catalysts.length > 0 && (
               <ul className="space-y-1.5">
                 {a.news.catalysts.map((c) => (
                   <li key={c} className="flex gap-2 text-xs text-fg/85">
                     <span className="mt-1.5 size-1 shrink-0 rounded-full bg-accent" />
-                    {c}
+                    <RichText text={c} />
                   </li>
                 ))}
               </ul>
@@ -174,7 +198,9 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
                 <span className="text-sm font-medium">{r.title}</span>
                 <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase", SEVERITY_STYLE[r.severity])}>{r.severity}</span>
               </div>
-              <p className="mt-1 text-xs leading-relaxed text-muted">{r.detail}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                <RichText text={r.detail} />
+              </p>
             </li>
           ))}
         </ul>
@@ -191,15 +217,21 @@ function EarningsWatch({ e }: { e: StockAnalysis["earnings"] }) {
   const mounted = useMounted();
   const tz = useTimeZone();
   return (
-    <Panel title="Earnings watch" icon={<CalendarClock className="size-4" />} subtitle={e.nextDate && mounted ? `${fmtDate(e.nextDate, tz, { weekday: "short", month: "short", day: "numeric" })} · ${fmtTime(e.nextDate, tz, true)}` : "Next report"}>
+    <Panel
+      title="Earnings watch"
+      icon={<CalendarClock className="size-4" />}
+      subtitle={e.nextDate && mounted ? `${fmtDate(e.nextDate, tz, { weekday: "short", month: "short", day: "numeric" })} · ${fmtTime(e.nextDate, tz, true)}` : "Next report"}
+    >
       <div className="space-y-3 p-4 text-sm">
-        <p className="leading-relaxed text-fg/90">{e.summary}</p>
+        <p className="leading-relaxed text-fg/90">
+          <RichText text={e.summary} />
+        </p>
         {e.whatToWatch.length > 0 && (
           <ul className="space-y-1.5">
             {e.whatToWatch.map((w) => (
               <li key={w} className="flex gap-2 text-xs text-fg/85">
                 <span className="mt-1.5 size-1 shrink-0 rounded-full bg-accent-2" />
-                {w}
+                <RichText text={w} />
               </li>
             ))}
           </ul>
@@ -216,7 +248,7 @@ function CaseList({ title, icon, items, tone }: { title: string; icon: ReactNode
         {items.map((s) => (
           <li key={s} className="flex gap-2 text-sm leading-relaxed text-fg/90">
             <span className={cn("mt-2 size-1.5 shrink-0 rounded-full", tone === "up" ? "bg-up" : "bg-down")} />
-            {s}
+            <RichText text={s} />
           </li>
         ))}
       </ul>
@@ -249,7 +281,10 @@ function FairValueBar({ low, base, high, price }: { low: number | null; base: nu
   return (
     <div className="pt-4">
       <div className="relative h-3 rounded-full bg-white/5">
-        <div className="absolute inset-y-0 rounded-full bg-gradient-to-r from-amber-500/40 via-emerald-500/40 to-emerald-400/60" style={{ left: `${pos(low)}%`, width: `${pos(high) - pos(low)}%` }} />
+        <div
+          className="absolute inset-y-0 rounded-full bg-gradient-to-r from-amber-500/40 via-emerald-500/40 to-emerald-400/60"
+          style={{ left: `${pos(low)}%`, width: `${pos(high) - pos(low)}%` }}
+        />
         {base != null && <span className="absolute -top-1 h-5 w-0.5 bg-fg" style={{ left: `${pos(base)}%` }} />}
         {price != null && (
           <span className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${pos(price)}%` }}>

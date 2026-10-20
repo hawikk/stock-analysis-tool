@@ -5,6 +5,7 @@ import type { MarketBrief } from "@/lib/types";
 import { useApi } from "@/lib/hooks";
 import { cn, fmtRelative } from "@/lib/format";
 import { Panel } from "@/components/ui/panel";
+import { RichText } from "@/components/ui/rich-text";
 import { ErrorState, Skeleton } from "@/components/ui/states";
 
 export function BriefCard() {
@@ -30,12 +31,16 @@ export function BriefCard() {
         <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto]">
           <div className="min-w-0">
             <h3 className="text-lg font-semibold leading-snug tracking-tight">{b.headline}</h3>
-            <p className="mt-1.5 text-sm text-muted">{b.summary}</p>
+            <p className="mt-1.5 text-sm text-muted">
+              <RichText text={b.summary} />
+            </p>
             <ul className="mt-3 space-y-1.5">
               {b.bullets.map((x, i) => (
                 <li key={i} className="flex gap-2 text-sm leading-relaxed">
                   <span className="mt-2 size-1 shrink-0 rounded-full bg-accent" />
-                  <span>{x}</span>
+                  <span>
+                    <RichText text={x} />
+                  </span>
                 </li>
               ))}
             </ul>

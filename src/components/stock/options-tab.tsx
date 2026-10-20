@@ -29,6 +29,8 @@ export function OptionsTab({ symbol }: { symbol: string }) {
     return c ? p / c : null;
   }, [chain]);
 
+  const quotesLive = useMemo(() => !!chain && [...chain.calls, ...chain.puts].some((c) => (c.bid ?? 0) > 0 || (c.ask ?? 0) > 0), [chain]);
+
   const atmIv = useMemo(() => {
     if (!rows.length || !spot) return null;
     const atm = rows.reduce((a, b) => (Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a));
@@ -39,7 +41,9 @@ export function OptionsTab({ symbol }: { symbol: string }) {
   return (
     <Panel
       title="Options chain"
-      subtitle={chain ? `Spot ${fmtPrice(spot)} · put/call OI ${pcr?.toFixed(2) ?? "—"} · ATM IV ${atmIv ? (atmIv * 100).toFixed(1) + "%" : "—"}` : "Calls and puts by strike"}
+      subtitle={
+        chain ? `Spot ${fmtPrice(spot)} · put/call OI ${pcr?.toFixed(2) ?? "—"} · ATM IV ${atmIv && quotesLive ? (atmIv * 100).toFixed(1) + "%" : "—"}` : "Calls and puts by strike"
+      }
       meta={data?.meta}
       actions={
         chain && chain.expirations.length > 0 ? (
@@ -54,23 +58,41 @@ export function OptionsTab({ symbol }: { symbol: string }) {
       }
     >
       {isLoading && <SkeletonRows rows={10} />}
-      {error && (error.message.includes("No options") ? <EmptyState title="No listed options" hint="Options data is available for US-listed stocks and ETFs." /> : <ErrorState message={error.message} onRetry={() => refetch()} />)}
+      {error &&
+        (error.message.includes("No options") ? (
+          <EmptyState title="No listed options" hint="Options data is available for US-listed stocks and ETFs." />
+        ) : (
+          <ErrorState message={error.message} onRetry={() => refetch()} />
+        ))}
+      {chain && rows.length > 0 && !quotesLive && (
+        <p className="border-b border-line px-4 py-2 text-xs text-amber-300/90">
+          Bid/ask and implied volatility populate during US market hours; outside them only last-session volume is shown.
+        </p>
+      )}
       {chain && rows.length > 0 && (
         <div className="max-h-[560px] overflow-auto">
           <table className="w-full min-w-[760px] text-xs">
             <thead className="sticky top-0 z-[1] bg-panel-2">
               <tr className="text-[10px] uppercase tracking-wide text-muted">
-                <th colSpan={5} className="border-b border-line py-1.5 text-center font-semibold text-up">Calls</th>
+                <th colSpan={5} className="border-b border-line py-1.5 text-center font-semibold text-up">
+                  Calls
+                </th>
                 <th className="border-b border-line py-1.5" />
-                <th colSpan={5} className="border-b border-line py-1.5 text-center font-semibold text-down">Puts</th>
+                <th colSpan={5} className="border-b border-line py-1.5 text-center font-semibold text-down">
+                  Puts
+                </th>
               </tr>
               <tr className="text-[10px] uppercase tracking-wide text-muted">
                 {["OI", "Vol", "IV", "Bid", "Ask"].map((h) => (
-                  <th key={`c${h}`} className="px-2 py-1.5 text-right font-medium">{h}</th>
+                  <th key={`c${h}`} className="px-2 py-1.5 text-right font-medium">
+                    {h}
+                  </th>
                 ))}
                 <th className="px-2 py-1.5 text-center font-semibold text-fg">Strike</th>
                 {["Bid", "Ask", "IV", "Vol", "OI"].map((h) => (
-                  <th key={`p${h}`} className="px-2 py-1.5 text-right font-medium">{h}</th>
+                  <th key={`p${h}`} className="px-2 py-1.5 text-right font-medium">
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -78,7 +100,9 @@ export function OptionsTab({ symbol }: { symbol: string }) {
               {rows.map((r) => (
                 <tr key={r.strike} className="table-row">
                   <Side c={r.call} cols={["openInterest", "volume", "impliedVolatility", "bid", "ask"]} itm={r.call?.inTheMoney} />
-                  <td className={cn("num px-2 py-1 text-center font-semibold", spot && Math.abs(r.strike - spot) / spot < 0.01 && "text-accent")}>{fmtPrice(r.strike, { digits: 2 })}</td>
+                  <td className={cn("num px-2 py-1 text-center font-semibold", spot && Math.abs(r.strike - spot) / spot < 0.01 && "text-accent")}>
+                    {fmtPrice(r.strike, { digits: 2 })}
+                  </td>
                   <Side c={r.put} cols={["bid", "ask", "impliedVolatility", "volume", "openInterest"]} itm={r.put?.inTheMoney} />
                 </tr>
               ))}
@@ -96,7 +120,8 @@ function Side({ c, cols, itm }: { c?: OptionContract; cols: Col[]; itm?: boolean
   return (
     <>
       {cols.map((k) => {
-        const v = c?.[k] ?? null;
+        const raw = c?.[k] ?? null;
+        const v = (k === "bid" || k === "ask" || k === "impliedVolatility") && !raw ? null : raw;
         const text = v == null ? "—" : k === "impliedVolatility" ? `${(v * 100).toFixed(0)}%` : k === "bid" || k === "ask" ? fmtPrice(v, { digits: 2 }) : fmtCompact(v);
         return (
           <td key={k} className={cn("num px-2 py-1 text-right", itm && "bg-accent/[0.05]", v == null && "text-muted")}>
