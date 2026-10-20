@@ -1,9 +1,11 @@
+import { connection } from "next/server";
 import type { HeatmapStock } from "@/lib/types";
 import { liveQuotes } from "@/lib/server/quotes";
 import { serve } from "@/lib/server/respond";
 import { HEATMAP_UNIVERSE } from "@/lib/universe";
 
 export async function GET() {
+  await connection();
   return serve({
     key: "markets:heatmap",
     ttl: 60,

@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import type { CryptoAsset } from "@/lib/types";
 import { assetRows } from "@/lib/server/assets";
 import { cryptoMarkets } from "@/lib/server/macro";
@@ -6,6 +7,7 @@ import { serve } from "@/lib/server/respond";
 import { CRYPTO_FALLBACK } from "@/lib/universe";
 
 export async function GET() {
+  await connection();
   return serve({
     key: "macro:crypto",
     ttl: 60,

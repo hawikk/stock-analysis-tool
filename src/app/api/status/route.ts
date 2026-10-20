@@ -1,6 +1,8 @@
+import { connection } from "next/server";
 import { aiConfig } from "@/lib/server/ai";
 
 export async function GET() {
+  await connection();
   const ai = aiConfig();
   const env = process.env;
   return Response.json({

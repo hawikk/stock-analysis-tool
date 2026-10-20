@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import type { EconomicEvent, NewsItem } from "@/lib/types";
 import { addDays, isoDateInTz } from "@/lib/time";
 import { aiConfig } from "@/lib/server/ai";
@@ -24,6 +25,7 @@ const MACRO = [
 ];
 
 export async function GET() {
+  await connection();
   const engine = aiConfig() ? "ai" : "quant";
   return serve({
     key: `brief:${engine}`,

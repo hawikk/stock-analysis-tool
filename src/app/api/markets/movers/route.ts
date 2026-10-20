@@ -1,7 +1,9 @@
+import { connection } from "next/server";
 import { serve } from "@/lib/server/respond";
 import { yahooScreener } from "@/lib/server/yahoo";
 
 export async function GET() {
+  await connection();
   return serve({
     key: "markets:movers",
     ttl: 120,

@@ -1,5 +1,6 @@
 import type { DataSource, Meta } from "@/lib/types";
 import { cached } from "./cache";
+import { SYMBOL_PATTERN } from "@/lib/symbols";
 
 type Loaded<T> = { data: T; source: DataSource | DataSource[]; note?: string };
 
@@ -34,7 +35,7 @@ export function badRequest(message: string) {
   return Response.json({ error: message }, { status: 400 });
 }
 
-export const SYMBOL_RE = /^[A-Za-z0-9^=.\-]{1,20}$/;
+export const SYMBOL_RE = SYMBOL_PATTERN;
 
 export function parseSymbols(raw: string | null, max = 200): string[] {
   if (!raw) return [];

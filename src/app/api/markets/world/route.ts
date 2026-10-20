@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import type { WorldIndexRow } from "@/lib/types";
 import { assetRows } from "@/lib/server/assets";
 import { serve } from "@/lib/server/respond";
@@ -6,6 +7,7 @@ import { EXCHANGES, WORLD_INDICES } from "@/lib/universe";
 const exchangeFor = (symbol: string) => EXCHANGES.find((e) => e.indexSymbol === symbol)?.id ?? "";
 
 export async function GET() {
+  await connection();
   return serve({
     key: "markets:world",
     ttl: 30,
