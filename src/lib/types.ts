@@ -298,3 +298,25 @@ export type MarketBrief = {
   mood: "Risk-on" | "Risk-off" | "Mixed";
   moodScore: number;
 };
+
+export type OptionContract = {
+  contractSymbol: string;
+  strike: number;
+  lastPrice: number | null;
+  bid: number | null;
+  ask: number | null;
+  change: number | null;
+  volume: number | null;
+  openInterest: number | null;
+  impliedVolatility: number | null;
+  inTheMoney: boolean;
+};
+
+export type OptionChain = {
+  symbol: string;
+  underlyingPrice: number | null;
+  expirations: number[];
+  expiration: number | null;
+  calls: OptionContract[];
+  puts: OptionContract[];
+};

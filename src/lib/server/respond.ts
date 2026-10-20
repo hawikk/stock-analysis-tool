@@ -2,6 +2,9 @@ import type { DataSource, Meta } from "@/lib/types";
 import { cached } from "./cache";
 import { SYMBOL_PATTERN } from "@/lib/symbols";
 
+/** Thrown by loaders when the upstream definitively has no such entity; served as 404 rather than mock data. */
+export class NotFoundError extends Error {}
+
 type Loaded<T> = { data: T; source: DataSource | DataSource[]; note?: string };
 
 /**
@@ -22,6 +25,7 @@ export async function serve<T>(opts: {
     return Response.json({ data: value.data, meta }, { headers: { "Cache-Control": `public, max-age=0, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 5}` } });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (err instanceof NotFoundError) return Response.json({ error: message }, { status: 404 });
     console.error(`[${opts.key}]`, message);
     if (opts.fallback) {
       const meta: Meta = { source: "mock", asOf: new Date().toISOString(), note: `Live data unavailable (${message}). Showing demo data.` };

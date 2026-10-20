@@ -1,5 +1,6 @@
 import type { Financials, StatItem, StockProfile } from "@/lib/types";
 import { yahooQuoteSummary, yahooQuotes, yahooTimeseries, yNum, type QuoteSummary } from "./yahoo";
+import { NotFoundError } from "./respond";
 
 const MODULES = [
   "price",
@@ -26,7 +27,7 @@ export async function stockProfile(symbol: string): Promise<StockProfile> {
     yahooQuoteSummary(symbol, MODULES).catch(() => ({}) as QuoteSummary),
   ]);
   const quote = quotes[0];
-  if (!quote) throw new Error(`Unknown symbol ${symbol}`);
+  if (!quote || quote.price == null) throw new NotFoundError(`No market data found for ${symbol}`);
 
   const sd = summary.summaryDetail as Obj | undefined;
   const ks = summary.defaultKeyStatistics as Obj | undefined;

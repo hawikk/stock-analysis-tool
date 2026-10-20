@@ -1,4 +1,4 @@
-import type { Candle, ChartData, ChartRange, FinancialPoint, NewsItem, Performance, Quote, SearchResult } from "@/lib/types";
+import type { Candle, ChartData, ChartRange, FinancialPoint, NewsItem, OptionChain, OptionContract, Performance, Quote, SearchResult } from "@/lib/types";
 import { HttpError, httpJson, httpText } from "./http";
 
 const BASE = "https://query1.finance.yahoo.com";
@@ -296,27 +296,7 @@ export async function yahooScreener(scrId: "day_gainers" | "day_losers" | "most_
   return (raw.finance.result?.[0]?.quotes ?? []).map(mapQuote);
 }
 
-export type OptionContract = {
-  contractSymbol: string;
-  strike: number;
-  lastPrice: number | null;
-  bid: number | null;
-  ask: number | null;
-  change: number | null;
-  volume: number | null;
-  openInterest: number | null;
-  impliedVolatility: number | null;
-  inTheMoney: boolean;
-};
 
-export type OptionChain = {
-  symbol: string;
-  underlyingPrice: number | null;
-  expirations: number[];
-  expiration: number | null;
-  calls: OptionContract[];
-  puts: OptionContract[];
-};
 
 export async function yahooOptions(symbol: string, date?: number): Promise<OptionChain> {
   const raw = await yget<{
