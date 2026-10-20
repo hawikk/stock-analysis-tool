@@ -99,6 +99,6 @@ export async function marketBrief(input: BriefInput): Promise<MarketBrief> {
     return { ...value, engine: "ai", model, generatedAt: new Date().toISOString() };
   } catch (err) {
     console.error("AI brief failed:", err);
-    return quant;
+    return { ...quant, aiUnavailable: true };
   }
 }

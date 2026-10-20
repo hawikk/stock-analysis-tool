@@ -58,7 +58,11 @@ export function AnalysisTab({ symbol, price, currency }: { symbol: string; price
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               <span className="flex items-center gap-1 rounded-md bg-white/5 px-2 py-0.5">
                 {a.engine === "ai" ? <Bot className="size-3.5 text-accent" /> : <Calculator className="size-3.5 text-accent" />}
-                {a.engine === "ai" ? `AI analyst · ${a.model}` : "Quant engine (add an AI key for a written thesis)"}
+                {a.engine === "ai"
+                  ? `AI analyst · ${a.model}`
+                  : a.aiUnavailable
+                    ? "Quant engine (AI models are busy, refresh later)"
+                    : "Quant engine (add an AI key for a written thesis)"}
               </span>
               <span>Generated {fmtRelative(a.generatedAt)}</span>
               <button onClick={refresh} disabled={refreshing} className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-accent hover:bg-accent/10 disabled:opacity-50">

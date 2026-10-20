@@ -15,7 +15,11 @@ export function BriefCard() {
     <Panel
       title="Market brief"
       icon={<Sparkles className="size-4" />}
-      subtitle={b ? `${b.engine === "ai" ? `AI · ${b.model}` : "Rules-based snapshot · add an AI key for narrative"} · ${fmtRelative(b.generatedAt)}` : "Cross-asset summary"}
+      subtitle={
+        b
+          ? `${b.engine === "ai" ? `AI · ${b.model}` : b.aiUnavailable ? "Rules-based snapshot · AI models busy" : "Rules-based snapshot · add an AI key for narrative"} · ${fmtRelative(b.generatedAt)}`
+          : "Cross-asset summary"
+      }
       className="h-full"
     >
       {isLoading && (

@@ -131,7 +131,8 @@ function classify(err: unknown): Failure {
       if (/per-day|daily/i.test(err.message)) return { cooldownMs: retryAfterMs(err) ?? HOUR, scope: "free-models", reason: `daily free-model limit: ${msg}` };
       return { cooldownMs: Math.min(retryAfterMs(err) ?? MINUTE, 10 * MINUTE), scope: "model", reason: `rate limited: ${msg}` };
     }
-    if (status === 401 || status === 402 || status === 403) return { cooldownMs: HOUR, scope: "provider", reason: msg };
+    // Some providers (Gemini) report a bad key as 400 rather than 401.
+    if (status === 401 || status === 402 || status === 403 || /api[ _-]?key|credential|unauthori[sz]ed/i.test(msg)) return { cooldownMs: HOUR, scope: "provider", reason: msg };
     if (status === 400 || status === 404 || status === 410 || status === 422) return { cooldownMs: 6 * HOUR, scope: "model", reason: msg };
     return { cooldownMs: 2 * MINUTE, scope: "model", reason: msg };
   }

@@ -246,6 +246,8 @@ export type StockAnalysis = {
   symbol: string;
   engine: "ai" | "quant";
   model?: string;
+  /** Set when AI is configured but every model failed, so the quant engine answered instead. */
+  aiUnavailable?: boolean;
   generatedAt: string;
   rating: Rating;
   conviction: number;
@@ -280,6 +282,7 @@ export type StockAnalysis = {
 export type MarketBrief = {
   engine: "ai" | "quant";
   model?: string;
+  aiUnavailable?: boolean;
   generatedAt: string;
   headline: string;
   summary: string;

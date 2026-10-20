@@ -428,6 +428,6 @@ export async function analyzeStock(input: AnalysisInput): Promise<StockAnalysis>
     };
   } catch (err) {
     console.error("AI analysis failed, falling back to quant engine:", err);
-    return { ...quant, headline: quant.headline };
+    return { ...quant, aiUnavailable: true };
   }
 }
