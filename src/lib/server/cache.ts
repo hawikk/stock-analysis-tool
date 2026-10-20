@@ -1,3 +1,5 @@
+import { after } from "next/server";
+
 type Entry<T> = { value: T; expires: number; staleUntil: number };
 
 type CacheState = {
@@ -24,12 +26,17 @@ function evictIfNeeded() {
   }
 }
 
-function refresh<T>(key: string, ttlMs: number, staleMs: number, loader: () => Promise<T>): Promise<T> {
+export type Ttl<T> = number | ((value: T) => number);
+
+function refresh<T>(key: string, ttl: Ttl<T>, staleSeconds: number | undefined, loader: () => Promise<T>): Promise<T> {
   const existing = state.inflight.get(key) as Promise<T> | undefined;
   if (existing) return existing;
   const p = loader()
     .then((value) => {
       const now = Date.now();
+      const ttlSeconds = typeof ttl === "function" ? ttl(value) : ttl;
+      const ttlMs = ttlSeconds * 1000;
+      const staleMs = (staleSeconds ?? ttlSeconds * 10) * 1000;
       state.store.set(key, { value, expires: now + ttlMs, staleUntil: now + ttlMs + staleMs });
       evictIfNeeded();
       return value;
@@ -46,28 +53,27 @@ export function invalidate(key: string) {
 /**
  * In-memory TTL cache with stale-while-revalidate and in-flight de-duplication.
  * Fresh hits return immediately; stale hits return the old value and refresh in the background;
- * if a refresh fails and a stale value exists, the stale value is served.
+ * if a refresh fails and a stale value exists, the stale value is served. `ttl` may depend on the
+ * loaded value, e.g. to keep a degraded fallback result only briefly.
  */
-export async function cached<T>(
-  key: string,
-  ttlSeconds: number,
-  loader: () => Promise<T>,
-  { staleSeconds = ttlSeconds * 10 }: { staleSeconds?: number } = {},
-): Promise<{ value: T; stale: boolean }> {
-  const ttlMs = ttlSeconds * 1000;
-  const staleMs = staleSeconds * 1000;
+export async function cached<T>(key: string, ttl: Ttl<T>, loader: () => Promise<T>, { staleSeconds }: { staleSeconds?: number } = {}): Promise<{ value: T; stale: boolean }> {
   const now = Date.now();
   const hit = state.store.get(key) as Entry<T> | undefined;
 
   if (hit && hit.expires > now) return { value: hit.value, stale: false };
 
   if (hit && hit.staleUntil > now) {
-    refresh(key, ttlMs, staleMs, loader).catch(() => undefined);
+    const pending = refresh(key, ttl, staleSeconds, loader).catch(() => undefined);
+    // On serverless hosts the instance can be frozen once the response is sent; after() keeps it alive
+    // until the refresh lands. It throws outside a request scope, where the promise simply runs on.
+    try {
+      after(pending);
+    } catch {}
     return { value: hit.value, stale: true };
   }
 
   try {
-    return { value: await refresh(key, ttlMs, staleMs, loader), stale: false };
+    return { value: await refresh(key, ttl, staleSeconds, loader), stale: false };
   } catch (err) {
     if (hit) return { value: hit.value, stale: true };
     throw err;

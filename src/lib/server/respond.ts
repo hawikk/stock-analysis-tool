@@ -1,5 +1,5 @@
 import type { DataSource, Meta } from "@/lib/types";
-import { cached } from "./cache";
+import { cached, type Ttl } from "./cache";
 import { SYMBOL_PATTERN } from "@/lib/symbols";
 
 /** Thrown by loaders when the upstream definitively has no such entity; served as 404 rather than mock data. */
@@ -11,8 +11,8 @@ type Loaded<T> = { data: T; source: DataSource | DataSource[]; note?: string };
  * Serve `loader` through the shared cache; on failure fall back to `fallback` (mock data) so the UI
  * always renders, flagged via `meta.source = "mock"`.
  */
-export async function serve<T>(opts: { key: string; ttl: number; load: () => Promise<Loaded<T>>; fallback?: () => T; maxAge?: number }): Promise<Response> {
-  const maxAge = opts.maxAge ?? Math.min(opts.ttl, 60);
+export async function serve<T>(opts: { key: string; ttl: Ttl<Loaded<T>>; load: () => Promise<Loaded<T>>; fallback?: () => T; maxAge?: number }): Promise<Response> {
+  const maxAge = opts.maxAge ?? Math.min(typeof opts.ttl === "number" ? opts.ttl : 60, 60);
   try {
     const { value, stale } = await cached(opts.key, opts.ttl, opts.load);
     const meta: Meta = { source: value.source, asOf: new Date().toISOString(), stale, note: value.note };
