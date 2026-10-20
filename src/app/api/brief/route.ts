@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import type { EconomicEvent, NewsItem } from "@/lib/types";
 import { addDays, isoDateInTz } from "@/lib/time";
-import { aiConfig } from "@/lib/server/ai";
+import { aiEnabled } from "@/lib/server/ai";
 import { assetRows } from "@/lib/server/assets";
 import { marketBrief } from "@/lib/server/brief";
 import { economicCalendar } from "@/lib/server/calendars";
@@ -26,10 +26,9 @@ const MACRO = [
 
 export async function GET() {
   await connection();
-  const engine = aiConfig() ? "ai" : "quant";
   return serve({
-    key: `brief:${engine}`,
-    ttl: engine === "ai" ? 1800 : 120,
+    key: `brief:${aiEnabled() ? "ai" : "quant"}`,
+    ttl: (v) => (v.source === "ai" ? 1800 : 120),
     load: async () => {
       const today = isoDateInTz(new Date(), "America/New_York");
       const [indices, sectors, macro, events, headlines] = await Promise.all([

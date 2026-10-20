@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Candle, Financials, NewsItem, Rating, StockAnalysis, StockProfile } from "@/lib/types";
 import { atr, last, macd, maxDrawdown, pctReturn, realizedVol, rsi, sma, supportResistance } from "@/lib/indicators";
-import { completeJson, aiConfig } from "./ai";
+import { aiEnabled, completeJson } from "./ai";
 
 export type AnalysisInput = {
   profile: StockProfile;
@@ -409,10 +409,9 @@ function packet(input: AnalysisInput, quant: StockAnalysis) {
 
 export async function analyzeStock(input: AnalysisInput): Promise<StockAnalysis> {
   const quant = quantAnalysis(input);
-  if (!aiConfig()) return quant;
+  if (!aiEnabled()) return quant;
   try {
-    const { json, model } = await completeJson(SYSTEM, `${SHAPE}\n\nDATA PACKET:\n${JSON.stringify(packet(input, quant))}`);
-    const ai = AiSchema.parse(json);
+    const { value: ai, model } = await completeJson(SYSTEM, `${SHAPE}\n\nDATA PACKET:\n${JSON.stringify(packet(input, quant))}`, (json) => AiSchema.parse(json));
     return {
       ...ai,
       symbol: input.profile.symbol,

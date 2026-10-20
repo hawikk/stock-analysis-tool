@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AssetRow, EconomicEvent, MarketBrief, NewsItem } from "@/lib/types";
-import { aiConfig, completeJson } from "./ai";
+import { aiEnabled, completeJson } from "./ai";
 
 export type BriefInput = {
   indices: AssetRow[];
@@ -68,7 +68,7 @@ export function quantBrief(input: BriefInput): MarketBrief {
 }
 
 const BriefSchema = z.object({
-  headline: z.string().catch(""),
+  headline: z.string().min(1),
   summary: z.string().catch(""),
   bullets: z.array(z.string()).catch([]),
   mood: z.enum(["Risk-on", "Risk-off", "Mixed"]).catch("Mixed"),
@@ -77,7 +77,7 @@ const BriefSchema = z.object({
 
 export async function marketBrief(input: BriefInput): Promise<MarketBrief> {
   const quant = quantBrief(input);
-  if (!aiConfig()) return quant;
+  if (!aiEnabled()) return quant;
   const compact = (qs: AssetRow[]) =>
     qs.map((q) => ({ s: q.symbol, n: q.label, p: q.price, chg: q.changePercent !== null ? Math.round((q.changePercent ?? 0) * 100) / 100 : null }));
   const data = {
@@ -90,11 +90,13 @@ export async function marketBrief(input: BriefInput): Promise<MarketBrief> {
     ruleBasedMoodScore: quant.moodScore,
   };
   try {
-    const { json, model } = await completeJson(
+    const { value, model } = await completeJson(
       "You are a global macro strategist writing a crisp morning brief for a sophisticated investor. Use only the provided data; cite numbers. Output JSON only.",
       `Return {"headline": one line, "summary": 2-3 sentences on what is driving markets, "bullets": 4-6 bullets covering US, Europe, Asia, rates/FX, commodities/crypto and what to watch next, "mood": "Risk-on|Risk-off|Mixed", "moodScore": 0-100}.\nDATA:\n${JSON.stringify(data)}`,
+      (json) => BriefSchema.parse(json),
+      { budgetMs: 75_000 },
     );
-    return { ...BriefSchema.parse(json), engine: "ai", model, generatedAt: new Date().toISOString() };
+    return { ...value, engine: "ai", model, generatedAt: new Date().toISOString() };
   } catch (err) {
     console.error("AI brief failed:", err);
     return quant;

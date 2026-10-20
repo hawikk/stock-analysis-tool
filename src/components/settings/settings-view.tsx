@@ -12,7 +12,12 @@ import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { TimezonePicker } from "@/components/shell/timezone-picker";
 
 type Provider = { id: string; name: string; role: string; keyRequired: boolean; configured: boolean; optionalKey?: string; hasKey?: boolean };
-type Status = { ai: { enabled: boolean; provider?: string; model?: string }; providers: Provider[] };
+type AiTarget = { provider: string; label: string; model: string; coolingUntil?: string; reason?: string };
+type Status = {
+  ai: { enabled: boolean; chain: AiTarget[]; last?: { target: string; ok: boolean; at: string; error?: string } };
+  httpClient: { client: "impit" | "fetch" | "starting"; note?: string };
+  providers: Provider[];
+};
 
 const KEY_LINKS: Record<string, string> = {
   FINNHUB_API_KEY: "https://finnhub.io/register",
@@ -66,9 +71,35 @@ export function SettingsView() {
             {isLoading && <SkeletonRows rows={2} />}
             {st &&
               (st.ai.enabled ? (
-                <p className="flex items-center gap-2">
-                  <Check className="size-4 text-up" /> Connected to <span className="font-medium">{st.ai.provider}</span> using <span className="num">{st.ai.model}</span>
-                </p>
+                <>
+                  <p className="text-muted">
+                    Models are tried in order; one that is rate-limited or retired is skipped for a while, and if all fail the built-in quant engine answers.
+                  </p>
+                  <ol className="space-y-1">
+                    {st.ai.chain.map((t, i) => (
+                      <li key={`${t.provider}/${t.model}`} className="flex items-center gap-2 text-xs" title={t.reason}>
+                        <span className="num w-4 text-right text-muted">{i + 1}</span>
+                        <span className={cn("size-1.5 shrink-0 rounded-full", t.coolingUntil ? "bg-amber-400" : "bg-up")} />
+                        <span className="text-muted">{t.label}</span>
+                        <span className="num truncate text-fg">{t.model}</span>
+                        {t.coolingUntil && mounted && <span className="ml-auto shrink-0 text-amber-300">paused until {fmtTime(new Date(t.coolingUntil), tz)}</span>}
+                      </li>
+                    ))}
+                    <li className="flex items-center gap-2 text-xs">
+                      <span className="num w-4 text-right text-muted">{st.ai.chain.length + 1}</span>
+                      <span className="size-1.5 shrink-0 rounded-full bg-slate-500" />
+                      <span className="text-muted">Built-in</span>
+                      <span className="text-fg">quant engine</span>
+                    </li>
+                  </ol>
+                  {st.ai.last && mounted && (
+                    <p className="flex items-center gap-2 text-xs text-muted">
+                      {st.ai.last.ok ? <Check className="size-3.5 text-up" /> : <span className="size-1.5 rounded-full bg-down" />}
+                      {st.ai.last.ok ? "Last answer from" : "Last failed attempt:"} <span className="num text-fg">{st.ai.last.target}</span> at{" "}
+                      {fmtTime(new Date(st.ai.last.at), tz)}
+                    </p>
+                  )}
+                </>
               ) : (
                 <>
                   <p>
@@ -76,12 +107,12 @@ export function SettingsView() {
                     momentum, balance sheet and sentiment).
                   </p>
                   <p className="text-muted">
-                    For written theses, set one of <code className="text-fg">GEMINI_API_KEY</code> (free tier at{" "}
-                    <a className="text-accent hover:underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
-                      Google AI Studio
+                    For written theses, set <code className="text-fg">OPENROUTER_API_KEY</code> (free models, key at{" "}
+                    <a className="text-accent hover:underline" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">
+                      openrouter.ai/keys
                     </a>
-                    ), <code className="text-fg">GROQ_API_KEY</code>, <code className="text-fg">OPENROUTER_API_KEY</code> or <code className="text-fg">OPENAI_API_KEY</code> and
-                    restart the server.
+                    ) or <code className="text-fg">GEMINI_API_KEY</code>, <code className="text-fg">GROQ_API_KEY</code> or <code className="text-fg">OPENAI_API_KEY</code>, then
+                    redeploy.
                   </p>
                 </>
               ))}
@@ -117,6 +148,20 @@ export function SettingsView() {
               </li>
             ))}
           </ul>
+        )}
+        {st && (
+          <p className="border-t border-line/60 px-4 py-2.5 text-xs text-muted">
+            Yahoo transport:{" "}
+            {st.httpClient.client === "fetch" ? (
+              <span className="text-amber-300" title={st.httpClient.note}>
+                plain fetch (Chrome impersonation unavailable{st.httpClient.note ? `: ${st.httpClient.note.slice(0, 80)}` : ""})
+              </span>
+            ) : st.httpClient.client === "impit" ? (
+              <span className="text-fg">Chrome TLS impersonation (impit)</span>
+            ) : (
+              "not used yet"
+            )}
+          </p>
         )}
       </Panel>
 

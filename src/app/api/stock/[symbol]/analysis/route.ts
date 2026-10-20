@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import type { Candle, Financials, NewsItem } from "@/lib/types";
 import { analyzeStock } from "@/lib/server/analysis";
-import { aiConfig } from "@/lib/server/ai";
+import { aiEnabled } from "@/lib/server/ai";
 import { cached, invalidate } from "@/lib/server/cache";
 import { badRequest, SYMBOL_RE } from "@/lib/server/respond";
 import { stockFinancials, stockProfile } from "@/lib/server/stock";
@@ -14,8 +14,7 @@ const lastRefresh = new Map<string, number>();
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/stock/[symbol]/analysis">) {
   const symbol = decodeURIComponent((await ctx.params).symbol).toUpperCase();
   if (!SYMBOL_RE.test(symbol)) return badRequest("invalid symbol");
-  const engine = aiConfig() ? "ai" : "quant";
-  const key = `analysis:${engine}:${symbol}`;
+  const key = `analysis:${aiEnabled() ? "ai" : "quant"}:${symbol}`;
 
   // Refreshes are rate-limited per symbol so a shared deployment can't burn through AI credits.
   if (req.nextUrl.searchParams.get("refresh") === "1" && Date.now() - (lastRefresh.get(symbol) ?? 0) > 5 * 60_000) {
@@ -26,7 +25,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/stock/[symbo
   try {
     const { value } = await cached(
       key,
-      engine === "ai" ? 6 * 3600 : 900,
+      (v) => (v.engine === "ai" ? 6 * 3600 : 900),
       async () => {
         const [profile, chart, bench, financials, news] = await Promise.all([
           stockProfile(symbol),

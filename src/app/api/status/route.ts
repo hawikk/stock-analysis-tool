@@ -1,13 +1,14 @@
 import { connection } from "next/server";
-import { aiConfig } from "@/lib/server/ai";
+import { aiStatus } from "@/lib/server/ai";
+import { httpClientStatus } from "@/lib/server/http";
 
 export async function GET() {
   await connection();
-  const ai = aiConfig();
   const env = process.env;
   return Response.json({
     data: {
-      ai: ai ? { enabled: true, provider: ai.provider, model: ai.model } : { enabled: false },
+      ai: aiStatus(),
+      httpClient: httpClientStatus(),
       providers: [
         { id: "yahoo", name: "Yahoo Finance", role: "Quotes, charts, fundamentals, news, options", keyRequired: false, configured: true },
         { id: "nasdaq", name: "Nasdaq", role: "Earnings & economic calendars", keyRequired: false, configured: true },
