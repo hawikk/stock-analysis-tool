@@ -1,24 +1,29 @@
-# Use official Python runtime as a parent image
-FROM python:3.10-slim
+# syntax=docker/dockerfile:1
+# Production image for Cloud Run / Fly / any container host. Uses Next.js standalone output.
+# glibc base (not Alpine) so impit's prebuilt linux-x64-gnu binary loads.
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Set work directory
+FROM node:22-bookworm-slim AS deps
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Install dependencies
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+FROM node:22-bookworm-slim AS build
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
 
-# Copy project
-COPY . /app/
-
-# Expose port
+FROM node:22-bookworm-slim AS run
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=8080 \
+    HOSTNAME=0.0.0.0
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
+USER node
 EXPOSE 8080
-
-# Run the application with Gunicorn (Production server)
-# Note: You need to add gunicorn to requirements.txt first
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "8", "--timeout", "0", "app:app"]
-
+CMD ["node", "server.js"]

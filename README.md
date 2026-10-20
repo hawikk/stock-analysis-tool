@@ -1,420 +1,145 @@
-# 📊 Massive Market Terminal 3.0
+# Stock Analyses: Global Market Terminal
 
-A professional-grade stock analysis platform with real-time market data, AI-powered pattern recognition, options chain analysis, and institutional-quality tools. Built with Flask and optimized for both desktop and mobile trading.
+A daily-driver dashboard for global markets, covering the macro picture across countries, rates, FX, commodities and crypto, plus deep dives on individual stocks with AI analysis. It runs with **zero API keys** on keyless public data sources. Optional keys add an LLM-written thesis and backup data providers.
 
-## ✨ Key Features
+![Overview](docs/screenshots/overview.jpg)
 
-### **Trading Tools**
-- 🎯 **Real-Time Price Updates** - 30-second auto-refresh with visual price flash indicators
-- 📊 **Advanced Charts** - LightweightCharts with candlesticks, volume, SMA, Bollinger Bands
-- 🔔 **Smart Alerts** - Price, RSI, and volume spike alerts with browser notifications
-- 📈 **Options Chain** - Live calls/puts data with IV, OI, and volume metrics
-- 🧠 **AI Pattern Recognition** - Detects Golden Cross, Head & Shoulders, Cup patterns, etc.
-- 🛠️ **Custom Indicators** - Build and save your own trading strategies
+<details>
+<summary>More screenshots</summary>
 
-### **Portfolio Management**
-- 📝 **Multi-Group Watchlists** - Organize stocks by sector, strategy, or theme
-- ↕️ **Drag & Drop** - Reorder tickers with intuitive drag-and-drop
-- 💾 **Export/Import** - Backup and share watchlists via JSON
+| World markets                                          | Heatmap                                      |
+| ------------------------------------------------------ | -------------------------------------------- |
+| ![World markets](docs/screenshots/world-markets.jpg)   | ![Heatmap](docs/screenshots/heatmap.jpg)     |
+| **Economic calendar**                                  | **Watchlist**                                |
+| ![Calendar](docs/screenshots/calendar-economic.jpg)    | ![Watchlist](docs/screenshots/watchlist.jpg) |
+| **Stock page with AI analysis**                        | **Macro**                                    |
+| ![AI analysis](docs/screenshots/stock-ai-analysis.jpg) | ![Macro](docs/screenshots/macro.jpg)         |
 
-### **Market Intelligence**
-- 🔥 **Unusual Options Activity** - Track whale movements and large trades
-- 🗺️ **Sector Heatmap** - Visual performance map of all 11 sectors
-- 📰 **Market News** - Aggregated news from NewsAPI and Yahoo Finance
-- 📅 **Economic Calendar** - Upcoming CPI, NFP, FOMC events
-- 💰 **Earnings Calendar** - Track upcoming earnings reports
-- 💱 **Forex & Macro** - Currency pairs, Bitcoin, Gold, Oil prices
-- 📊 **Tech Screener** - Scans S&P 100 for technical signals
-- 🔀 **Stock Comparison** - Side-by-side analysis of 2-3 stocks
-- 📉 **Correlation Matrix** - Portfolio correlation analysis
-- 🎲 **Monte Carlo Simulation** - Probabilistic price projections
+<img alt="Mobile stock page" src="docs/screenshots/mobile-stock.jpg" width="260" />
 
-### **User Experience**
-- 🌙 **Dark & Pitch Black Themes** - Navy blue or pure OLED black (battery saver)
-- 📱 **Mobile-First Design** - Bottom navigation, touch-optimized for phones
-- ⚡ **Blazing Fast** - Response compression, smart caching (3-5ms cached responses)
-- ✨ **Smooth Animations** - Skeleton screens, fade-ins, price flash effects
+</details>
 
-## 🏗️ Architecture
+## Features
 
-### **Frontend**
-- HTML5, CSS3 with dual dark themes
-- Vanilla JavaScript (no framework bloat)
-- Bootstrap 5 for responsive layout
-- LightweightCharts for professional charting
-- Modular architecture (utils, api, charts, ui, features, main)
+| Area              | What you get                                                                                                                                                                                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Overview**      | 3D globe of country benchmark performance (1D/1W/1M/YTD/1Y), market brief with a risk-on/off gauge, key indices, rates and VIX, the coming week's earnings and macro events, S&P 500 heatmap, sector bars, FX, commodities, movers, headlines and live exchange status           |
+| **World markets** | Globe, a 24-hour trading-day timeline of 23 exchanges in _your_ time zone (lunch breaks and Sun–Thu venues included), 47 indices by region with 1W/1M/YTD/1Y returns, FX, commodities and crypto                                                                                 |
+| **Heatmap**       | Squarified treemap of about 130 S&P 500 large caps sized by market cap; sector, theme and US-mover leaderboards                                                                                                                                                                  |
+| **Macro**         | US Treasury yield curve vs 1W/1M/1Y ago, 2s10s and 3m10y spread history, 12 FRED indicators (CPI, core PCE, payrolls, GDP, Fed funds, HY spreads, ECB rate, euro HICP…), 16 sovereign 10Y yields, commodities and macro news                                                     |
+| **Calendar**      | Earnings by day with BMO/AMC converted to local time, plus large-cap, watchlist and ticker filters. The economic calendar shows impact levels, country filters and actual vs forecast. The time zone is auto-detected and can be overridden.                                     |
+| **Stock pages**   | Live quote (15 s polling, pre- and post-market), candlestick or line chart with SMA 20/50/200, Bollinger bands, volume and an RSI pane, and tabs for **AI Analysis**, key stats, analyst targets and ratings, financials, earnings (EPS vs estimate), news and the options chain |
+| **AI analysis**   | Rating, conviction, thesis, bull and bear cases, valuation with a fair-value range, 12-month scenarios, technical levels, risks with severity, an earnings watch-list and news sentiment, all scored against a six-factor quant scorecard                                        |
+| **Watchlists**    | Multiple lists in `localStorage` with reorder, live table (extended hours, 52-week range, next earnings) and JSON import and export                                                                                                                                              |
+| **Everywhere**    | ⌘K / `/` command palette, scrolling ticker tape, market-status pill, "Demo data" badges when a source falls back, and skeleton, empty and error states                                                                                                                           |
 
-### **Backend**
-- Python 3.10+ with Flask
-- yfinance for free market data
-- Technical Analysis library (ta) for indicators
-- scikit-learn for ML predictions
-- OpenAI API for pattern recognition (optional)
-- Flask-Caching (FileSystem) - no Redis needed
-- Flask-Compress for gzip responses
+## Architecture
 
-### **Data Sources**
-- **yfinance** - Stock prices, options, fundamentals (FREE)
-- **NewsAPI** - Market news headlines
-- **Massive API** - Unusual options activity (optional)
-- **OpenAI** - AI-powered analysis (optional)
-
-### **Performance**
-- Response compression (80% bandwidth reduction)
-- Smart caching (95% cache hit rate)
-- 30-second real-time updates
-- Optimized endpoints (150-200ms average)
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.10+
-- pip (Python Package Manager)
-
-### Installation
-
-    ```bash
-# 1. Clone the repository
-git clone https://github.com/hawikk/stock-analysis-tool.git
-    cd stock-new
-
-# 2. Create virtual environment
-    python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# 3. Install dependencies
-    pip install -r requirements.txt
-
-# 4. Configure environment variables (optional)
-# Create .env file:
-cat > .env << EOF
-OPENAI_API_KEY=your_openai_key_here  # Optional - for AI features
-NEWS_API_KEY=your_newsapi_key_here   # Optional - for news
-MASSIVE_API_KEY=your_massive_key     # Optional - for whale activity
-EOF
-
-# 5. Run the app
-python app.py
-
-# 6. Open browser
-# http://127.0.0.1:5000
+```
+Next.js 16 (App Router, React 19, Tailwind v4, Cache Components)
+├─ src/app/(pages)          Server-rendered shells; data widgets are client components (TanStack Query polling)
+├─ src/app/api/**           Route handlers = the only place that talks to upstream APIs
+│   └─ src/lib/server/*     Data adapters + in-memory SWR cache with in-flight de-duplication
+│       ├─ yahoo.ts         Quotes, charts, spark, quoteSummary, fundamentals timeseries, search, news, screener, options
+│       ├─ calendars.ts     Nasdaq earnings + economic calendar (impact enriched from ForexFactory)
+│       ├─ macro.ts         US Treasury curve, CNBC sovereign yields, FRED, CoinGecko
+│       ├─ analysis.ts      Quant engine (technicals, 6-factor scorecard, fair value) + LLM prompt/schema
+│       ├─ brief.ts         Cross-asset market brief (LLM or rules-based)
+│       └─ mock.ts          Deterministic demo data used only when a live source fails
+└─ src/components/**        Globe (react-globe.gl/three), charts (lightweight-charts, recharts), treemap (d3-hierarchy)
 ```
 
-### **Note:** All API keys are optional! The app works without them:
-- ✅ Stock data, charts, technicals (FREE via yfinance)
-- ✅ Options chain (FREE via yfinance)
-- ✅ Pattern detection (basic patterns, no AI key needed)
-- ⚠️ AI-enhanced features require OpenAI key
-- ⚠️ News requires NewsAPI key (or uses yfinance fallback)
+- **Resilience.** Every API route returns `{ data, meta: { source, asOf, stale, note } }`. The cache serves stale data while it revalidates. If an upstream source fails, routes with a fallback serve mock data with `source: "mock"`, and the UI shows a "Demo data" badge. Unknown tickers return 404 instead of fake data.
+- **Yahoo access.** Yahoo rate-limits (HTTP 429) generic HTTP clients from cloud IPs, which is likely why the old Cloud Run deploy broke. Requests go through [`impit`](https://github.com/apify/impit), a Rust HTTP client with a Chrome TLS fingerprint, plus Yahoo's cookie and crumb handshake. impit is loaded lazily. If its native binary cannot load, the app falls back to plain `fetch`, then Finnhub (an optional backup for quotes, news and earnings), then labelled demo data. impit has been verified in a real `vercel build` output running on the AWS Lambda Node 24 / Amazon Linux 2023 image.
+- **AI.** OpenRouter's free models are the default, and any OpenAI-compatible API (Gemini, Groq, OpenAI or a custom endpoint) can join the chain. The model receives a compact data packet (profile, about 40 stats, analyst data, earnings history, computed technicals, the quant scorecard and headlines), must return JSON in a fixed schema, and is validated with zod. Models are tried in order. A model that is rate-limited, retired or returns invalid JSON is paused for between 1 minute and 6 hours depending on the error. When OpenRouter's daily free cap is hit, every `:free` model pauses until the reset. When the whole chain is exhausted, the deterministic quant engine fills the same schema. AI results are cached for 6 h, quant fallbacks for only 15 min, and manual refresh is rate-limited per symbol. Settings shows the live chain and any paused models.
+- **Time zones.** All instants travel as UTC ISO strings and are formatted in the browser's zone or the user's override. Exchange sessions are computed from IANA zones, so DST is handled. BMO/AMC earnings are approximated as 08:00 and 16:05 ET. Stock pages show Yahoo's exact timestamp when one is available.
 
----
+## Data sources
 
-## ☁️ Deployment to Google Cloud Run
+| Source                     | Used for                                                  | Key                            |
+| -------------------------- | --------------------------------------------------------- | ------------------------------ |
+| Yahoo Finance (unofficial) | Quotes, charts, fundamentals, analyst data, news, options | none                           |
+| Nasdaq.com calendars       | Earnings and economic calendar                            | none                           |
+| ForexFactory weekly JSON   | Economic event impact levels                              | none                           |
+| US Treasury                | Daily par yield curve                                     | none                           |
+| FRED (St. Louis Fed)       | Macro indicators                                          | optional (`FRED_API_KEY`)      |
+| CNBC quote API             | Global 10Y sovereign yields                               | none                           |
+| CoinGecko                  | Crypto markets                                            | optional (`COINGECKO_API_KEY`) |
+| Finnhub                    | Backup quotes, company news, earnings                     | optional (`FINNHUB_API_KEY`)   |
 
-### Quick Deploy
+Data may be delayed and the unofficial endpoints can change without notice. The app is for information only and is not investment advice.
+
+## Environment variables
+
+Copy `.env.example` to `.env.local`. **All variables are optional.**
+
+| Variable                     | Purpose                                                                                                  | Free tier                                                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `OPENROUTER_API_KEY`         | AI analysis and brief through OpenRouter's free models (default provider)                                | [openrouter.ai/keys](https://openrouter.ai/keys): 50 free requests/day, 1,000/day after a one-time $10 top-up |
+| `AI_MODEL`                   | Preferred model(s), comma-separated, tried first                                                         |                                                                                                               |
+| `AI_FALLBACK_MODELS`         | Replaces the built-in free fallback list                                                                 |                                                                                                               |
+| `AI_PROVIDER`                | Primary provider when several keys are set (`openrouter`, `gemini`, `groq`, `custom`, `openai`)          |                                                                                                               |
+| `GEMINI_API_KEY`             | Google Gemini (`gemini-flash-latest`)                                                                    | [Google AI Studio](https://aistudio.google.com/apikey)                                                        |
+| `GROQ_API_KEY`               | Groq (`openai/gpt-oss-120b`, `llama-3.3-70b-versatile`)                                                  | [Groq console](https://console.groq.com/keys)                                                                 |
+| `OPENAI_API_KEY`             | OpenAI (`gpt-5-mini`)                                                                                    | paid                                                                                                          |
+| `AI_API_KEY` + `AI_BASE_URL` | Any other OpenAI-compatible endpoint, with models from `AI_MODEL`                                        |                                                                                                               |
+| `FINNHUB_API_KEY`            | Backup market data                                                                                       | [finnhub.io/register](https://finnhub.io/register)                                                            |
+| `FRED_API_KEY`               | Higher FRED limits                                                                                       | [FRED API keys](https://fredaccount.stlouisfed.org/apikeys)                                                   |
+| `COINGECKO_API_KEY`          | Higher CoinGecko limits                                                                                  | [CoinGecko demo key](https://www.coingecko.com/en/developers/dashboard)                                       |
+| `SITE_URL`                   | Canonical URL for metadata, robots.txt and the www → apex redirect (default `https://stockanalyses.org`) |                                                                                                               |
+| `HTTP_CLIENT`                | `fetch` disables impit                                                                                   |                                                                                                               |
+
+**Default free model chain (OpenRouter, October 2026):**
+
+1. `minimax/minimax-m3.1-flash:free`
+2. `nvidia/nemotron-3.5-super-vl:free`
+3. `thinkingmachines/inkling:free`
+4. `google/gemma-4-31b-it:free`
+5. `nvidia/nemotron-3-super-120b-a12b:free`
+6. `openrouter/free` (OpenRouter's router across whatever free models exist)
+
+Every other configured provider is appended after these, and the quant engine comes last.
+
+**OpenCode Zen.** Zen's API is OpenAI-compatible, but its free models (such as `mimo-v2.6-flash-free`) answer only requests coming from the OpenCode app. Requests from other apps get `FreeTierError`. Its paid models work with `AI_API_KEY`, `AI_BASE_URL=https://opencode.ai/zen/v1` and `AI_MODEL=<model>`. On OpenRouter, Xiaomi MiMo is currently a paid model (`xiaomi/mimo-v2.6-flash`, about $0.14 per million input tokens).
+
+## Run locally
 
 ```bash
-# Set your project ID
-export PROJECT_ID=your-google-cloud-project-id
-
-# Build and deploy in one command
-gcloud builds submit --tag gcr.io/$PROJECT_ID/stock-analysis-tool && \
-gcloud run deploy stock-analysis-tool \
-  --image gcr.io/$PROJECT_ID/stock-analysis-tool \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --memory 2Gi \
-  --cpu 2 \
-  --timeout 300 \
-  --max-instances 10 \
-  --set-env-vars OPENAI_API_KEY=your_key,NEWS_API_KEY=your_key
+npm install
+cp .env.example .env.local   # optional
+npm run dev                  # http://localhost:3000
 ```
 
-### Recommended Settings
+Other scripts: `npm run lint`, `npm run typecheck`, `npm run format`, `npm run build && npm start`.
 
-| Setting | Value | Reason |
-|---------|-------|--------|
-| Memory | 2Gi | Handles yfinance data downloads |
-| CPU | 2 vCPU | Pattern detection & calculations |
-| Timeout | 300s | Allows slow API calls to complete |
-| Max Instances | 10 | Auto-scales with traffic |
+Requires Node 20.9+. On Linux x64 and macOS, `impit` installs a prebuilt native binary automatically.
 
-### Using Secret Manager (Recommended)
+## Deploy
+
+### Recommended: Vercel Hobby (free) at stockanalyses.org
+
+**Step-by-step guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).** It covers the Vercel import, environment variables, adding the domain, the Cloudflare DNS records, proxy and SSL settings, and verification.
+
+In short:
+
+1. Import the repo at [vercel.com/new](https://vercel.com/new).
+2. Add `OPENROUTER_API_KEY` and `SITE_URL=https://stockanalyses.org`, then deploy.
+3. Add `stockanalyses.org` in Vercel, with `www` redirecting to the apex.
+4. In Cloudflare, create the `A @` and `CNAME www` records Vercel shows, both set to **DNS only** (grey cloud), and set the SSL mode to **Full (strict)**.
+
+`vercel.json` pins functions to `iad1` (US East) and enables Fluid compute. Yahoo can answer EU IP addresses with a GDPR consent wall that breaks its cookie and crumb handshake, and most of the upstream APIs are in the US anyway. Hobby is free for personal, non-commercial use and needs no credit card.
+
+### Alternative: Google Cloud Run (container)
+
+The repo has a production `Dockerfile` (Next.js standalone output, port 8080) and a **manual** workflow at `.github/workflows/deploy-cloud-run.yml`. To use it, run **Actions → Deploy to Cloud Run → Run workflow**. It reuses the existing `GCP_PROJECT_ID` and `GCP_SA_KEY` secrets and deploys with scale-to-zero and a single instance, which stays inside the free tier for personal use. The default region is `us-central1` for the same Yahoo reason.
 
 ```bash
-# Create secrets
-echo -n "your_openai_key" | gcloud secrets create openai-api-key --data-file=-
-echo -n "your_news_key" | gcloud secrets create news-api-key --data-file=-
-
-# Deploy with secrets
-gcloud run deploy stock-analysis-tool \
-  --region us-central1 \
-  --update-secrets OPENAI_API_KEY=openai-api-key:latest \
-  --update-secrets NEWS_API_KEY=news-api-key:latest
+gcloud run deploy stock-analysis-tool --source . --region us-central1 --allow-unauthenticated --port 8080 --min-instances 0 --max-instances 1
+gcloud run services update stock-analysis-tool --region us-central1 --update-env-vars GEMINI_API_KEY=...   # optional
 ```
 
----
+The container also runs unchanged on Railway, Render or Fly.io (`docker build -t market-terminal . && docker run -p 8080:8080 market-terminal`).
 
-## 📱 Features Walkthrough
+## CI
 
-### **Dashboard View**
-- Market indices (SPY, QQQ, DIA, IWM) with live updates
-- Unusual options activity table
-- Market news feed
-- AI market sentiment analysis
-
-### **Watchlist (Enhanced)**
-- Create multiple watchlist groups (Tech, Crypto, Earnings, etc.)
-- Drag & drop to reorder
-- Real-time price updates every 30 seconds
-- Export/Import for backup
-- Quick alert creation
-
-### **Stock Analysis**
-- Interactive candlestick charts
-- Technical indicators (RSI, MACD, SMA 50/200, Bollinger Bands)
-- Buy/Sell verdict with reasoning
-- Fundamentals (Market Cap, P/E, Dividend, Sector)
-- Stock comparison tool
-
-### **Options Chain**
-- Real-time calls and puts data
-- Strike prices, last price, volume, open interest
-- Implied volatility (IV%)
-- Nearest expiration date
-
-### **Alerts System**
-- Price alerts (above/below target)
-- RSI alerts (overbought/oversold)
-- Volume spike detection (2x average)
-- Browser push notifications
-- Auto-checking every 60 seconds
-
-### **Pattern Recognition**
-- AI-powered pattern detection
-- Identifies: Golden Cross, Death Cross, Head & Shoulders, Cup patterns, etc.
-- Confidence scores and success rates
-- Visual chart with pattern markers
-
-### **Additional Tools**
-- Sector heatmap (11 sectors)
-- Economic calendar (CPI, NFP, FOMC)
-- Earnings calendar
-- Forex pairs with sparklines
-- Crypto & macro indicators
-- Tech screener (S&P 100 signals)
-- Portfolio correlation matrix
-- Monte Carlo simulations
-
----
-
-## 🎨 Themes
-
-**Dark Mode (Navy Blue)** - Default
-- Professional TradingView-style dark theme
-- Easy on eyes for long trading sessions
-- Balanced contrast
-
-**Pitch Black (OLED)** - Battery Saver
-- Pure black background (#000000)
-- OLED pixel optimization (30-40% battery savings)
-- High contrast, perfect for night trading
-- Brighter accent colors
-
-Toggle between themes with the button in the navbar.
-
----
-
-## 🔄 CI/CD Pipeline (GitHub Actions)
-
-Create `.github/workflows/deploy.yml` for automatic deployment:
-
-```yaml
-name: Deploy to Cloud Run
-on:
-  push:
-    branches: [main]
-
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_NAME: stock-analysis-tool
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-      - uses: google-github-actions/setup-gcloud@v1
-      - run: |
-          gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME
-          gcloud run deploy $SERVICE_NAME \
-            --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --memory 2Gi \
-            --cpu 2 \
-            --set-env-vars OPENAI_API_KEY=${{ secrets.OPENAI_KEY }},NEWS_API_KEY=${{ secrets.NEWS_KEY }}
-```
-
-**Required Secrets:** `GCP_PROJECT_ID`, `GCP_SA_KEY`, `OPENAI_KEY`, `NEWS_KEY`
-
----
-
-## 🔌 API Endpoints
-
-### Market Data
-- `GET /api/market/status` - Major indices (SPY, QQQ, DIA, IWM)
-- `GET /api/market/movers` - Top gainers/losers/active
-- `GET /api/market/news` - Market news headlines
-- `GET /api/market/whale` - Unusual options activity
-- `GET /api/market/heatmap` - Sector performance (11 sectors)
-- `GET /api/market/calendar` - Economic calendar events
-- `GET /api/market/earnings` - Upcoming earnings dates
-- `GET /api/market/forex` - Currency pair data
-- `GET /api/market/macro` - Crypto, gold, oil, yields
-- `GET /api/market/social` - Social sentiment for meme stocks
-- `GET /api/market/screener_tech` - Technical screener results
-- `GET /api/market/sentiment_analysis` - AI market sentiment
-
-### Stock Analysis
-- `GET /api/dashboard_data?ticker=AAPL&period=1y` - Chart data + verdict
-- `GET /api/info?ticker=AAPL` - Stock fundamentals + technicals
-- `GET /api/search?q=AAPL` - Ticker search/autocomplete
-- `GET /api/ai?ticker=AAPL` - AI summary (requires OpenAI key)
-
-### Advanced Tools
-- `POST /api/tools/correlation` - Correlation matrix for tickers
-- `GET /api/tools/monte_carlo?ticker=SPY&days=30&sims=50` - Monte Carlo simulation
-- `GET /api/options/chain?ticker=AAPL` - Options chain (calls/puts)
-- `GET /api/patterns/detect?ticker=AAPL` - Chart pattern detection
-- `POST /api/realtime/prices` - Batch price updates for watchlist
-
-All responses are JSON formatted and cached appropriately.
-
----
-
-## 🐛 Troubleshooting
-
-### App won't start
-```bash
-# Check Python version (needs 3.10+)
-python3 --version
-
-# Reinstall dependencies
-pip install --upgrade -r requirements.txt
-
-# Check for port conflicts
-lsof -i :5000  # Kill any process using port 5000
-```
-
-### Features not working
-```bash
-# Clear cache
-rm -rf flask_cache/*
-
-# Hard refresh browser
-Ctrl + Shift + R (Windows/Linux)
-Cmd + Shift + R (Mac)
-
-# Check browser console (F12) for JavaScript errors
-```
-
-### P/E or Dividend showing N/A
-- This is normal for some tickers (e.g., ETFs, new IPOs)
-- Data comes from yfinance - some stocks don't report these metrics
-- Wait a few minutes, data might update
-
-### GCP deployment fails
-- Check `requirements.txt` is in root directory
-- Verify OpenAI version is `>=1.40.0` (not 1.12.0)
-- Ensure Dockerfile has correct Python version
-- Check logs: `gcloud run services logs read stock-analysis-tool`
-
----
-
-## 💰 Cost Breakdown
-
-### **Development Costs**
-- ✅ All tools are FREE and open-source
-- ✅ No licensing fees
-
-### **Running Costs (Monthly)**
-
-| Service | Free Tier | Typical Usage | Cost |
-|---------|-----------|---------------|------|
-| Google Cloud Run | 2M requests | 10K-100K requests | $0-5 |
-| yfinance API | Unlimited | All stock data | $0 |
-| NewsAPI | 100 req/day | News headlines | $0 |
-| OpenAI (optional) | $5 credit | Pattern detection | $0-2 |
-| Cloudflare | Unlimited | CDN & DDoS | $0 |
-| **Total** | | | **$0-10/month** |
-
-Compare to: Bloomberg Terminal ($24,000/year) or TradingView Pro ($720/year)
-
----
-
-## 🎯 Roadmap
-
-See `ROADMAP.md` for detailed future plans.
-
-**Planned Enhancements:**
-- [ ] WebSocket for true real-time (no polling)
-- [ ] Strategy backtesting engine
-- [ ] Portfolio tracking with P&L
-- [ ] Social sentiment (Reddit/Twitter)
-- [ ] Max pain calculator for options
-- [ ] Keyboard shortcuts
-- [ ] Export analysis to PDF
-
----
-
-## 📄 License
-
-This project is proprietary. All rights reserved.
-
----
-
-## 🙏 Acknowledgments
-
-**Built with:**
-- Flask (Python web framework)
-- yfinance (Yahoo Finance data)
-- LightweightCharts (TradingView)
-- Bootstrap (UI framework)
-- OpenAI (AI analysis)
-
-**Inspired by:**
-- TradingView
-- Unusual Whales
-- Bloomberg Terminal
-
----
-
-## 📞 Support
-
-**Live Demo:** https://stockanalyses.org
-
-**Issues & Suggestions:**
-- GitHub Issues: https://github.com/hawikk/stock-analysis-tool/issues
-- Email: support@stockanalyses.org
-
-**Referral:** 
-Start investing with MyInvestor using code **GACEQ** and get 30€!
-[Sign up here](https://newapp.myinvestor.es/do/signup?promotionalCode=GACEQ)
-
----
-
-## ⭐ Star This Repo!
-
-If you find this useful, please star the repository and share with other traders!
-
-**Built with ❤️ for the trading community**
-
+`.github/workflows/ci.yml` runs lint, typecheck, Prettier and `next build` on every PR and push, and builds the Docker image without pushing it. Nothing deploys automatically.
