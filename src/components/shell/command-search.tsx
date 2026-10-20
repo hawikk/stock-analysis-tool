@@ -88,7 +88,9 @@ export function CommandSearch() {
                 <Command.Group heading={<GroupHeading>Securities</GroupHeading>}>
                   {results.map((r) => (
                     <Item key={r.symbol} value={r.symbol} onSelect={() => go(`/stock/${encodeURIComponent(r.symbol)}`)}>
-                      <span className="w-24 shrink-0 font-medium">{r.symbol}</span>
+                      <span className="w-24 shrink-0 truncate font-medium" title={r.symbol}>
+                        {r.symbol}
+                      </span>
                       <span className="truncate">{r.name}</span>
                       <span className="ml-auto shrink-0 text-[11px] text-muted">
                         {r.type} · {r.exchange}
