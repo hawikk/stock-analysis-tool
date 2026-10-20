@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ApiResponse } from "@/lib/types";
 
 export class ApiError extends Error {
@@ -42,13 +42,45 @@ export function useMounted() {
   );
 }
 
+type Clock = { now: number; subs: Set<() => void>; timer?: ReturnType<typeof setInterval> };
+const clocks = new Map<number, Clock>();
+
+function clockFor(intervalMs: number): Clock {
+  let c = clocks.get(intervalMs);
+  if (!c) {
+    c = { now: Date.now(), subs: new Set() };
+    clocks.set(intervalMs, c);
+  }
+  return c;
+}
+
+function subscribeClock(intervalMs: number, cb: () => void) {
+  const c = clockFor(intervalMs);
+  if (c.subs.size === 0) {
+    c.now = Date.now();
+    c.timer = setInterval(() => {
+      c.now = Date.now();
+      c.subs.forEach((fn) => fn());
+    }, intervalMs);
+  }
+  c.subs.add(cb);
+  return () => {
+    c.subs.delete(cb);
+    if (c.subs.size === 0) clearInterval(c.timer);
+  };
+}
+
+/**
+ * Shared ticking clock. Returns 0 during prerender/hydration (Cache Components forbids reading the
+ * current time while prerendering), so callers should gate time-dependent UI on `useMounted()`.
+ */
 export function useNow(intervalMs = 1000) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
+  const subscribe = useCallback((cb: () => void) => subscribeClock(intervalMs, cb), [intervalMs]);
+  return useSyncExternalStore(
+    subscribe,
+    () => clockFor(intervalMs).now,
+    () => 0,
+  );
 }
 
 export function useElementSize<T extends HTMLElement>() {

@@ -106,7 +106,15 @@ function heuristicImpact(title: string, country: string): EconomicImpact {
 
 const clean = (s: string | undefined | null): string | null => {
   if (!s) return null;
-  const t = s.replace(/&nbsp;/g, " ").replace(/&lt;BR\/&gt;/gi, " ").replace(/&[a-z]+;/g, " ").trim();
+  const t = s
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;BR\/&gt;/gi, " ")
+    .replace(/&#0*39;|&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&#?[a-z0-9]+;/gi, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
   return t || null;
 };
 

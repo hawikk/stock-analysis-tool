@@ -1,4 +1,4 @@
-import type { CryptoAsset, GlobalBond, YieldCurveData, YieldPoint } from "@/lib/types";
+import type { CryptoAsset, GlobalBond, MacroIndicator, YieldCurveData, YieldPoint } from "@/lib/types";
 import { GLOBAL_BONDS } from "@/lib/universe";
 import { httpJson, httpText } from "./http";
 
@@ -142,17 +142,6 @@ export async function cryptoMarkets(): Promise<CryptoAsset[]> {
   });
 }
 
-export type MacroIndicator = {
-  id: string;
-  label: string;
-  region: "US" | "Euro Area";
-  unit: string;
-  value: number | null;
-  previous: number | null;
-  date: string | null;
-  series: { date: string; value: number }[];
-  description: string;
-};
 
 type FredSpec = { id: string; label: string; region: MacroIndicator["region"]; unit: string; transform?: "yoy" | "diff"; description: string };
 

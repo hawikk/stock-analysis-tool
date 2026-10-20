@@ -217,6 +217,18 @@ export type GlobalBond = {
   change: number | null;
 };
 
+export type MacroIndicator = {
+  id: string;
+  label: string;
+  region: "US" | "Euro Area";
+  unit: string;
+  value: number | null;
+  previous: number | null;
+  date: string | null;
+  series: { date: string; value: number }[];
+  description: string;
+};
+
 export type CryptoAsset = {
   id: string;
   symbol: string;
