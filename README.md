@@ -2,7 +2,22 @@
 
 A daily-driver dashboard for global markets, covering the macro picture across countries, rates, FX, commodities and crypto, plus deep dives on individual stocks with AI analysis. It runs with **zero API keys** on keyless public data sources. Optional keys add an LLM-written thesis and backup data providers.
 
-![Overview](docs/screenshots/overview.png)
+![Overview](docs/screenshots/overview.jpg)
+
+<details>
+<summary>More screenshots</summary>
+
+| World markets                                          | Heatmap                                      |
+| ------------------------------------------------------ | -------------------------------------------- |
+| ![World markets](docs/screenshots/world-markets.jpg)   | ![Heatmap](docs/screenshots/heatmap.jpg)     |
+| **Economic calendar**                                  | **Watchlist**                                |
+| ![Calendar](docs/screenshots/calendar-economic.jpg)    | ![Watchlist](docs/screenshots/watchlist.jpg) |
+| **Stock page with AI analysis**                        | **Macro**                                    |
+| ![AI analysis](docs/screenshots/stock-ai-analysis.jpg) | ![Macro](docs/screenshots/macro.jpg)         |
+
+<img alt="Mobile stock page" src="docs/screenshots/mobile-stock.jpg" width="260" />
+
+</details>
 
 ## Features
 
